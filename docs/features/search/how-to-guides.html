@@ -115,10 +115,22 @@ getting started guide.</p>
 <pre><code class="hljs css language-typescript"><span class="hljs-keyword">import</span> { DefaultTechDocsCollatorFactory } <span class="hljs-keyword">from</span> <span class="hljs-string">'@backstage/plugin-techdocs-backend'</span>;
 </code></pre>
 <ol start="2">
+<li>If there isn't an existing schedule you'd like to run the collator on, be
+sure to create it first. Something like...</li>
+</ol>
+<pre><code class="hljs css language-typescript"><span class="hljs-keyword">import</span> { Duration } <span class="hljs-keyword">from</span> <span class="hljs-string">'luxon'</span>;
+
+<span class="hljs-keyword">const</span> every10MinutesSchedule = env.scheduler.createScheduledTaskRunner({
+  frequency: Duration.fromObject({ seconds: <span class="hljs-number">600</span> }),
+  timeout: Duration.fromObject({ seconds: <span class="hljs-number">900</span> }),
+  initialDelay: Duration.fromObject({ seconds: <span class="hljs-number">3</span> }),
+});
+</code></pre>
+<ol start="3">
 <li>Register the <code>DefaultTechDocsCollatorFactory</code> with the IndexBuilder.</li>
 </ol>
 <pre><code class="hljs css language-typescript">indexBuilder.addCollator({
-  defaultRefreshIntervalSeconds: <span class="hljs-number">600</span>,
+  schedule: every10MinutesSchedule,
   factory: DefaultTechDocsCollatorFactory.fromConfig(env.config, {
     discovery: env.discovery,
     logger: env.logger,
