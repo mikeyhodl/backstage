@@ -27,6 +27,7 @@
 <tr><td><a href="/docs/reference/backend-common.git">Git</a></td><td>A convenience wrapper around the <code>isomorphic-git</code> library.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.githuburlreader">GithubUrlReader</a></td><td>Implements a <a href="/docs/reference/backend-common.urlreader">UrlReader</a> for files through the GitHub v3 APIs, such as the one exposed by GitHub itself.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.gitlaburlreader">GitlabUrlReader</a></td><td>Implements a <a href="/docs/reference/backend-common.urlreader">UrlReader</a> for files on GitLab.</td></tr>
+<tr><td><a href="/docs/reference/backend-common.readurlresponsefactory">ReadUrlResponseFactory</a></td><td>Utility class for UrlReader implementations to create valid ReadUrlResponse instances from common response primitives.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.servertokenmanager">ServerTokenManager</a></td><td>Creates and validates tokens for use during backend-to-backend authentication.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.singlehostdiscovery">SingleHostDiscovery</a></td><td>SingleHostDiscovery is a basic PluginEndpointDiscovery implementation that assumes that all plugins are hosted in a single deployment.<!-- -->The deployment may be scaled horizontally, as long as the external URL is the same for all instances. However, internal URLs will always be resolved to the same host, so there won't be any balancing of internal traffic.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.urlreaders">UrlReaders</a></td><td>Helps construct <a href="/docs/reference/backend-common.urlreader">UrlReader</a><!-- -->s.</td></tr>
@@ -103,6 +104,7 @@
 <tr><td><a href="/docs/reference/backend-common.readtreeresponsefile">ReadTreeResponseFile</a></td><td>Represents a single file in a  response.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.readurloptions">ReadUrlOptions</a></td><td>An options object for readUrl operations.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.readurlresponse">ReadUrlResponse</a></td><td>A response object for  operations.</td></tr>
+<tr><td><a href="/docs/reference/backend-common.readurlresponsefactoryfromstreamoptions">ReadUrlResponseFactoryFromStreamOptions</a></td><td>An options object for <a href="/docs/reference/backend-common.readurlresponsefactory">ReadUrlResponseFactory</a> factory methods.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.requestlogginghandlerfactory">RequestLoggingHandlerFactory</a></td><td>A factory for request loggers.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.runcontaineroptions">RunContainerOptions</a></td><td>Options passed to the <a href="/docs/reference/backend-common.containerrunner.runcontainer">ContainerRunner.runContainer()</a> method.</td></tr>
 <tr><td><a href="/docs/reference/backend-common.searchoptions">SearchOptions</a></td><td>An options object for search operations.</td></tr>
