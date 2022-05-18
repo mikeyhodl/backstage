@@ -109,7 +109,7 @@ yarn add --cwd packages/backend @backstage/plugin-catalog-backend-module-aws
 <span class="hljs-keyword">const</span> builder = <span class="hljs-keyword">await</span> CatalogBuilder.create(env);
 <span class="hljs-comment">/** ... other processors and/or providers ... */</span>
 builder.addEntityProvider(
-  ...AwsS3EntityProvider.fromConfig(env.config, {
+  AwsS3EntityProvider.fromConfig(env.config, {
     logger: env.logger,
     schedule: env.scheduler.createScheduledTaskRunner({
       frequency: { minutes: <span class="hljs-number">30</span> },
