@@ -11,11 +11,12 @@
 <p><b>Signature:</b></p>
 <pre><code class="hljs css language-typescript"><span class="hljs-keyword">type</span> RecommendedDeploymentOptions = {
     publisher: PublisherBase;
-    logger: Logger;
+    logger: winston.Logger;
     discovery: PluginEndpointDiscovery;
     config: Config;
     cache: PluginCacheManager;
     docsBuildStrategy?: DocsBuildStrategy;
+    buildLogTransport?: winston.transport;
 };
 </code></pre>
 <p><b>References:</b> <a href="/docs/reference/plugin-techdocs-node.publisherbase">PublisherBase</a><!-- -->, <a href="/docs/reference/backend-common.pluginendpointdiscovery">PluginEndpointDiscovery</a><!-- -->, <a href="/docs/reference/config.config">Config</a><!-- -->, <a href="/docs/reference/backend-common.plugincachemanager">PluginCacheManager</a><!-- -->, <a href="/docs/reference/plugin-techdocs-backend.docsbuildstrategy">DocsBuildStrategy</a></p>
