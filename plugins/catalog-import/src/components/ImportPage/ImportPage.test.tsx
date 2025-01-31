@@ -14,39 +14,25 @@
  * limitations under the License.
  */
 
-import { CatalogClient } from '@backstage/catalog-client';
 import { ApiProvider, ConfigReader } from '@backstage/core-app-api';
-import { configApiRef } from '@backstage/core-plugin-api';
+import { FetchApi, configApiRef } from '@backstage/core-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
+import { catalogApiMock } from '@backstage/plugin-catalog-react/testUtils';
 import { renderInTestApp, TestApiRegistry } from '@backstage/test-utils';
 import { screen } from '@testing-library/react';
 import React from 'react';
-import { useOutlet } from 'react-router';
+import { useOutlet } from 'react-router-dom';
 import { catalogImportApiRef, CatalogImportClient } from '../../api';
 import { ImportPage } from './ImportPage';
 
-jest.mock('react-router', () => ({
-  ...jest.requireActual('react-router'),
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
   useOutlet: jest.fn(),
 }));
 
 describe('<ImportPage />', () => {
-  const identityApi = {
-    getUserId: () => {
-      return 'user';
-    },
-    getProfile: () => {
-      return {};
-    },
-    getIdToken: () => {
-      return Promise.resolve('token');
-    },
-    signOut: () => {
-      return Promise.resolve();
-    },
-    getProfileInfo: jest.fn(),
-    getBackstageIdentity: jest.fn(),
-    getCredentials: jest.fn(),
+  const fetchApi: FetchApi = {
+    fetch: jest.fn(),
   };
 
   let apis: TestApiRegistry;
@@ -54,12 +40,12 @@ describe('<ImportPage />', () => {
   beforeEach(() => {
     apis = TestApiRegistry.from(
       [configApiRef, new ConfigReader({ integrations: {} })],
-      [catalogApiRef, new CatalogClient({ discoveryApi: {} as any })],
+      [catalogApiRef, catalogApiMock()],
       [
         catalogImportApiRef,
         new CatalogImportClient({
           discoveryApi: {} as any,
-          identityApi,
+          fetchApi,
           scmAuthApi: {} as any,
           scmIntegrationsApi: {} as any,
           catalogApi: {} as any,

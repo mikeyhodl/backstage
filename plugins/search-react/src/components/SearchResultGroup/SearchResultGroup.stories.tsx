@@ -14,24 +14,31 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, useCallback, useState } from 'react';
+import React, {
+  ComponentType,
+  useCallback,
+  useState,
+  PropsWithChildren,
+} from 'react';
 
-import {
-  Grid,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  MenuItem,
-} from '@material-ui/core';
+import Grid from '@material-ui/core/Grid';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
+import MenuItem from '@material-ui/core/MenuItem';
 import DocsIcon from '@material-ui/icons/InsertDriveFile';
 
 import { JsonValue } from '@backstage/types';
 import { Link } from '@backstage/core-components';
-import { createRouteRef } from '@backstage/core-plugin-api';
-import { SearchQuery, SearchResultSet } from '@backstage/plugin-search-common';
 import { TestApiProvider, wrapInTestApp } from '@backstage/test-utils';
+import { createPlugin, createRouteRef } from '@backstage/core-plugin-api';
+import { SearchQuery, SearchResultSet } from '@backstage/plugin-search-common';
 
+import { DefaultResultListItem } from '../DefaultResultListItem';
+
+import { SearchContextProvider } from '../../context';
 import { searchApiRef, MockSearchApi } from '../../api';
+import { createSearchResultListItemExtension } from '../../extensions';
 
 import {
   SearchResultGroup,
@@ -68,7 +75,7 @@ export default {
   title: 'Plugins/Search/SearchResultGroup',
   component: SearchResultGroup,
   decorators: [
-    (Story: ComponentType<{}>) =>
+    (Story: ComponentType<PropsWithChildren<{}>>) =>
       wrapInTestApp(
         <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
           <Grid container direction="row">
@@ -83,6 +90,14 @@ export default {
 };
 
 export const Default = () => {
+  return (
+    <SearchContextProvider>
+      <SearchResultGroup icon={<DocsIcon />} title="Documentation" />
+    </SearchContextProvider>
+  );
+};
+
+export const WithQuery = () => {
   const [query] = useState<Partial<SearchQuery>>({
     types: ['techdocs'],
   });
@@ -339,5 +354,23 @@ export const WithCustomResultItem = () => {
         />
       )}
     />
+  );
+};
+
+export const WithResultItemExtensions = () => {
+  const [query] = useState<Partial<SearchQuery>>({
+    types: ['techdocs'],
+  });
+  const plugin = createPlugin({ id: 'plugin' });
+  const DefaultSearchResultGroupItem = plugin.provide(
+    createSearchResultListItemExtension({
+      name: 'DefaultResultListItem',
+      component: async () => DefaultResultListItem,
+    }),
+  );
+  return (
+    <SearchResultGroup query={query} icon={<DocsIcon />} title="Documentation">
+      <DefaultSearchResultGroupItem />
+    </SearchResultGroup>
   );
 };

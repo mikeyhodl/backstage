@@ -16,7 +16,8 @@
 
 import { InfoCard } from '@backstage/core-components';
 import { configApiRef, useApi } from '@backstage/core-plugin-api';
-import { Chip, Typography } from '@material-ui/core';
+import Chip from '@material-ui/core/Chip';
+import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { catalogImportApiRef } from '../../api';
 import { useCatalogFilename } from '../../hooks';
@@ -43,7 +44,7 @@ export const ImportInfoCard = (props: ImportInfoCardProps) => {
   } = props;
 
   const configApi = useApi(configApiRef);
-  const appTitle = configApi.getOptional('app.title') || 'Backstage';
+  const appTitle = configApi.getOptionalString('app.title') || 'Backstage';
   const catalogImportApi = useApi(catalogImportApiRef);
 
   const hasGithubIntegration = configApi.has('integrations.github');
@@ -56,7 +57,7 @@ export const ImportInfoCard = (props: ImportInfoCardProps) => {
       titleTypographyProps={{ component: 'h3' }}
       deepLink={{
         title: 'Learn more about the Software Catalog',
-        link: 'https://backstage.io/docs/features/software-catalog/software-catalog-overview',
+        link: 'https://backstage.io/docs/features/software-catalog/',
       }}
     >
       <Typography variant="body2" paragraph>

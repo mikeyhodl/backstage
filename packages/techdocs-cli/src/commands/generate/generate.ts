@@ -17,21 +17,17 @@
 import { resolve } from 'path';
 import { OptionValues } from 'commander';
 import fs from 'fs-extra';
-import Docker from 'dockerode';
 import {
   TechdocsGenerator,
   ParsedLocationAnnotation,
+  getMkdocsYml,
 } from '@backstage/plugin-techdocs-node';
-import {
-  ContainerRunner,
-  DockerContainerRunner,
-} from '@backstage/backend-common';
 import { ConfigReader } from '@backstage/config';
 import {
   convertTechDocsRefToLocationAnnotation,
   createLogger,
+  getLogStream,
 } from '../../lib/utility';
-import { stdout } from 'process';
 
 export default async function generate(opts: OptionValues) {
   // Use techdocs-node package to generate docs. Keep consistency between Backstage and CI generating docs.
@@ -46,6 +42,7 @@ export default async function generate(opts: OptionValues) {
   const dockerImage = opts.dockerImage;
   const pullImage = opts.pull;
   const legacyCopyReadmeMdToIndexMd = opts.legacyCopyReadmeMdToIndexMd;
+  const defaultPlugins = opts.defaultPlugin;
 
   logger.info(`Using source dir ${sourceDir}`);
   logger.info(`Will output generated files in ${outputDir}`);
@@ -53,6 +50,10 @@ export default async function generate(opts: OptionValues) {
   logger.verbose('Creating output directory if it does not exist.');
 
   await fs.ensureDir(outputDir);
+
+  const { path: mkdocsYmlPath, configIsTemporary } = await getMkdocsYml(
+    sourceDir,
+  );
 
   const config = new ConfigReader({
     techdocs: {
@@ -63,18 +64,11 @@ export default async function generate(opts: OptionValues) {
         mkdocs: {
           legacyCopyReadmeMdToIndexMd,
           omitTechdocsCorePlugin,
+          defaultPlugins,
         },
       },
     },
   });
-
-  // Docker client (conditionally) used by the generators, based on techdocs.generators config.
-  let containerRunner: ContainerRunner | undefined;
-
-  if (opts.docker) {
-    const dockerClient = new Docker();
-    containerRunner = new DockerContainerRunner({ dockerClient });
-  }
 
   let parsedLocationAnnotation = {} as ParsedLocationAnnotation;
   if (opts.techdocsRef) {
@@ -90,7 +84,6 @@ export default async function generate(opts: OptionValues) {
   // Generate docs using @backstage/plugin-techdocs-node
   const techdocsGenerator = await TechdocsGenerator.fromConfig(config, {
     logger,
-    containerRunner,
   });
 
   logger.info('Generating documentation...');
@@ -105,8 +98,16 @@ export default async function generate(opts: OptionValues) {
       : {}),
     logger,
     etag: opts.etag,
-    ...(process.env.LOG_LEVEL === 'debug' ? { logStream: stdout } : {}),
+    logStream: getLogStream(logger),
+    siteOptions: { name: opts.siteName },
+    runAsDefaultUser: opts.runAsDefaultUser,
   });
+
+  if (configIsTemporary) {
+    process.on('exit', async () => {
+      fs.rmSync(mkdocsYmlPath, {});
+    });
+  }
 
   logger.info('Done!');
 }

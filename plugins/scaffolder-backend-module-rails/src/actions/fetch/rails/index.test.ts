@@ -15,8 +15,8 @@
  */
 
 const mockRailsTemplater = { run: jest.fn() };
-jest.mock('@backstage/plugin-scaffolder-backend', () => ({
-  ...jest.requireActual('@backstage/plugin-scaffolder-backend'),
+jest.mock('@backstage/plugin-scaffolder-node', () => ({
+  ...jest.requireActual('@backstage/plugin-scaffolder-node'),
   fetchContents: jest.fn(),
 }));
 jest.mock('./railsNewRunner', () => {
@@ -27,21 +27,19 @@ jest.mock('./railsNewRunner', () => {
   };
 });
 
-import {
-  ContainerRunner,
-  getVoidLogger,
-  UrlReader,
-} from '@backstage/backend-common';
+import { ContainerRunner } from '@backstage/backend-common';
 import { ConfigReader } from '@backstage/config';
 import { ScmIntegrations } from '@backstage/integration';
-import mockFs from 'mock-fs';
-import os from 'os';
 import { resolve as resolvePath } from 'path';
-import { PassThrough } from 'stream';
 import { createFetchRailsAction } from './index';
-import { fetchContents } from '@backstage/plugin-scaffolder-backend';
+import { fetchContents } from '@backstage/plugin-scaffolder-node';
+import { createMockDirectory } from '@backstage/backend-test-utils';
+import { createMockActionContext } from '@backstage/plugin-scaffolder-node-test-utils';
+import { Writable } from 'stream';
+import { UrlReaderService } from '@backstage/backend-plugin-api';
 
 describe('fetch:rails', () => {
+  const mockDir = createMockDirectory();
   const integrations = ScmIntegrations.fromConfig(
     new ConfigReader({
       integrations: {
@@ -53,8 +51,7 @@ describe('fetch:rails', () => {
     }),
   );
 
-  const mockTmpDir = os.tmpdir();
-  const mockContext = {
+  const mockContext = createMockActionContext({
     input: {
       url: 'https://rubyonrails.org/generator',
       targetPath: 'something',
@@ -66,15 +63,10 @@ describe('fetch:rails', () => {
       baseUrl: 'somebase',
       entityRef: 'template:default/myTemplate',
     },
-    workspacePath: mockTmpDir,
-    logger: getVoidLogger(),
-    logStream: new PassThrough(),
-    output: jest.fn(),
-    createTemporaryDirectory: jest.fn().mockResolvedValue(mockTmpDir),
-  };
+    workspacePath: mockDir.path,
+  });
 
-  const mockReader: UrlReader = {
-    read: jest.fn(),
+  const mockReader: UrlReaderService = {
     readUrl: jest.fn(),
     readTree: jest.fn(),
     search: jest.fn(),
@@ -91,12 +83,10 @@ describe('fetch:rails', () => {
   });
 
   beforeEach(() => {
-    mockFs({ [`${mockContext.workspacePath}/result`]: {} });
-    jest.restoreAllMocks();
-  });
-
-  afterEach(() => {
-    mockFs.restore();
+    mockDir.setContent({
+      result: '{}',
+    });
+    jest.clearAllMocks();
   });
 
   it('should call fetchContents with the correct values', async () => {
@@ -105,7 +95,7 @@ describe('fetch:rails', () => {
     expect(fetchContents).toHaveBeenCalledWith({
       reader: mockReader,
       integrations,
-      baseUrl: mockContext.templateInfo.baseUrl,
+      baseUrl: mockContext.templateInfo?.baseUrl,
       fetchUrl: mockContext.input.url,
       outputPath: resolvePath(mockContext.workspacePath),
     });
@@ -115,8 +105,8 @@ describe('fetch:rails', () => {
     await action.handler(mockContext);
 
     expect(mockRailsTemplater.run).toHaveBeenCalledWith({
-      workspacePath: mockTmpDir,
-      logStream: mockContext.logStream,
+      workspacePath: mockContext.workspacePath,
+      logStream: expect.any(Writable),
       values: mockContext.input.values,
     });
   });
@@ -131,8 +121,8 @@ describe('fetch:rails', () => {
     });
 
     expect(mockRailsTemplater.run).toHaveBeenCalledWith({
-      workspacePath: mockTmpDir,
-      logStream: mockContext.logStream,
+      workspacePath: mockContext.workspacePath,
+      logStream: expect.any(Writable),
       values: {
         ...mockContext.input.values,
         imageName: 'foo/rails-custom-image',

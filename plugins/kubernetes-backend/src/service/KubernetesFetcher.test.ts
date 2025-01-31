@@ -14,15 +14,28 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
+import { ANNOTATION_KUBERNETES_AUTH_PROVIDER } from '@backstage/plugin-kubernetes-common';
 import { KubernetesClientBasedFetcher } from './KubernetesFetcher';
 import { ObjectToFetch } from '../types/types';
-import { topPods } from '@kubernetes/client-node';
+import {
+  MockedRequest,
+  RestContext,
+  ResponseTransformer,
+  compose,
+  rest,
+} from 'msw';
+import { setupServer } from 'msw/node';
+import {
+  createMockDirectory,
+  mockServices,
+  registerMswTestHooks,
+} from '@backstage/backend-test-utils';
 
-jest.mock('@kubernetes/client-node', () => ({
-  ...jest.requireActual('@kubernetes/client-node'),
-  topPods: jest.fn(),
-}));
+const mockCertDir = createMockDirectory({
+  content: {
+    'ca.crt': 'MOCKCA',
+  },
+});
 
 const OBJECTS_TO_FETCH = new Set<ObjectToFetch>([
   {
@@ -39,71 +52,104 @@ const OBJECTS_TO_FETCH = new Set<ObjectToFetch>([
   },
 ]);
 
-const POD_METRICS_FIXTURE = {
-  containers: [],
-  cpu: {
-    currentUsage: 100,
-    limitTotal: 102,
-    requestTotal: 101,
+const POD_METRICS_FIXTURE = [
+  {
+    type: 'podstatus',
+    resources: [
+      {
+        CPU: { CurrentUsage: 0, LimitTotal: 1, RequestTotal: 0.5 },
+        Memory: {
+          CurrentUsage: 0,
+          LimitTotal: 1000000000n,
+          RequestTotal: 512000000n,
+        },
+      },
+    ],
   },
-  memory: {
-    currentUsage: '1000',
-    limitTotal: '1002',
-    requestTotal: '1001',
-  },
-  pod: {},
-};
+];
 
 describe('KubernetesFetcher', () => {
-  describe('fetchObjectsForService', () => {
-    let clientMock: any;
-    let kubernetesClientProvider: any;
-    let sut: KubernetesClientBasedFetcher;
+  const worker = setupServer();
+  registerMswTestHooks(worker);
 
-    beforeEach(() => {
-      jest.resetAllMocks();
-      clientMock = {
-        listClusterCustomObject: jest.fn(),
-        listNamespacedCustomObject: jest.fn(),
-        addInterceptor: jest.fn(),
-      };
-
-      kubernetesClientProvider = {
-        getCustomObjectsClient: jest.fn(() => clientMock),
-      };
-
-      sut = new KubernetesClientBasedFetcher({
-        kubernetesClientProvider,
-        logger: getVoidLogger(),
-      });
+  const labels = (req: MockedRequest): object => {
+    const selectorParam = req.url.searchParams.get('labelSelector');
+    if (selectorParam) {
+      const [key, value] = selectorParam.split('=');
+      return { [key]: value };
+    }
+    return {};
+  };
+  const checkToken = (
+    req: MockedRequest,
+    ctx: RestContext,
+    token: string,
+  ): ResponseTransformer => {
+    switch (req.headers.get('Authorization')) {
+      case `Bearer ${token}`:
+        return ctx.status(200);
+      default:
+        return compose(
+          ctx.status(401),
+          ctx.json({
+            kind: 'Status',
+            apiVersion: 'v1',
+            code: 401,
+          }),
+        );
+    }
+  };
+  const withLabels = <T extends { items: { metadata: object }[] }>(
+    req: MockedRequest,
+    ctx: RestContext,
+    body: T,
+  ): ResponseTransformer =>
+    ctx.json({
+      ...body,
+      items: body.items.map(item => ({
+        ...item,
+        metadata: { ...item.metadata, labels: labels(req) },
+      })),
     });
+
+  describe('fetchObjectsForService', () => {
+    let sut: KubernetesClientBasedFetcher;
+    const logger = mockServices.logger.mock();
 
     const testErrorResponse = async (
       errorResponse: any,
       expectedResult: any,
     ) => {
-      clientMock.listClusterCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'pod-name',
-              },
-            },
-          ],
-        },
-      });
-
-      clientMock.listClusterCustomObject.mockRejectedValue(errorResponse);
+      worker.use(
+        rest.get('http://localhost:9999/api/v1/pods', (req, res, ctx) =>
+          res(
+            checkToken(req, ctx, 'token'),
+            withLabels(req, ctx, {
+              items: [{ metadata: { name: 'pod-name' } }],
+            }),
+          ),
+        ),
+        rest.get('http://localhost:9999/api/v1/services', (_, res, ctx) => {
+          return res(
+            ctx.status(errorResponse.response.statusCode),
+            ctx.json({
+              kind: 'Status',
+              apiVersion: 'v1',
+              status: 'Failure',
+              code: errorResponse.response.statusCode,
+            }),
+          );
+        }),
+      );
 
       const result = await sut.fetchObjectsForService({
         serviceId: 'some-service',
         clusterDetails: {
           name: 'cluster1',
           url: 'http://localhost:9999',
-          serviceAccountToken: 'token',
-          authProvider: 'serviceAccount',
+          authMetadata: {},
         },
+        credential: { type: 'bearer token', token: 'token' },
         objectTypesToFetch: OBJECTS_TO_FETCH,
         labelSelector: '',
         customResources: [],
@@ -118,75 +164,53 @@ describe('KubernetesFetcher', () => {
               {
                 metadata: {
                   name: 'pod-name',
+                  labels: {},
                 },
               },
             ],
           },
         ],
       });
-
-      expect(clientMock.listClusterCustomObject.mock.calls.length).toBe(2);
-
-      expect(clientMock.listClusterCustomObject.mock.calls[0]).toEqual([
-        '',
-        'v1',
-        'pods',
-        '',
-        false,
-        '',
-        '',
-        'backstage.io/kubernetes-id=some-service',
-      ]);
-
-      expect(clientMock.listClusterCustomObject.mock.calls[1]).toEqual([
-        '',
-        'v1',
-        'services',
-        '',
-        false,
-        '',
-        '',
-        'backstage.io/kubernetes-id=some-service',
-      ]);
-
-      expect(
-        kubernetesClientProvider.getCustomObjectsClient.mock.calls.length,
-      ).toBe(2);
     };
 
-    it('should return pods, services', async () => {
-      clientMock.listClusterCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'pod-name',
-              },
-            },
-          ],
-        },
+    beforeEach(() => {
+      sut = new KubernetesClientBasedFetcher({
+        logger,
       });
+    });
 
-      clientMock.listClusterCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'service-name',
-              },
-            },
-          ],
-        },
-      });
+    it('should support clusters with a base path', async () => {
+      worker.use(
+        rest.get(
+          'http://localhost:9999/k8s/clusters/1234/api/v1/pods',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'pod-name' } }],
+              }),
+            ),
+        ),
+        rest.get(
+          'http://localhost:9999/k8s/clusters/1234/api/v1/services',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'service-name' } }],
+              }),
+            ),
+        ),
+      );
 
       const result = await sut.fetchObjectsForService({
         serviceId: 'some-service',
         clusterDetails: {
           name: 'cluster1',
-          url: 'http://localhost:9999',
-          serviceAccountToken: 'token',
-          authProvider: 'serviceAccount',
+          url: 'http://localhost:9999/k8s/clusters/1234',
+          authMetadata: {},
         },
+        credential: { type: 'bearer token', token: 'token' },
         objectTypesToFetch: OBJECTS_TO_FETCH,
         labelSelector: '',
         customResources: [],
@@ -201,6 +225,7 @@ describe('KubernetesFetcher', () => {
               {
                 metadata: {
                   name: 'pod-name',
+                  labels: {},
                 },
               },
             ],
@@ -211,86 +236,168 @@ describe('KubernetesFetcher', () => {
               {
                 metadata: {
                   name: 'service-name',
+                  labels: {},
                 },
               },
             ],
           },
         ],
       });
-
-      expect(clientMock.listClusterCustomObject.mock.calls.length).toBe(2);
-
-      expect(clientMock.listClusterCustomObject.mock.calls[0]).toEqual([
-        '',
-        'v1',
-        'pods',
-        '',
-        false,
-        '',
-        '',
-        'backstage.io/kubernetes-id=some-service',
-      ]);
-
-      expect(clientMock.listClusterCustomObject.mock.calls[1]).toEqual([
-        '',
-        'v1',
-        'services',
-        '',
-        false,
-        '',
-        '',
-        'backstage.io/kubernetes-id=some-service',
-      ]);
-
-      expect(
-        kubernetesClientProvider.getCustomObjectsClient.mock.calls.length,
-      ).toBe(2);
     });
-    it('should return pods, services and customobjects', async () => {
-      clientMock.listClusterCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'pod-name',
-              },
-            },
-          ],
+    it('localKubectlProxy authProvider fetches resources correctly', async () => {
+      worker.use(
+        rest.get(
+          'http://localhost:9999/k8s/clusters/1234/api/v1/services',
+          (req, res, ctx) =>
+            res(
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'service-name' } }],
+              }),
+            ),
+        ),
+      );
+
+      const result = await sut.fetchObjectsForService({
+        serviceId: 'some-service',
+        clusterDetails: {
+          name: 'cluster1',
+          url: 'http://localhost:9999/k8s/clusters/1234',
+          authMetadata: {
+            [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'localKubectlProxy',
+          },
         },
+        credential: { type: 'anonymous' },
+        objectTypesToFetch: new Set([
+          {
+            group: '',
+            apiVersion: 'v1',
+            plural: 'services',
+            objectType: 'services',
+          },
+        ]),
+        labelSelector: '',
+        customResources: [],
       });
 
-      clientMock.listClusterCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'service-name',
+      expect(result).toStrictEqual({
+        errors: [],
+        responses: [
+          {
+            type: 'services',
+            resources: [
+              {
+                metadata: {
+                  name: 'service-name',
+                  labels: {},
+                },
               },
-            },
-          ],
-        },
+            ],
+          },
+        ],
       });
-
-      clientMock.listClusterCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'something-else',
-              },
-            },
-          ],
-        },
-      });
+    });
+    it('should return pods, services', async () => {
+      worker.use(
+        rest.get('http://localhost:9999/api/v1/pods', (req, res, ctx) =>
+          res(
+            checkToken(req, ctx, 'token'),
+            withLabels(req, ctx, {
+              items: [{ metadata: { name: 'pod-name' } }],
+            }),
+          ),
+        ),
+        rest.get('http://localhost:9999/api/v1/services', (req, res, ctx) =>
+          res(
+            checkToken(req, ctx, 'token'),
+            withLabels(req, ctx, {
+              items: [{ metadata: { name: 'service-name' } }],
+            }),
+          ),
+        ),
+      );
 
       const result = await sut.fetchObjectsForService({
         serviceId: 'some-service',
         clusterDetails: {
           name: 'cluster1',
           url: 'http://localhost:9999',
-          serviceAccountToken: 'token',
-          authProvider: 'serviceAccount',
+          authMetadata: {},
         },
+        credential: { type: 'bearer token', token: 'token' },
+        objectTypesToFetch: OBJECTS_TO_FETCH,
+        labelSelector: '',
+        customResources: [],
+      });
+
+      expect(result).toStrictEqual({
+        errors: [],
+        responses: [
+          {
+            type: 'pods',
+            resources: [
+              {
+                metadata: {
+                  name: 'pod-name',
+                  labels: {},
+                },
+              },
+            ],
+          },
+          {
+            type: 'services',
+            resources: [
+              {
+                metadata: {
+                  name: 'service-name',
+                  labels: {},
+                },
+              },
+            ],
+          },
+        ],
+      });
+    });
+    it('should return pods, services and customobjects', async () => {
+      worker.use(
+        rest.get('http://localhost:9999/api/v1/pods', (req, res, ctx) =>
+          res(
+            checkToken(req, ctx, 'token'),
+            withLabels(req, ctx, {
+              kind: 'PodList',
+              items: [{ metadata: { name: 'pod-name' } }],
+            }),
+          ),
+        ),
+        rest.get('http://localhost:9999/api/v1/services', (req, res, ctx) =>
+          res(
+            checkToken(req, ctx, 'token'),
+            withLabels(req, ctx, {
+              kind: 'ServiceList',
+              items: [{ metadata: { name: 'service-name' } }],
+            }),
+          ),
+        ),
+        rest.get(
+          'http://localhost:9999/apis/some-group/v2/things',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                kind: 'ThingList',
+                items: [{ metadata: { name: 'something-else' } }],
+              }),
+            ),
+        ),
+      );
+
+      const result = await sut.fetchObjectsForService({
+        serviceId: 'some-service',
+        clusterDetails: {
+          name: 'cluster1',
+          url: 'http://localhost:9999',
+          authMetadata: {},
+        },
+        credential: { type: 'bearer token', token: 'token' },
         objectTypesToFetch: OBJECTS_TO_FETCH,
         labelSelector: '',
         customResources: [
@@ -312,6 +419,7 @@ describe('KubernetesFetcher', () => {
               {
                 metadata: {
                   name: 'pod-name',
+                  labels: {},
                 },
               },
             ],
@@ -322,6 +430,7 @@ describe('KubernetesFetcher', () => {
               {
                 metadata: {
                   name: 'service-name',
+                  labels: {},
                 },
               },
             ],
@@ -330,53 +439,16 @@ describe('KubernetesFetcher', () => {
             type: 'customresources',
             resources: [
               {
+                kind: 'Thing',
                 metadata: {
                   name: 'something-else',
+                  labels: {},
                 },
               },
             ],
           },
         ],
       });
-
-      expect(clientMock.listClusterCustomObject.mock.calls.length).toBe(3);
-
-      expect(clientMock.listClusterCustomObject.mock.calls[0]).toEqual([
-        '',
-        'v1',
-        'pods',
-        '',
-        false,
-        '',
-        '',
-        'backstage.io/kubernetes-id=some-service',
-      ]);
-
-      expect(clientMock.listClusterCustomObject.mock.calls[1]).toEqual([
-        '',
-        'v1',
-        'services',
-        '',
-        false,
-        '',
-        '',
-        'backstage.io/kubernetes-id=some-service',
-      ]);
-
-      expect(clientMock.listClusterCustomObject.mock.calls[2]).toEqual([
-        'some-group',
-        'v2',
-        'things',
-        '',
-        false,
-        '',
-        '',
-        'backstage.io/kubernetes-id=some-service',
-      ]);
-
-      expect(
-        kubernetesClientProvider.getCustomObjectsClient.mock.calls.length,
-      ).toBe(3);
     });
     // they're in testErrorResponse
     // eslint-disable-next-line jest/expect-expect
@@ -385,39 +457,68 @@ describe('KubernetesFetcher', () => {
         {
           response: {
             statusCode: 400,
-            request: {
-              uri: {
-                pathname: '/some/path',
-              },
-            },
           },
         },
         {
           errorType: 'BAD_REQUEST',
-          resourcePath: '/some/path',
+          resourcePath: '/api/v1/services',
           statusCode: 400,
         },
       );
     });
-    // they're in testErrorResponse
-    // eslint-disable-next-line jest/expect-expect
-    it('should return pods, unauthorized error', async () => {
-      await testErrorResponse(
-        {
-          response: {
+    it('should return pods and unauthorized error, logging a warning', async () => {
+      const warn = jest.spyOn(logger, 'warn');
+      worker.use(
+        rest.get('http://localhost:9999/api/v1/pods', (req, res, ctx) =>
+          res(
+            checkToken(req, ctx, 'token'),
+            withLabels(req, ctx, {
+              items: [{ metadata: { name: 'pod-name' } }],
+            }),
+          ),
+        ),
+        rest.get('http://localhost:9999/api/v1/services', (req, res, ctx) =>
+          res(checkToken(req, ctx, 'other-token')),
+        ),
+      );
+
+      const result = await sut.fetchObjectsForService({
+        serviceId: 'some-service',
+        clusterDetails: {
+          name: 'cluster1',
+          url: 'http://localhost:9999',
+          authMetadata: {},
+        },
+        credential: { type: 'bearer token', token: 'token' },
+        objectTypesToFetch: OBJECTS_TO_FETCH,
+        labelSelector: '',
+        customResources: [],
+      });
+
+      expect(result).toStrictEqual({
+        errors: [
+          {
+            errorType: 'UNAUTHORIZED_ERROR',
+            resourcePath: '/api/v1/services',
             statusCode: 401,
-            request: {
-              uri: {
-                pathname: '/some/path',
-              },
-            },
           },
-        },
-        {
-          errorType: 'UNAUTHORIZED_ERROR',
-          resourcePath: '/some/path',
-          statusCode: 401,
-        },
+        ],
+        responses: [
+          {
+            type: 'pods',
+            resources: [
+              {
+                metadata: {
+                  name: 'pod-name',
+                  labels: {},
+                },
+              },
+            ],
+          },
+        ],
+      });
+      expect(warn).toHaveBeenCalledWith(
+        'Received 401 status when fetching "/api/v1/services" from cluster "cluster1"; body=[{"kind":"Status","apiVersion":"v1","code":401}]',
       );
     });
     // they're in testErrorResponse
@@ -427,16 +528,11 @@ describe('KubernetesFetcher', () => {
         {
           response: {
             statusCode: 500,
-            request: {
-              uri: {
-                pathname: '/some/path',
-              },
-            },
           },
         },
         {
           errorType: 'SYSTEM_ERROR',
-          resourcePath: '/some/path',
+          resourcePath: '/api/v1/services',
           statusCode: 500,
         },
       );
@@ -448,191 +544,724 @@ describe('KubernetesFetcher', () => {
         {
           response: {
             statusCode: 900,
-            request: {
-              uri: {
-                pathname: '/some/path',
-              },
-            },
           },
         },
         {
           errorType: 'UNKNOWN_ERROR',
-          resourcePath: '/some/path',
+          resourcePath: '/api/v1/services',
           statusCode: 900,
         },
       );
     });
-    it('should always add a labelSelector query', async () => {
-      clientMock.listClusterCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'pod-name',
-              },
-            },
-          ],
-        },
-      });
+    it('fails on a network error', async () => {
+      worker.use(
+        rest.get('http://badurl.does.not.exist/api/v1/pods', (_, res) =>
+          res.networkError('getaddrinfo ENOTFOUND badurl.does.not.exist'),
+        ),
+        rest.get(
+          'http://badurl.does.not.exist/api/v1/services',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'service-name' } }],
+              }),
+            ),
+        ),
+      );
 
-      clientMock.listClusterCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'service-name',
-              },
-            },
-          ],
-        },
-      });
-
-      await sut.fetchObjectsForService({
+      const result = sut.fetchObjectsForService({
         serviceId: 'some-service',
         clusterDetails: {
           name: 'cluster1',
-          url: 'http://localhost:9999',
-          serviceAccountToken: 'token',
-          authProvider: 'serviceAccount',
+          url: 'http://badurl.does.not.exist',
+          authMetadata: {},
         },
+        credential: { type: 'bearer token', token: 'token' },
         objectTypesToFetch: OBJECTS_TO_FETCH,
         labelSelector: '',
         customResources: [],
       });
 
-      const mockCall = clientMock.listClusterCustomObject.mock.calls[0];
-      const actualSelector = mockCall[mockCall.length - 1];
-      const expectedSelector = 'backstage.io/kubernetes-id=some-service';
-      expect(actualSelector).toBe(expectedSelector);
+      await expect(result).rejects.toThrow(
+        'getaddrinfo ENOTFOUND badurl.does.not.exist',
+      );
     });
-    it('should use namespace if provided', async () => {
-      clientMock.listNamespacedCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'pod-name',
-              },
-            },
-          ],
-        },
-      });
+    it('should respect labelSelector', async () => {
+      worker.use(
+        rest.get('http://localhost:9999/api/v1/pods', (req, res, ctx) =>
+          res(
+            checkToken(req, ctx, 'token'),
+            withLabels(req, ctx, {
+              items: [{ metadata: { name: 'pod-name' } }],
+            }),
+          ),
+        ),
+        rest.get('http://localhost:9999/api/v1/services', (req, res, ctx) =>
+          res(
+            checkToken(req, ctx, 'token'),
+            withLabels(req, ctx, {
+              items: [{ metadata: { name: 'service-name' } }],
+            }),
+          ),
+        ),
+      );
 
-      clientMock.listNamespacedCustomObject.mockResolvedValueOnce({
-        body: {
-          items: [
-            {
-              metadata: {
-                name: 'service-name',
-              },
-            },
-          ],
-        },
-      });
-
-      await sut.fetchObjectsForService({
+      const result = await sut.fetchObjectsForService({
         serviceId: 'some-service',
         clusterDetails: {
           name: 'cluster1',
           url: 'http://localhost:9999',
-          serviceAccountToken: 'token',
-          authProvider: 'serviceAccount',
+          authMetadata: {},
         },
+        credential: { type: 'bearer token', token: 'token' },
+        objectTypesToFetch: OBJECTS_TO_FETCH,
+        labelSelector: 'service-label=value',
+        customResources: [],
+      });
+
+      expect(result).toStrictEqual({
+        errors: [],
+        responses: [
+          {
+            type: 'pods',
+            resources: [
+              {
+                metadata: {
+                  name: 'pod-name',
+                  labels: { 'service-label': 'value' },
+                },
+              },
+            ],
+          },
+          {
+            type: 'services',
+            resources: [
+              {
+                metadata: {
+                  name: 'service-name',
+                  labels: { 'service-label': 'value' },
+                },
+              },
+            ],
+          },
+        ],
+      });
+    });
+    describe('when server uses TLS', () => {
+      let httpsRequest: jest.SpyInstance;
+      const initialCAPath = process.env.KUBERNETES_CA_FILE_PATH;
+      beforeAll(() => {
+        httpsRequest = jest.spyOn(
+          // this is pretty egregious reverse engineering of msw.
+          // If the SetupServerApi constructor was exported, we wouldn't need
+          // to be quite so hacky here
+          (worker as any).interceptor.interceptors[0].modules.get('https'),
+          'request',
+        );
+      });
+      beforeEach(() => {
+        httpsRequest.mockClear();
+        process.env.KUBERNETES_CA_FILE_PATH = mockCertDir.resolve('ca.crt');
+      });
+
+      afterEach(() => {
+        process.env.KUBERNETES_CA_FILE_PATH = initialCAPath;
+      });
+
+      it('should trust specified caData', async () => {
+        worker.use(
+          rest.get('https://localhost:9999/api/v1/pods', (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'pod-name' } }],
+              }),
+            ),
+          ),
+        );
+
+        await sut.fetchObjectsForService({
+          serviceId: 'some-service',
+          clusterDetails: {
+            name: 'cluster1',
+            url: 'https://localhost:9999',
+            authMetadata: {},
+            caData: 'MOCKCA',
+          },
+          credential: { type: 'bearer token', token: 'token' },
+          objectTypesToFetch: new Set<ObjectToFetch>([
+            {
+              group: '',
+              apiVersion: 'v1',
+              plural: 'pods',
+              objectType: 'pods',
+            },
+          ]),
+          labelSelector: '',
+          customResources: [],
+        });
+
+        expect(httpsRequest).toHaveBeenCalledTimes(1);
+        const [[{ agent }]] = httpsRequest.mock.calls;
+        expect(agent.options.ca.toString('base64')).toMatch('MOCKCA');
+      });
+      it('should use default chain of trust when caData is unspecified', async () => {
+        worker.use(
+          rest.get('https://localhost:9999/api/v1/pods', (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'pod-name' } }],
+              }),
+            ),
+          ),
+        );
+
+        await sut.fetchObjectsForService({
+          serviceId: 'some-service',
+          clusterDetails: {
+            name: 'cluster1',
+            url: 'https://localhost:9999',
+            authMetadata: {},
+          },
+          credential: { type: 'bearer token', token: 'token' },
+          objectTypesToFetch: new Set<ObjectToFetch>([
+            {
+              group: '',
+              apiVersion: 'v1',
+              plural: 'pods',
+              objectType: 'pods',
+            },
+          ]),
+          labelSelector: '',
+          customResources: [],
+        });
+
+        expect(httpsRequest).toHaveBeenCalledTimes(1);
+        const [[{ agent }]] = httpsRequest.mock.calls;
+        expect(agent.options.ca).toBeUndefined();
+      });
+      describe('with a CA file on disk', () => {
+        it('should trust contents of specified caFile', async () => {
+          worker.use(
+            rest.get('https://localhost:9999/api/v1/pods', (req, res, ctx) =>
+              res(
+                checkToken(req, ctx, 'token'),
+                withLabels(req, ctx, {
+                  items: [{ metadata: { name: 'pod-name' } }],
+                }),
+              ),
+            ),
+          );
+
+          await sut.fetchObjectsForService({
+            serviceId: 'some-service',
+            clusterDetails: {
+              name: 'cluster1',
+              url: 'https://localhost:9999',
+              authMetadata: {},
+              caFile: process.env.KUBERNETES_CA_FILE_PATH,
+            },
+            credential: { type: 'bearer token', token: 'token' },
+            objectTypesToFetch: new Set<ObjectToFetch>([
+              {
+                group: '',
+                apiVersion: 'v1',
+                plural: 'pods',
+                objectType: 'pods',
+              },
+            ]),
+            labelSelector: '',
+            customResources: [],
+          });
+
+          expect(httpsRequest).toHaveBeenCalledTimes(1);
+          const [[{ agent }]] = httpsRequest.mock.calls;
+          expect(agent.options.ca.toString()).toEqual('MOCKCA');
+        });
+      });
+      it('should accept unauthorized certs when skipTLSVerify is set', async () => {
+        worker.use(
+          rest.get('https://localhost:9999/api/v1/pods', (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'pod-name' } }],
+              }),
+            ),
+          ),
+        );
+
+        await sut.fetchObjectsForService({
+          serviceId: 'some-service',
+          clusterDetails: {
+            name: 'cluster1',
+            url: 'https://localhost:9999',
+            authMetadata: {},
+            skipTLSVerify: true,
+          },
+          credential: { type: 'bearer token', token: 'token' },
+          objectTypesToFetch: new Set<ObjectToFetch>([
+            {
+              group: '',
+              apiVersion: 'v1',
+              plural: 'pods',
+              objectType: 'pods',
+            },
+          ]),
+          labelSelector: '',
+          customResources: [],
+        });
+
+        expect(httpsRequest).toHaveBeenCalledTimes(1);
+        const [[{ agent }]] = httpsRequest.mock.calls;
+        expect(agent.options.rejectUnauthorized).toBe(false);
+      });
+
+      it('fetchObjectsForService authenticates with k8s using x509 client cert from authentication strategy', async () => {
+        worker.use(
+          rest.get('https://localhost:9999/api/v1/pods', (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'pod-name' } }],
+              }),
+            ),
+          ),
+        );
+
+        const myCert = 'MOCKCert';
+        const myKey = 'MOCKKey';
+
+        const result = sut.fetchObjectsForService({
+          serviceId: 'some-service',
+          clusterDetails: {
+            name: 'cluster1',
+            url: 'https://localhost:9999',
+            authMetadata: {},
+            caData: 'MOCKCA',
+          },
+          credential: {
+            type: 'x509 client certificate',
+            cert: myCert,
+            key: myKey,
+          },
+          objectTypesToFetch: new Set<ObjectToFetch>([
+            {
+              group: '',
+              apiVersion: 'v1',
+              plural: 'pods',
+              objectType: 'pods',
+            },
+          ]),
+          labelSelector: '',
+          customResources: [],
+        });
+
+        await expect(result).rejects.toThrow(/PEM/);
+
+        expect(httpsRequest).toHaveBeenCalledTimes(1);
+        const [[{ agent }]] = httpsRequest.mock.calls;
+        expect(agent.options.ca.toString('base64')).toMatch('MOCKCA');
+        expect(agent.options.cert).toEqual(myCert);
+        expect(agent.options.key).toEqual(myKey);
+      });
+
+      it('fetchPodMetricsByNamespaces authenticates with k8s using x509 client cert from authentication strategy', async () => {
+        worker.use(
+          rest.get(
+            'https://localhost:9999/api/v1/namespaces/:namespace/pods',
+            (req, res, ctx) =>
+              res(
+                withLabels(req, ctx, {
+                  items: [
+                    {
+                      metadata: { name: 'pod-name' },
+                      spec: {
+                        containers: [
+                          {
+                            name: 'container-name',
+                            resources: {
+                              requests: { cpu: '500m', memory: '512M' },
+                              limits: { cpu: '1000m', memory: '1G' },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                }),
+              ),
+          ),
+          rest.get(
+            'https://localhost:9999/apis/metrics.k8s.io/v1beta1/namespaces/:namespace/pods',
+            (req, res, ctx) =>
+              res(
+                withLabels(req, ctx, {
+                  items: [
+                    {
+                      metadata: { name: 'pod-name' },
+                      containers: [
+                        {
+                          name: 'container-name',
+                          usage: { cpu: '0', memory: '0' },
+                        },
+                      ],
+                    },
+                  ],
+                }),
+              ),
+          ),
+        );
+
+        const myCert = 'MOCKCert';
+        const myKey = 'MOCKKey';
+
+        const result = sut.fetchPodMetricsByNamespaces(
+          {
+            name: 'cluster1',
+            url: 'https://localhost:9999',
+            authMetadata: {},
+            caData: 'MOCKCA',
+          },
+          {
+            type: 'x509 client certificate',
+            cert: myCert,
+            key: myKey,
+          },
+          new Set(['ns-a']),
+        );
+
+        await expect(result).rejects.toThrow(/PEM/);
+
+        expect(httpsRequest).toHaveBeenCalledTimes(2);
+        const [[{ agent }]] = httpsRequest.mock.calls;
+        expect(agent.options.ca.toString('base64')).toMatch('MOCKCA');
+        expect(agent.options.cert).toEqual(myCert);
+        expect(agent.options.key).toEqual(myKey);
+      });
+    });
+
+    it('should use namespace if provided', async () => {
+      worker.use(
+        rest.get(
+          'http://localhost:9999/api/v1/namespaces/some-namespace/pods',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'pod-name' } }],
+              }),
+            ),
+        ),
+        rest.get(
+          'http://localhost:9999/api/v1/namespaces/some-namespace/services',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'service-name' } }],
+              }),
+            ),
+        ),
+      );
+
+      const result = await sut.fetchObjectsForService({
+        serviceId: 'some-service',
+        clusterDetails: {
+          name: 'cluster1',
+          url: 'http://localhost:9999',
+          authMetadata: {},
+        },
+        credential: { type: 'bearer token', token: 'token' },
         objectTypesToFetch: OBJECTS_TO_FETCH,
         labelSelector: '',
         namespace: 'some-namespace',
         customResources: [],
       });
 
-      const mockCall = clientMock.listNamespacedCustomObject.mock.calls[0];
-      const namespace = mockCall[2];
-      expect(namespace).toBe('some-namespace');
-    });
-  });
-
-  describe('fetchPodMetricsByNamespaces', () => {
-    let kubernetesClientProvider: any;
-    let sut: KubernetesClientBasedFetcher;
-
-    beforeEach(() => {
-      jest.resetAllMocks();
-
-      kubernetesClientProvider = {
-        getMetricsClient: jest.fn(),
-        getCoreClientByClusterDetails: jest.fn(),
-      };
-
-      sut = new KubernetesClientBasedFetcher({
-        kubernetesClientProvider,
-        logger: getVoidLogger(),
-      });
-    });
-
-    it('should return pod metrics', async () => {
-      (topPods as jest.Mock).mockResolvedValue(POD_METRICS_FIXTURE);
-
-      const result = await sut.fetchPodMetricsByNamespaces(
-        {
-          name: 'cluster1',
-          url: 'http://localhost:9999',
-          serviceAccountToken: 'token',
-          authProvider: 'serviceAccount',
-        },
-        new Set(['ns-a', 'ns-b']),
-      );
       expect(result).toStrictEqual({
         errors: [],
         responses: [
           {
-            type: 'podstatus',
-            resources: POD_METRICS_FIXTURE,
+            type: 'pods',
+            resources: [
+              {
+                metadata: {
+                  name: 'pod-name',
+                  labels: {},
+                },
+              },
+            ],
           },
           {
-            type: 'podstatus',
-            resources: POD_METRICS_FIXTURE,
+            type: 'services',
+            resources: [
+              {
+                metadata: {
+                  name: 'service-name',
+                  labels: {},
+                },
+              },
+            ],
           },
         ],
       });
     });
-    it('should return pod metrics and error', async () => {
-      const topPodsMock = topPods as jest.Mock;
-      topPodsMock
-        .mockResolvedValueOnce(POD_METRICS_FIXTURE)
-        .mockRejectedValueOnce({
-          response: {
-            statusCode: 404,
-            request: {
-              uri: {
-                pathname: '/some/path',
-              },
+    describe('Backstage not running on k8s', () => {
+      it('fails if no credential is provided', () => {
+        const result = sut.fetchObjectsForService({
+          serviceId: 'some-service',
+          clusterDetails: {
+            name: 'unauthenticated-cluster',
+            url: 'https://10.10.10.10',
+            authMetadata: {},
+          },
+          credential: { type: 'anonymous' },
+          objectTypesToFetch: OBJECTS_TO_FETCH,
+          labelSelector: '',
+          customResources: [],
+        });
+        return expect(result).rejects.toThrow(
+          "no bearer token or client cert for cluster 'unauthenticated-cluster' and not running in Kubernetes",
+        );
+      });
+    });
+    describe('Backstage running on k8s', () => {
+      const initialHost = process.env.KUBERNETES_SERVICE_HOST;
+      const initialPort = process.env.KUBERNETES_SERVICE_PORT;
+      const initialCAPath = process.env.KUBERNETES_CA_FILE_PATH;
+
+      beforeEach(() => {
+        process.env.KUBERNETES_CA_FILE_PATH = mockCertDir.resolve('ca.crt');
+      });
+
+      afterEach(() => {
+        process.env.KUBERNETES_SERVICE_HOST = initialHost;
+        process.env.KUBERNETES_SERVICE_PORT = initialPort;
+        process.env.KUBERNETES_CA_FILE_PATH = initialCAPath;
+      });
+
+      it('makes in-cluster requests when cluster details has no token', async () => {
+        process.env.KUBERNETES_SERVICE_HOST = '10.10.10.10';
+        process.env.KUBERNETES_SERVICE_PORT = '443';
+        worker.use(
+          rest.get('https://10.10.10.10/api/v1/pods', (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'allowed-token'),
+              withLabels(req, ctx, {
+                items: [{ metadata: { name: 'pod-name' } }],
+              }),
+            ),
+          ),
+        );
+
+        const result = await sut.fetchObjectsForService({
+          serviceId: 'some-service',
+          clusterDetails: {
+            name: 'overridden-to-in-cluster',
+            url: 'https://10.10.10.10',
+            authMetadata: {
+              [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'serviceAccount',
             },
           },
+          credential: { type: 'bearer token', token: 'allowed-token' },
+          objectTypesToFetch: new Set<ObjectToFetch>([
+            {
+              group: '',
+              apiVersion: 'v1',
+              plural: 'pods',
+              objectType: 'pods',
+            },
+          ]),
+          labelSelector: '',
+          customResources: [],
         });
+
+        expect(result).toStrictEqual({
+          errors: [],
+          responses: [
+            {
+              type: 'pods',
+              resources: [
+                {
+                  metadata: {
+                    name: 'pod-name',
+                    labels: {},
+                  },
+                },
+              ],
+            },
+          ],
+        });
+      });
+    });
+  });
+
+  describe('fetchPodMetricsByNamespaces', () => {
+    let sut: KubernetesClientBasedFetcher;
+
+    beforeEach(() => {
+      sut = new KubernetesClientBasedFetcher({
+        logger: mockServices.logger.mock(),
+      });
+    });
+
+    it('should return pod metrics', async () => {
+      worker.use(
+        rest.get(
+          'http://localhost:9999/api/v1/namespaces/:namespace/pods',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [
+                  {
+                    metadata: { name: 'pod-name' },
+                    spec: {
+                      containers: [
+                        {
+                          name: 'container-name',
+                          resources: {
+                            requests: { cpu: '500m', memory: '512M' },
+                            limits: { cpu: '1000m', memory: '1G' },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }),
+            ),
+        ),
+        rest.get(
+          'http://localhost:9999/apis/metrics.k8s.io/v1beta1/namespaces/:namespace/pods',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [
+                  {
+                    metadata: { name: 'pod-name' },
+                    containers: [
+                      {
+                        name: 'container-name',
+                        usage: { cpu: '0', memory: '0' },
+                      },
+                    ],
+                  },
+                ],
+              }),
+            ),
+        ),
+      );
 
       const result = await sut.fetchPodMetricsByNamespaces(
         {
           name: 'cluster1',
           url: 'http://localhost:9999',
-          serviceAccountToken: 'token',
-          authProvider: 'serviceAccount',
+          authMetadata: {},
         },
+        { type: 'bearer token', token: 'token' },
+        new Set(['ns-a']),
+      );
+      expect(result).toMatchObject({
+        errors: [],
+        responses: POD_METRICS_FIXTURE,
+      });
+    });
+    it('should return pod metrics and error', async () => {
+      worker.use(
+        rest.get(
+          'http://localhost:9999/api/v1/namespaces/ns-a/pods',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [
+                  {
+                    metadata: { name: 'pod-name' },
+                    spec: {
+                      containers: [
+                        {
+                          name: 'container-name',
+                          resources: {
+                            requests: { cpu: '500m', memory: '512M' },
+                            limits: { cpu: '1000m', memory: '1G' },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }),
+            ),
+        ),
+        rest.get(
+          'http://localhost:9999/apis/metrics.k8s.io/v1beta1/namespaces/ns-a/pods',
+          (req, res, ctx) =>
+            res(
+              checkToken(req, ctx, 'token'),
+              withLabels(req, ctx, {
+                items: [
+                  {
+                    metadata: { name: 'pod-name' },
+                    containers: [
+                      {
+                        name: 'container-name',
+                        usage: { cpu: '0', memory: '0' },
+                      },
+                    ],
+                  },
+                ],
+              }),
+            ),
+        ),
+        rest.get(
+          'http://localhost:9999/api/v1/namespaces/ns-b/pods',
+          (_, res, ctx) =>
+            res(
+              ctx.status(404),
+              ctx.json({
+                kind: 'Status',
+                apiVersion: 'v1',
+                code: 404,
+              }),
+            ),
+        ),
+        rest.get(
+          'http://localhost:9999/apis/metrics.k8s.io/v1beta1/namespaces/ns-b/pods',
+          (_, res, ctx) =>
+            res(
+              ctx.status(404),
+              ctx.json({
+                kind: 'Status',
+                apiVersion: 'v1',
+                code: 404,
+              }),
+            ),
+        ),
+      );
+
+      const result = await sut.fetchPodMetricsByNamespaces(
+        {
+          name: 'cluster1',
+          url: 'http://localhost:9999',
+          authMetadata: {},
+        },
+        { type: 'bearer token', token: 'token' },
         new Set(['ns-a', 'ns-b']),
       );
-      expect(result).toStrictEqual({
-        errors: [
-          {
-            errorType: 'NOT_FOUND',
-            resourcePath: '/some/path',
-            statusCode: 404,
-          },
-        ],
-        responses: [
-          {
-            type: 'podstatus',
-            resources: POD_METRICS_FIXTURE,
-          },
-        ],
-      });
+
+      expect(result.errors).toStrictEqual([
+        {
+          errorType: 'NOT_FOUND',
+          resourcePath: '/apis/metrics.k8s.io/v1beta1/namespaces/ns-b/pods',
+          statusCode: 404,
+        },
+      ]);
+      expect(result.responses).toMatchObject(POD_METRICS_FIXTURE);
     });
   });
 });

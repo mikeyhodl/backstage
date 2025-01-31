@@ -14,66 +14,87 @@
  * limitations under the License.
  */
 
-import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import React, { ComponentType } from 'react';
+import { fireEvent, waitFor, screen, renderHook } from '@testing-library/react';
 import {
-  MockAnalyticsApi,
+  mockApis,
   TestApiProvider,
-  wrapInTestApp,
+  renderInTestApp,
 } from '@backstage/test-utils';
 import { analyticsApiRef, configApiRef } from '@backstage/core-plugin-api';
 import { isExternalUri, Link, useResolvedPath } from './Link';
-import { Route, Routes } from 'react-router';
-import { renderHook, WrapperComponent } from '@testing-library/react-hooks';
+import { Route, Routes } from 'react-router-dom';
 import { ConfigReader } from '@backstage/config';
 
 describe('<Link />', () => {
   it('navigates using react-router', async () => {
     const testString = 'This is test string';
     const linkText = 'Navigate!';
-    const { getByText } = render(
-      wrapInTestApp(
-        <>
-          <Link to="/test">{linkText}</Link>
-          <Routes>
-            <Route path="/test" element={<p>{testString}</p>} />
-          </Routes>
-        </>,
-      ),
+    await renderInTestApp(
+      <>
+        <Link to="/test">{linkText}</Link>
+        <Routes>
+          <Route path="/test" element={<p>{testString}</p>} />
+        </Routes>
+      </>,
     );
-    expect(() => getByText(testString)).toThrow();
-    fireEvent.click(getByText(linkText));
+    expect(() => screen.getByText(testString)).toThrow();
+    fireEvent.click(screen.getByText(linkText));
     await waitFor(() => {
-      expect(getByText(testString)).toBeInTheDocument();
+      expect(screen.getByText(testString)).toBeInTheDocument();
     });
+  });
+
+  it('does not render external link icon if externalLinkIcon prop is not passed', async () => {
+    const { container } = await renderInTestApp(
+      <Link to="http://something.external">External Link</Link>,
+    );
+    const externalLink = screen.getByRole('link', {
+      name: 'External Link , Opens in a new window',
+    });
+    const externalLinkIcon = container.querySelector('svg');
+    expect(externalLink).not.toContainElement(externalLinkIcon);
+  });
+
+  it('renders external link icon if externalLinkIcon prop is passed', async () => {
+    const { container } = await renderInTestApp(
+      <Link to="http://something.external" externalLinkIcon>
+        External Link
+      </Link>,
+    );
+    const externalLink = screen.getByRole('link', {
+      name: 'External Link , Opens in a new window',
+    });
+    const externalLinkIcon = container.querySelector('svg');
+    expect(externalLink).toContainElement(externalLinkIcon);
   });
 
   it('captures click using analytics api', async () => {
     const linkText = 'Navigate!';
-    const analyticsApi = new MockAnalyticsApi();
+    const analyticsApi = mockApis.analytics();
     const customOnClick = jest.fn();
 
-    const { getByText } = render(
-      wrapInTestApp(
-        <TestApiProvider apis={[[analyticsApiRef, analyticsApi]]}>
-          <Link to="/test" onClick={customOnClick}>
-            {linkText}
-          </Link>
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider apis={[[analyticsApiRef, analyticsApi]]}>
+        <Link to="/test" onClick={customOnClick}>
+          {linkText}
+        </Link>
+      </TestApiProvider>,
     );
 
-    fireEvent.click(getByText(linkText));
+    fireEvent.click(screen.getByText(linkText));
 
     // Analytics event should have been fired.
     await waitFor(() => {
-      expect(analyticsApi.getEvents()[0]).toMatchObject({
-        action: 'click',
-        subject: linkText,
-        attributes: {
-          to: '/test',
-        },
-      });
+      expect(analyticsApi.captureEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'click',
+          subject: linkText,
+          attributes: {
+            to: '/test',
+          },
+        }),
+      );
 
       // Custom onClick handler should have still been fired too.
       expect(customOnClick).toHaveBeenCalled();
@@ -82,20 +103,18 @@ describe('<Link />', () => {
 
   it('does not capture click when noTrack is set', async () => {
     const linkText = 'Navigate!';
-    const analyticsApi = new MockAnalyticsApi();
+    const analyticsApi = mockApis.analytics();
     const customOnClick = jest.fn();
 
-    const { getByText } = render(
-      wrapInTestApp(
-        <TestApiProvider apis={[[analyticsApiRef, analyticsApi]]}>
-          <Link to="/test" onClick={customOnClick} noTrack>
-            {linkText}
-          </Link>
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider apis={[[analyticsApiRef, analyticsApi]]}>
+        <Link to="/test" onClick={customOnClick} noTrack>
+          {linkText}
+        </Link>
+      </TestApiProvider>,
     );
 
-    fireEvent.click(getByText(linkText));
+    fireEvent.click(screen.getByText(linkText));
 
     // Analytics event should have been fired.
     await waitFor(() => {
@@ -103,7 +122,7 @@ describe('<Link />', () => {
       expect(customOnClick).toHaveBeenCalled();
 
       // But there should be no analytics event.
-      expect(analyticsApi.getEvents()).toHaveLength(0);
+      expect(analyticsApi.captureEvent).not.toHaveBeenCalled();
     });
   });
 
@@ -134,7 +153,9 @@ describe('<Link />', () => {
   });
 
   describe('useResolvedPath', () => {
-    const wrapper: WrapperComponent<{}> = ({ children }) => {
+    const wrapper: ComponentType<React.PropsWithChildren<{}>> = ({
+      children,
+    }) => {
       const configApi = new ConfigReader({
         app: { baseUrl: 'http://localhost:3000/example' },
       });
@@ -172,5 +193,25 @@ describe('<Link />', () => {
         expect(result.current).toBe(path);
       });
     });
+  });
+
+  it('throws an error when attempting to link to script code', async () => {
+    await expect(
+      // eslint-disable-next-line no-script-url
+      renderInTestApp(<Link to="javascript:alert('hello')">Script</Link>),
+    ).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"Link component rejected javascript: URL as a security precaution"`,
+    );
+  });
+});
+
+describe('window.open', () => {
+  it('throws an error when attempting to open script code', () => {
+    expect(() =>
+      // eslint-disable-next-line no-script-url
+      window.open("javascript:alert('hello')"),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Rejected window.open() with a javascript: URL as a security precaution"`,
+    );
   });
 });

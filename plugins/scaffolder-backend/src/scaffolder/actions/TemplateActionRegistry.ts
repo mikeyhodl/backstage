@@ -14,37 +14,36 @@
  * limitations under the License.
  */
 
-import { JsonObject } from '@backstage/types';
 import { ConflictError, NotFoundError } from '@backstage/errors';
-import { TemplateAction } from './types';
-
+import { TemplateAction } from '@backstage/plugin-scaffolder-node';
 /**
  * Registry of all registered template actions.
  * @public
  */
 export class TemplateActionRegistry {
-  private readonly actions = new Map<string, TemplateAction<any>>();
+  private readonly actions = new Map<string, TemplateAction>();
 
-  register<TInput extends JsonObject>(action: TemplateAction<TInput>) {
+  register(action: TemplateAction) {
     if (this.actions.has(action.id)) {
       throw new ConflictError(
         `Template action with ID '${action.id}' has already been registered`,
       );
     }
+
     this.actions.set(action.id, action);
   }
 
-  get(actionId: string): TemplateAction<JsonObject> {
+  get(actionId: string): TemplateAction {
     const action = this.actions.get(actionId);
     if (!action) {
       throw new NotFoundError(
-        `Template action with ID '${actionId}' is not registered.`,
+        `Template action with ID '${actionId}' is not registered. See https://backstage.io/docs/features/software-templates/builtin-actions/ on how to add a new action module.`,
       );
     }
     return action;
   }
 
-  list(): TemplateAction<JsonObject>[] {
+  list(): TemplateAction[] {
     return [...this.actions.values()];
   }
 }

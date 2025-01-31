@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Logger } from 'winston';
+import { LoggerService } from '@backstage/backend-plugin-api';
 import {
   DocumentData,
   Firestore,
@@ -57,7 +57,7 @@ export class FirestoreKeyStore implements KeyStore {
 
   static async verifyConnection(
     keyStore: FirestoreKeyStore,
-    logger?: Logger,
+    logger?: LoggerService,
   ): Promise<void> {
     try {
       await keyStore.verify();
@@ -75,13 +75,10 @@ export class FirestoreKeyStore implements KeyStore {
 
   async addKey(key: AnyJWK): Promise<void> {
     await this.withTimeout<WriteResult>(
-      this.database
-        .collection(this.path)
-        .doc(key.kid)
-        .set({
-          kid: key.kid,
-          key: JSON.stringify(key),
-        }),
+      this.database.collection(this.path).doc(key.kid).set({
+        kid: key.kid,
+        key: key,
+      }),
     );
   }
 
@@ -91,10 +88,14 @@ export class FirestoreKeyStore implements KeyStore {
     );
 
     return {
-      items: keys.docs.map(key => ({
-        key: key.data() as AnyJWK,
-        createdAt: key.createTime.toDate(),
-      })),
+      items: keys.docs.map(doc => {
+        const { key } = doc.data();
+
+        return {
+          createdAt: doc.createTime.toDate(),
+          key: typeof key === 'string' ? JSON.parse(key) : key,
+        };
+      }),
     };
   }
 

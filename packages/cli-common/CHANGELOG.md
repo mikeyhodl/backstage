@@ -1,5 +1,65 @@
 # @backstage/cli-common
 
+## 0.1.15
+
+### Patch Changes
+
+- 702f41d: Bumped dev dependencies `@types/node`
+
+## 0.1.15-next.0
+
+### Patch Changes
+
+- 702f41d: Bumped dev dependencies `@types/node`
+
+## 0.1.14
+
+### Patch Changes
+
+- 142abb0: The monorepo root check in `findPaths` will now accept a shorthand `workspaces` config in `package.json`, no longer requiring `workspaces.packages`.
+
+## 0.1.14-next.0
+
+### Patch Changes
+
+- 142abb0: The monorepo root check in `findPaths` will now accept a shorthand `workspaces` config in `package.json`, no longer requiring `workspaces.packages`.
+
+## 0.1.13
+
+### Patch Changes
+
+- de42eebaaf: Bumped dev dependencies `@types/node` and `mock-fs`.
+
+## 0.1.13-next.0
+
+### Patch Changes
+
+- de42eebaaf: Bumped dev dependencies `@types/node` and `mock-fs`.
+
+## 0.1.12
+
+### Patch Changes
+
+- 482dae5de1c: Updated link to docs.
+
+## 0.1.12-next.0
+
+### Patch Changes
+
+- 482dae5de1c: Updated link to docs.
+
+## 0.1.11
+
+### Patch Changes
+
+- 8015ff1258: Tweaked wording to use inclusive terminology
+
+## 0.1.11-next.0
+
+### Patch Changes
+
+- 8015ff1258: Tweaked wording to use inclusive terminology
+
 ## 0.1.10
 
 ### Patch Changes

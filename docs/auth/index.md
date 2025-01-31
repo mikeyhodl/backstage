@@ -8,27 +8,35 @@ The authentication system in Backstage serves two distinct purposes: sign-in and
 identification of users, as well as delegating access to third-party resources. It is possible to
 configure Backstage to have any number of authentication providers, but only
 one of these will typically be used for sign-in, with the rest being used to provide
-access external resources.
+access to external resources.
+
+:::note Note
+
+Identity management and the Sign-In page in Backstage will only block external access when using the new backend system, without setting `backend.auth.dangerouslyDisableDefaultAuthPolicy` in configuration. Even so, the frontend bundle is not protected from external access, protecting it requires the use of the [experimental public entry point](https://backstage.io/docs/tutorials/enable-public-entry/). You can learn more about this in the [Threat Model](../overview/threat-model.md#operator-responsibilities).
+
+:::
 
 ## Built-in Authentication Providers
 
 Backstage comes with many common authentication providers in the core library:
 
-- [Atlassian](atlassian/provider.md)
 - [Auth0](auth0/provider.md)
+- [Atlassian](atlassian/provider.md)
 - [Azure](microsoft/provider.md)
+- [Azure Easy Auth](microsoft/azure-easyauth.md)
 - [Bitbucket](bitbucket/provider.md)
-- [Cloudflare Access](cloudflare/access.md)
+- [Bitbucket Server](bitbucketServer/provider.md)
+- [Cloudflare Access](cloudflare/provider.md)
 - [GitHub](github/provider.md)
 - [GitLab](gitlab/provider.md)
 - [Google](google/provider.md)
 - [Google IAP](google/gcp-iap-auth.md)
 - [Okta](okta/provider.md)
+- [OAuth 2 Custom Proxy](oauth2-proxy/provider.md)
 - [OneLogin](onelogin/provider.md)
-- [OAuth2Proxy](oauth2-proxy/provider.md)
+- [VMware Cloud](vmware-cloud/provider.md)
 
-These built-in providers handle the authentication flow for a particular service
-including required scopes, callbacks, etc. These providers are each added to a
+These built-in providers handle the authentication flow for a particular service, including required scopes, callbacks, etc. These providers are each added to a
 Backstage app in a similar way.
 
 ## Configuring Authentication Providers
@@ -49,7 +57,7 @@ auth:
 See the documentation for a particular provider to see what configuration is
 needed.
 
-The `providers` key may have several authentication providers, if multiple
+The `providers` key may have several authentication providers if multiple
 authentication methods are supported. Each provider may also have configuration
 for different authentication environments (development, production, etc). This
 allows a single auth backend to serve multiple environments, such as running a
@@ -58,23 +66,15 @@ the local `auth.environment` setting will be selected.
 
 ## Sign-In Configuration
 
-> NOTE: Identity management and the `SignInPage` in Backstage is NOT a method
-> for blocking access for unauthorized users, that either requires additional
-> backend implementation or a separate service like Google's Identity-Aware
-> Proxy. The identity system only serves to provide a personalized experience
-> and access to a Backstage Identity Token, which can be passed to backend
-> plugins.
-
 Using an authentication provider for sign-in is something you need to configure
-both in the frontend app, as well as the `auth` backend plugin. For information
+both in the frontend app as well as the `auth` backend plugin. For information
 on how to configure the backend app, see [Sign-in Identities and Resolvers](./identity-resolver.md).
 The rest of this section will focus on how to configure sign-in for the frontend app.
 
-Sign-in is configured by providing a custom `SignInPage` app component. It will
+Sign-in is configured by providing a custom `SignInPage` app component. It will be
 rendered before any other routes in the app and is responsible for providing the
 identity of the current user. The `SignInPage` can render any number of pages and
-components, or just blank space with logic running in the background. In the end
-however it must provide a valid Backstage user identity through the `onSignInSuccess`
+components, or just blank space with logic running in the background. In the end, however, it must provide a valid Backstage user identity through the `onSignInSuccess`
 callback prop, at which point the rest of the app is rendered.
 
 If you want to, you can use the `SignInPage` component that is provided by `@backstage/core-components`,
@@ -83,84 +83,179 @@ which takes either a `provider` or `providers` (array) prop of `SignInProviderCo
 The following example for GitHub shows the additions needed to `packages/app/src/App.tsx`,
 and can be adapted to any of the built-in providers:
 
-```diff
-+ import { githubAuthApiRef } from '@backstage/core-plugin-api';
-+ import { SignInPage } from '@backstage/core-components';
+```tsx title="packages/app/src/App.tsx"
+/* highlight-add-start */
+import { githubAuthApiRef } from '@backstage/core-plugin-api';
+import { SignInPage } from '@backstage/core-components';
+/* highlight-add-end */
 
- const app = createApp({
-   apis,
-+  components: {
-+    SignInPage: props => (
-+      <SignInPage
-+        {...props}
-+        auto
-+        provider={{
-+          id: 'github-auth-provider',
-+          title: 'GitHub',
-+          message: 'Sign in using GitHub',
-+          apiRef: githubAuthApiRef,
-+        }}
-+      />
-+    ),
-+  },
-   bindRoutes({ bind }) {
+const app = createApp({
+  /* highlight-add-start */
+  components: {
+    SignInPage: props => (
+      <SignInPage
+        {...props}
+        auto
+        provider={{
+          id: 'github-auth-provider',
+          title: 'GitHub',
+          message: 'Sign in using GitHub',
+          apiRef: githubAuthApiRef,
+        }}
+      />
+    ),
+  },
+  /* highlight-add-end */
+  // ..
+});
 ```
 
-You can also use the `providers` prop to enable multiple sign-in methods, for example
-allows allowing guest access:
+:::note Note
 
-```diff
- const app = createApp({
-   apis,
-+  components: {
-+    SignInPage: props => (
-+      <SignInPage
-+        {...props}
-+        providers={['guest', {
-+          id: 'github-auth-provider',
-+          title: 'GitHub',
-+          message: 'Sign in using GitHub',
-+          apiRef: githubAuthApiRef,
-+        }]}
-+      />
-+    ),
-+  },
-   bindRoutes({ bind }) {
+You can configure sign-in to use a redirect flow with no pop-up by adding
+`enableExperimentalRedirectFlow: true` to the root of your `app-config.yaml`
+
+:::
+
+### Using Multiple Providers
+
+You can also use the `providers` prop to enable multiple sign-in methods, for example to allow guest access:
+
+```tsx title="packages/app/src/App.tsx"
+const app = createApp({
+  /* highlight-add-start */
+  components: {
+    SignInPage: props => (
+      <SignInPage
+        {...props}
+        providers={[
+          'guest',
+          {
+            id: 'github-auth-provider',
+            title: 'GitHub',
+            message: 'Sign in using GitHub',
+            apiRef: githubAuthApiRef,
+          },
+        ]}
+      />
+    ),
+  },
+  /* highlight-add-end */
+  // ..
+});
+```
+
+### Conditionally Render Sign In Provider
+
+In the above example, you have both Guest and GitHub sign-in options; this is helpful for non-production, but in Production you will most likely not want to offer Guest access. You can easily use information from your config to help conditionally render the provider:
+
+```tsx title="packages/app/src/App.tsx"
+import {
+  configApiRef,
+  githubAuthApiRef,
+  useApi,
+} from '@backstage/core-plugin-api';
+
+const app = createApp({
+  components: {
+    SignInPage: props => {
+      const configApi = useApi(configApiRef);
+      if (configApi.getString('auth.environment') === 'development') {
+        return (
+          <SignInPage
+            {...props}
+            providers={[
+              'guest',
+              {
+                id: 'github-auth-provider',
+                title: 'GitHub',
+                message: 'Sign in using GitHub',
+                apiRef: githubAuthApiRef,
+              },
+            ]}
+          />
+        );
+      }
+      return (
+        <SignInPage
+          {...props}
+          provider={{
+            id: 'google-auth-provider',
+            title: 'Google',
+            message: 'Sign In using Google',
+            apiRef: googleAuthApiRef,
+          }}
+        />
+      );
+    },
+  },
+  // ..
+});
 ```
 
 ## Sign-In with Proxy Providers
 
 Some auth providers are so-called "proxy" providers, meaning they're meant to be used
 behind an authentication proxy. Examples of these are
-[AWS ALB](https://github.com/backstage/backstage/blob/master/contrib/docs/tutorials/aws-alb-aad-oidc-auth.md), [Cloudflare Access](./cloudflare/access.md),
-[GCP IAP](./google/gcp-iap-auth.md), and [OAuth2 Proxy](./oauth2-proxy/provider.md).
+[Amazon Application Load Balancer](https://github.com/backstage/backstage/blob/master/contrib/docs/tutorials/aws-alb-aad-oidc-auth.md),
+[Azure EasyAuth](./microsoft/azure-easyauth.md),
+[Cloudflare Access](./cloudflare/provider.md),
+[Google Identity-Aware Proxy](./google/gcp-iap-auth.md)
+and [OAuth2 Proxy](./oauth2-proxy/provider.md).
 
 When using a proxy provider, you'll end up wanting to use a different sign-in page, as
 there is no need for further user interaction once you've signed in towards the proxy.
-All the sign-in page needs to do is to call the `/refresh` endpoint of the auth providers
+All the sign-in page needs to do is call the `/refresh` endpoint of the auth providers
 to get the existing session, which is exactly what the `ProxiedSignInPage` does. The only
 thing you need to do to configure the `ProxiedSignInPage` is to pass the ID of the provider like this:
 
-```tsx
+```tsx title="packages/app/src/App.tsx"
 const app = createApp({
-  ...,
   components: {
     SignInPage: props => <ProxiedSignInPage {...props} provider="awsalb" />,
   },
+  // ..
 });
+```
+
+If the provider in auth backend expects additional headers such as `x-provider-token`, there is now a way to configure that in `ProxiedSignInPage` using the optional `headers` prop.
+
+Example:
+
+```tsx
+<ProxiedSignInPage
+  {...props}
+  provider="my-custom-provider"
+  /* highlight-next-line */
+  headers={{ 'x-some-key': someValue }}
+/>
+```
+
+Headers can also be returned in an async manner:
+
+```tsx
+<ProxiedSignInPage
+  {...props}
+  provider="my-custom-provider"
+  /* highlight-start */
+  headers={async () => {
+    const someValue = await someFn();
+    return { 'x-some-key': someValue };
+  }}
+  /* highlight-end */
+/>
 ```
 
 A downside of this method is that it can be cumbersome to set up for local development.
 As a workaround for this, it's possible to dynamically select the sign-in page based on
-what environment the app is running in, and then use a different sign-in method for local
+what environment the app is running in and then use a different sign-in method for local
 development, if one is needed at all. Depending on the exact setup, one might choose to
 select the sign-in method based on the `process.env.NODE_ENV` environment variable,
 by checking the `hostname` of the current location, or by accessing the configuration API
 to read a configuration value. For example:
 
-```tsx
+```tsx title="packages/app/src/App.tsx"
 const app = createApp({
-  ...,
   components: {
     SignInPage: props => {
       const configApi = useApi(configApiRef);
@@ -180,6 +275,7 @@ const app = createApp({
       return <ProxiedSignInPage {...props} provider="gcpiap" />;
     },
   },
+  // ..
 });
 ```
 
@@ -188,11 +284,11 @@ sign-in resolvers so that they resolve to the same identity regardless of the me
 
 ## Scaffolder Configuration (Software Templates)
 
-If you want to use the authentication capabilities of the [Repository Picker](../features/software-templates/writing-templates.md#the-repository-picker) inside your software templates you will need to configure the [`ScmAuthApi`](https://backstage.io/docs/reference/integration-react.scmauthapi) alongside your authentication provider. It is an API used to authenticate towards different SCM systems in a generic way, based on what resource is being accessed.
+If you want to use the authentication capabilities of the [Repository Picker](../features/software-templates/writing-templates.md#the-repository-picker) inside your software templates, you will need to configure the [`ScmAuthApi`](https://backstage.io/docs/reference/integration-react.scmauthapi) alongside your authentication provider. It is an API used to authenticate towards different SCM systems in a generic way, based on what resource is being accessed.
 
 To set it up, you'll need to add an API factory entry to `packages/app/src/apis.ts`. The example below sets up the `ScmAuthApi` for an already configured GitLab authentication provider:
 
-```ts
+```ts title="packages/app/src/apis.ts"
 createApiFactory({
   api: scmAuthApiRef,
   deps: {
@@ -207,7 +303,7 @@ In case you are using a custom authentication providers, you might need to add a
 ## For Plugin Developers
 
 The Backstage frontend core APIs provide a set of Utility APIs for plugin developers
-to use, both to access the user identity, as well as third party resources.
+to use, both to access the user identity as well as third-party resources.
 
 ### Identity for Plugin Developers
 
@@ -225,21 +321,21 @@ to interact directly with the `IdentityApi`.
 
 ### Accessing Third Party Resources
 
-A common pattern for talking to third party services in Backstage is
+A common pattern for talking to third-party services in Backstage is
 user-to-server requests, where short-lived OAuth Access Tokens are requested by
 plugins to authenticate calls to external services. These calls can be made
 either directly to the services or through a backend plugin or service.
 
-By relying on user-to-server calls we keep the coupling between the frontend and
-backend low, and provide a much lower barrier for plugins to make use of third
-party services. This is in comparison to for example a session-based system,
+By relying on user-to-server calls, we keep the coupling between the frontend and
+backend low and provide a much lower barrier for plugins to make use of third
+party services. This is in comparison to, for example, a session-based system
 where access tokens are stored server-side. Such a solution would require a much
 deeper coupling between the auth backend plugin, its session storage, and other
 backend plugins or separate services. A goal of Backstage is to make it as easy
 as possible to create new plugins, and an auth solution based on user-to-server
 OAuth helps in that regard.
 
-The method with which frontend plugins request access to third party services is
+The method with which frontend plugins request access to third-party services is
 through [Utility APIs](../api/utility-apis.md) for each service provider. These
 are all suffixed with `*AuthApiRef`, for example `githubAuthApiRef`. For a
 full list of providers, see the
@@ -258,7 +354,7 @@ Passport-supported authentication method.
 
 ## Custom ScmAuthApi Implementation
 
-The default `ScmAuthAPi` provides integrations for `github`, `gitlab`, `azure` and `bitbucket` and is created by the following code in `packages/app/src/apis.ts`:
+The default `ScmAuthApi` provides integrations for `github`, `gitlab`, `azure` and `bitbucket` and is created by the following code in `packages/app/src/apis.ts`:
 
 ```ts
 ScmAuth.createDefaultApiFactory();
@@ -268,23 +364,24 @@ If you require only a subset of these integrations, then you will need a custom 
 
 The first step is to remove the code that creates the default providers.
 
-```diff
- import {
-   ScmIntegrationsApi,
-   scmIntegrationsApiRef,
-+   ScmAuth,
- } from '@backstage/integration-react';
+```ts title="packages/app/src/apis.ts"
+import {
+  ScmIntegrationsApi,
+  scmIntegrationsApiRef,
+  /* highlight-add-next-line */
+  ScmAuth,
+} from '@backstage/integration-react';
 
- export const apis: AnyApiFactory[] = [
-...
-+  ScmAuth.createDefaultApiFactory(),
-...
- ];
+export const apis: AnyApiFactory[] = [
+  /* highlight-add-next-line */
+  ScmAuth.createDefaultApiFactory(),
+  // ...
+];
 ```
 
-Then replace it with something like this, which will create an `ApiFactory` with only a github provider.
+Then replace it with something like this, which will create an `ApiFactory` with only a GitHub provider.
 
-```ts
+```ts title="packages/app/src/apis.ts"
 export const apis: AnyApiFactory[] = [
   createApiFactory({
     api: scmAuthApiRef,
@@ -309,7 +406,29 @@ const gheAuthApiRef: ApiRef<OAuthApi & ProfileInfoApi & SessionApi> =
   });
 ```
 
-The new ref is then used to add a new provider to the ApiFactory:
+This new API ref will only work if you define an API factory for it. For example:
+
+```ts
+createApiFactory({
+  api: gheAuthApiRef,
+  deps: {
+    discoveryApi: discoveryApiRef,
+    oauthRequestApi: oauthRequestApiRef,
+    configApi: configApiRef,
+  },
+  factory: ({ discoveryApi, oauthRequestApi, configApi }) =>
+    GithubAuth.create({
+      configApi,
+      discoveryApi,
+      oauthRequestApi,
+      provider: { id: 'ghe', title: 'GitHub Enterprise', icon: () => null },
+      defaultScopes: ['read:user'],
+      environment: configApi.getOptionalString('auth.environment'),
+    }),
+});
+```
+
+The new API ref is then used to add a new provider to the ApiFactory:
 
 ```ts
 createApiFactory({
@@ -337,4 +456,51 @@ import { providers } from '@backstage/plugin-auth-backend';
 providerFactories: {
   ghe: providers.github.create(),
 },
+```
+
+## Configuring token issuers
+
+By default, the Backstage authentication backend generates and manages its own signing keys automatically for any issued
+Backstage tokens. However, these keys have a short lifetime and do not persist after instance restarts.
+
+Alternatively, users can provide their own public and private key files to sign issued tokens. This is beneficial in
+scenarios where the token verification implementation aggressively caches the list of keys, and doesn't attempt to fetch
+new ones even if they encounter an unknown key id. To enable this feature add the following configuration to your config
+file:
+
+```yaml
+auth:
+  keyStore:
+    provider: 'static'
+    static:
+      keys:
+        # Must be declared at least once and the first one will be used for signing
+        - keyId: 'primary'
+          publicKeyFile: /path/to/public.key
+          privateKeyFile: /path/to/private.key
+          algorithm: # Optional, algorithm used to generate the keys, defaults to ES256
+          # More keys can be added so with future key rotations caches already know about it
+        - keyId: ...
+```
+
+The private key should be stored in the PKCS#8 format. The public key should be stored in the SPKI format.
+You can generate the public/private key pair, using openssl and the ES256 algorithm by performing the following
+steps:
+
+Generate a private key using the ES256 algorithm
+
+```sh
+openssl ecparam -name prime256v1 -genkey -out private.ec.key
+```
+
+Convert it to PKCS#8 format
+
+```sh
+openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private.ec.key -out private.key
+```
+
+Extract the public key
+
+```sh
+openssl ec -inform PEM -outform PEM -pubout -in private.key -out public.key
 ```

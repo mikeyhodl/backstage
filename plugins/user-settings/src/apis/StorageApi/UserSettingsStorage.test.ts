@@ -18,30 +18,28 @@ import {
   DiscoveryApi,
   ErrorApi,
   FetchApi,
-  IdentityApi,
   StorageApi,
 } from '@backstage/core-plugin-api';
-import { MockFetchApi, setupRequestMockHandlers } from '@backstage/test-utils';
+import {
+  MockFetchApi,
+  mockApis,
+  registerMswTestHooks,
+} from '@backstage/test-utils';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import { UserSettingsStorage } from './UserSettingsStorage';
 
 describe('Persistent Storage API', () => {
   const server = setupServer();
-  setupRequestMockHandlers(server);
+  registerMswTestHooks(server);
 
   const mockBaseUrl = 'http://backstage:9191/api';
   const mockErrorApi = { post: jest.fn(), error$: jest.fn() };
   const mockDiscoveryApi = {
     getBaseUrl: async () => mockBaseUrl,
   };
-  const mockIdentityApi: Partial<IdentityApi> = {
-    getCredentials: async () => ({ token: 'a-token' }),
-  };
-  const mockIdentityApiFallback: Partial<IdentityApi> = {
-    // This API recreates the guest mode, where the WebStorage is used as fallback
-    getCredentials: async () => ({}),
-  };
+  const mockIdentityApi = mockApis.identity({ token: 'a-token' });
+  const mockIdentityApiFallback = mockApis.identity();
 
   const createPersistentStorage = (
     args?: Partial<{
@@ -55,7 +53,7 @@ describe('Persistent Storage API', () => {
       errorApi: mockErrorApi,
       fetchApi: new MockFetchApi(),
       discoveryApi: mockDiscoveryApi,
-      identityApi: mockIdentityApi as IdentityApi,
+      identityApi: mockIdentityApi,
       ...args,
     });
   };
@@ -72,13 +70,13 @@ describe('Persistent Storage API', () => {
       errorApi: mockErrorApi,
       fetchApi: new MockFetchApi(),
       discoveryApi: mockDiscoveryApi,
-      identityApi: mockIdentityApiFallback as IdentityApi,
+      identityApi: mockIdentityApiFallback,
       ...args,
     });
   };
 
   afterEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should return undefined for values which are unset', async () => {

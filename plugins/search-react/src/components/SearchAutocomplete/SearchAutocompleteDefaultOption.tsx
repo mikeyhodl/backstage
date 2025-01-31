@@ -15,11 +15,10 @@
  */
 
 import React, { ReactNode } from 'react';
-import {
-  ListItemIcon,
-  ListItemText,
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText, {
   ListItemTextProps,
-} from '@material-ui/core';
+} from '@material-ui/core/ListItemText';
 
 /**
  * Props for {@link SearchAutocompleteDefaultOption}.
@@ -40,22 +39,28 @@ export type SearchAutocompleteDefaultOptionProps = {
  *
  * @public
  */
-export const SearchAutocompleteDefaultOption = ({
-  icon,
-  primaryText,
-  primaryTextTypographyProps,
-  secondaryText,
-  secondaryTextTypographyProps,
-  disableTextTypography,
-}: SearchAutocompleteDefaultOptionProps) => (
-  <>
-    {icon ? <ListItemIcon>{icon}</ListItemIcon> : null}
-    <ListItemText
-      primary={primaryText}
-      primaryTypographyProps={primaryTextTypographyProps}
-      secondary={secondaryText}
-      secondaryTypographyProps={secondaryTextTypographyProps}
-      disableTypography={disableTextTypography}
-    />
-  </>
-);
+export const SearchAutocompleteDefaultOption = (
+  props: SearchAutocompleteDefaultOptionProps,
+) => {
+  const {
+    icon,
+    primaryText,
+    primaryTextTypographyProps,
+    secondaryText,
+    secondaryTextTypographyProps,
+    disableTextTypography,
+  } = props;
+
+  return (
+    <>
+      {icon ? <ListItemIcon>{icon}</ListItemIcon> : null}
+      <ListItemText
+        primary={primaryText}
+        primaryTypographyProps={primaryTextTypographyProps}
+        secondary={secondaryText}
+        secondaryTypographyProps={secondaryTextTypographyProps}
+        disableTypography={disableTextTypography}
+      />
+    </>
+  );
+};

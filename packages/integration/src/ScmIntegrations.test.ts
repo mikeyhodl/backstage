@@ -36,15 +36,30 @@ import { GitLabIntegration } from './gitlab/GitLabIntegration';
 import { basicIntegrations } from './helpers';
 import { ScmIntegrations } from './ScmIntegrations';
 import { GiteaIntegration, GiteaIntegrationConfig } from './gitea';
+import { AwsCodeCommitIntegration } from './awsCodeCommit/AwsCodeCommitIntegration';
+import { AwsCodeCommitIntegrationConfig } from './awsCodeCommit';
+import { HarnessIntegration, HarnessIntegrationConfig } from './harness';
+import {
+  AzureBlobStorageIntegrationConfig,
+  AzureBlobStorageIntergation,
+} from './azureBlobStorage';
 
 describe('ScmIntegrations', () => {
   const awsS3 = new AwsS3Integration({
     host: 'awss3.local',
   } as AwsS3IntegrationConfig);
 
+  const awsCodeCommit = new AwsCodeCommitIntegration({
+    host: 'awscodecommit.local',
+  } as AwsCodeCommitIntegrationConfig);
+
   const azure = new AzureIntegration({
     host: 'azure.local',
   } as AzureIntegrationConfig);
+
+  const azureBlob = new AzureBlobStorageIntergation({
+    host: 'azureblobstorage.local',
+  } as AzureBlobStorageIntegrationConfig);
 
   const bitbucket = new BitbucketIntegration({
     host: 'bitbucket.local',
@@ -74,9 +89,15 @@ describe('ScmIntegrations', () => {
     host: 'gitea.local',
   } as GiteaIntegrationConfig);
 
+  const harness = new HarnessIntegration({
+    host: 'harness.local',
+  } as HarnessIntegrationConfig);
+
   const i = new ScmIntegrations({
     awsS3: basicIntegrations([awsS3], item => item.config.host),
+    awsCodeCommit: basicIntegrations([awsCodeCommit], item => item.config.host),
     azure: basicIntegrations([azure], item => item.config.host),
+    azureBlobStorage: basicIntegrations([azureBlob], item => item.config.host),
     bitbucket: basicIntegrations([bitbucket], item => item.config.host),
     bitbucketCloud: basicIntegrations([bitbucketCloud], item => item.title),
     bitbucketServer: basicIntegrations(
@@ -87,11 +108,18 @@ describe('ScmIntegrations', () => {
     github: basicIntegrations([github], item => item.config.host),
     gitlab: basicIntegrations([gitlab], item => item.config.host),
     gitea: basicIntegrations([gitea], item => item.config.host),
+    harness: basicIntegrations([harness], item => item.config.host),
   });
 
   it('can get the specifics', () => {
     expect(i.awsS3.byUrl('https://awss3.local')).toBe(awsS3);
+    expect(i.awsCodeCommit.byUrl('https://awscodecommit.local')).toBe(
+      awsCodeCommit,
+    );
     expect(i.azure.byUrl('https://azure.local')).toBe(azure);
+    expect(i.azureBlobStorage.byUrl('https://azureblobstorage.local')).toBe(
+      azureBlob,
+    );
     expect(i.bitbucket.byUrl('https://bitbucket.local')).toBe(bitbucket);
     expect(i.bitbucketCloud.byUrl('https://bitbucket.org')).toBe(
       bitbucketCloud,
@@ -103,13 +131,16 @@ describe('ScmIntegrations', () => {
     expect(i.github.byUrl('https://github.local')).toBe(github);
     expect(i.gitlab.byUrl('https://gitlab.local')).toBe(gitlab);
     expect(i.gitea.byUrl('https://gitea.local')).toBe(gitea);
+    expect(i.harness.byUrl('https://harness.local')).toBe(harness);
   });
 
   it('can list', () => {
     expect(i.list()).toEqual(
       expect.arrayContaining([
         awsS3,
+        awsCodeCommit,
         azure,
+        azureBlob,
         bitbucket,
         bitbucketCloud,
         bitbucketServer,
@@ -117,13 +148,18 @@ describe('ScmIntegrations', () => {
         github,
         gitlab,
         gitea,
+        harness,
       ]),
     );
   });
 
   it('can select by url and host', () => {
     expect(i.byUrl('https://awss3.local')).toBe(awsS3);
+    expect(i.byUrl('https://awscodecommit.local')).toBe(awsCodeCommit);
     expect(i.byUrl('https://azure.local')).toBe(azure);
+    expect(i.azureBlobStorage.byUrl('https://azureblobstorage.local')).toBe(
+      azureBlob,
+    );
     expect(i.byUrl('https://bitbucket.local')).toBe(bitbucket);
     expect(i.byUrl('https://bitbucket.org')).toBe(bitbucketCloud);
     expect(i.byUrl('https://bitbucket-server.local')).toBe(bitbucketServer);
@@ -131,9 +167,12 @@ describe('ScmIntegrations', () => {
     expect(i.byUrl('https://github.local')).toBe(github);
     expect(i.byUrl('https://gitlab.local')).toBe(gitlab);
     expect(i.byUrl('https://gitea.local')).toBe(gitea);
+    expect(i.byUrl('https://harness.local')).toBe(harness);
 
     expect(i.byHost('awss3.local')).toBe(awsS3);
+    expect(i.byHost('awscodecommit.local')).toBe(awsCodeCommit);
     expect(i.byHost('azure.local')).toBe(azure);
+    expect(i.byHost('azureblobstorage.local')).toBe(azureBlob);
     expect(i.byHost('bitbucket.local')).toBe(bitbucket);
     expect(i.byHost('bitbucket.org')).toBe(bitbucketCloud);
     expect(i.byHost('bitbucket-server.local')).toBe(bitbucketServer);

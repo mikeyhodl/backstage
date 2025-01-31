@@ -16,65 +16,18 @@
 
 import { Select } from '@backstage/core-components';
 import { alertApiRef, useApi } from '@backstage/core-plugin-api';
-import { Box } from '@material-ui/core';
-import capitalize from 'lodash/capitalize';
-import sortBy from 'lodash/sortBy';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import useAsync from 'react-use/lib/useAsync';
-import { catalogApiRef } from '../../api';
+import Box from '@material-ui/core/Box';
+import React, { useEffect, useMemo, useState } from 'react';
 import { EntityKindFilter } from '../../filters';
 import { useEntityList } from '../../hooks';
-
-function useAvailableKinds() {
-  const catalogApi = useApi(catalogApiRef);
-
-  const [availableKinds, setAvailableKinds] = useState<string[]>([]);
-
-  const {
-    error,
-    loading,
-    value: facets,
-  } = useAsync(async () => {
-    const facet = 'kind';
-    const items = await catalogApi
-      .getEntityFacets({
-        facets: [facet],
-      })
-      .then(response => response.facets[facet] || []);
-
-    return items;
-  }, [catalogApi]);
-
-  const facetsRef = useRef(facets);
-  useEffect(() => {
-    const oldFacets = facetsRef.current;
-    facetsRef.current = facets;
-    // Delay processing hook until facets load updates have settled to generate list of kinds;
-    // This prevents resetting the kind filter due to saved kind value from query params not matching the
-    // empty set of kind values while values are still being loaded; also only run this hook on changes
-    // to facets
-    if (loading || oldFacets === facets || !facets) {
-      return;
-    }
-
-    const newKinds = [
-      ...new Set(
-        sortBy(facets, f => f.value).map(f =>
-          f.value.toLocaleLowerCase('en-US'),
-        ),
-      ),
-    ];
-
-    setAvailableKinds(newKinds);
-  }, [loading, facets, setAvailableKinds]);
-
-  return { loading, error, availableKinds };
-}
+import { filterKinds, useAllKinds } from './kindFilterUtils';
+import { catalogReactTranslationRef } from '../../translation';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 
 function useEntityKindFilter(opts: { initialFilter: string }): {
   loading: boolean;
   error?: Error;
-  availableKinds: string[];
+  allKinds: Map<string, string>;
   selectedKind: string;
   setSelectedKind: (kind: string) => void;
 } {
@@ -84,22 +37,22 @@ function useEntityKindFilter(opts: { initialFilter: string }): {
     updateFilters,
   } = useEntityList();
 
-  const flattenedQueryKind = useMemo(
+  const queryParamKind = useMemo(
     () => [kindParameter].flat()[0],
     [kindParameter],
   );
 
   const [selectedKind, setSelectedKind] = useState(
-    flattenedQueryKind ?? filters.kind?.value ?? opts.initialFilter,
+    queryParamKind ?? filters.kind?.value ?? opts.initialFilter,
   );
 
   // Set selected kinds on query parameter updates; this happens at initial page load and from
   // external updates to the page location.
   useEffect(() => {
-    if (flattenedQueryKind) {
-      setSelectedKind(flattenedQueryKind);
+    if (queryParamKind) {
+      setSelectedKind(queryParamKind);
     }
-  }, [flattenedQueryKind]);
+  }, [queryParamKind]);
 
   // Set selected kind from filters; this happens when the kind filter is
   // updated from another component
@@ -109,18 +62,21 @@ function useEntityKindFilter(opts: { initialFilter: string }): {
     }
   }, [filters.kind]);
 
-  const { availableKinds, loading, error } = useAvailableKinds();
+  const { allKinds, loading, error } = useAllKinds();
+  const selectedKindLabel = allKinds.get(selectedKind) || selectedKind;
 
   useEffect(() => {
     updateFilters({
-      kind: selectedKind ? new EntityKindFilter(selectedKind) : undefined,
+      kind: selectedKind
+        ? new EntityKindFilter(selectedKind, selectedKindLabel)
+        : undefined,
     });
-  }, [selectedKind, updateFilters]);
+  }, [selectedKind, selectedKindLabel, updateFilters]);
 
   return {
     loading,
     error,
-    availableKinds,
+    allKinds,
     selectedKind,
     setSelectedKind,
   };
@@ -132,17 +88,23 @@ function useEntityKindFilter(opts: { initialFilter: string }): {
  * @public
  */
 export interface EntityKindPickerProps {
+  /**
+   * Entity kinds to show in the dropdown; by default all kinds are fetched from the catalog and
+   * displayed.
+   */
+  allowedKinds?: string[];
   initialFilter?: string;
   hidden?: boolean;
 }
 
 /** @public */
 export const EntityKindPicker = (props: EntityKindPickerProps) => {
-  const { hidden, initialFilter = 'component' } = props;
+  const { allowedKinds, hidden, initialFilter = 'component' } = props;
+  const { t } = useTranslationRef(catalogReactTranslationRef);
 
   const alertApi = useApi(alertApiRef);
 
-  const { error, availableKinds, selectedKind, setSelectedKind } =
+  const { error, allKinds, selectedKind, setSelectedKind } =
     useEntityKindFilter({
       initialFilter: initialFilter,
     });
@@ -150,27 +112,27 @@ export const EntityKindPicker = (props: EntityKindPickerProps) => {
   useEffect(() => {
     if (error) {
       alertApi.post({
-        message: `Failed to load entity kinds`,
+        message: t('entityKindPicker.errorMessage'),
         severity: 'error',
       });
     }
-  }, [error, alertApi]);
+  }, [error, alertApi, t]);
 
-  if (availableKinds?.length === 0 || error) return null;
+  if (error) return null;
 
-  const items = [
-    ...availableKinds.map((kind: string) => ({
-      value: kind,
-      label: capitalize(kind),
-    })),
-  ];
+  const options = filterKinds(allKinds, allowedKinds, selectedKind);
+
+  const items = [...options.entries()].map(([key, value]) => ({
+    label: value,
+    value: key,
+  }));
 
   return hidden ? null : (
     <Box pb={1} pt={1}>
       <Select
-        label="Kind"
+        label={t('entityKindPicker.title')}
         items={items}
-        selected={selectedKind}
+        selected={selectedKind.toLocaleLowerCase('en-US')}
         onChange={value => setSelectedKind(String(value))}
       />
     </Box>

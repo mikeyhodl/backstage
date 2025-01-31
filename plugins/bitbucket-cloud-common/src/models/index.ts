@@ -107,7 +107,7 @@ export namespace Models {
    * @public
    */
   export type BaseCommitSummaryMarkupEnum =
-    typeof BaseCommitSummaryMarkupEnum[keyof typeof BaseCommitSummaryMarkupEnum];
+    (typeof BaseCommitSummaryMarkupEnum)[keyof typeof BaseCommitSummaryMarkupEnum];
 
   /**
    * A branch object, representing a branch in a repository.
@@ -146,7 +146,7 @@ export namespace Models {
    * @public
    */
   export type BranchMergeStrategiesEnum =
-    typeof BranchMergeStrategiesEnum[keyof typeof BranchMergeStrategiesEnum];
+    (typeof BranchMergeStrategiesEnum)[keyof typeof BranchMergeStrategiesEnum];
 
   /**
    * A repository commit object.
@@ -191,7 +191,7 @@ export namespace Models {
    * @public
    */
   export type CommitFileAttributesEnum =
-    typeof CommitFileAttributesEnum[keyof typeof CommitFileAttributesEnum];
+    (typeof CommitFileAttributesEnum)[keyof typeof CommitFileAttributesEnum];
 
   /**
    * A link to a resource related to this object.
@@ -254,6 +254,39 @@ export namespace Models {
   }
 
   /**
+   * A paginated list of projects.
+   * @public
+   */
+  export interface PaginatedProjects extends Paginated<Project> {
+    /**
+     * The values of the current page.
+     */
+    values?: Set<Project>;
+  }
+
+  /**
+   * A paginated list of workspaces.
+   * @public
+   */
+  export interface PaginatedWorkspaces extends Paginated<Workspace> {
+    /**
+     * The values of the current page.
+     */
+    values?: Set<Workspace>;
+  }
+
+  /**
+   * A paginated list of branches.
+   * @public
+   */
+  export interface PaginatedBranches extends Paginated<Branch> {
+    /**
+     * The values of the current page.
+     */
+    values?: Set<Branch>;
+  }
+
+  /**
    * Object describing a user's role on resources like commits or pull requests.
    * @public
    */
@@ -280,7 +313,7 @@ export namespace Models {
    * @public
    */
   export type ParticipantRoleEnum =
-    typeof ParticipantRoleEnum[keyof typeof ParticipantRoleEnum];
+    (typeof ParticipantRoleEnum)[keyof typeof ParticipantRoleEnum];
 
   /**
    * @public
@@ -295,7 +328,7 @@ export namespace Models {
    * @public
    */
   export type ParticipantStateEnum =
-    typeof ParticipantStateEnum[keyof typeof ParticipantStateEnum];
+    (typeof ParticipantStateEnum)[keyof typeof ParticipantStateEnum];
 
   /**
    * A Bitbucket project.
@@ -373,7 +406,19 @@ export namespace Models {
      * The concatenation of the repository owner's username and the slugified name, e.g. "evzijst/interruptingcow". This is the same string used in Bitbucket URLs.
      */
     full_name?: string;
+    /**
+     *
+     * The issue tracker for this repository is enabled. Issue Tracker
+     * features are not supported for repositories in workspaces
+     * administered through admin.atlassian.com.
+     */
     has_issues?: boolean;
+    /**
+     *
+     * The wiki for this repository is enabled. Wiki
+     * features are not supported for repositories in workspaces
+     * administered through admin.atlassian.com.
+     */
     has_wiki?: boolean;
     is_private?: boolean;
     language?: string;
@@ -423,7 +468,7 @@ export namespace Models {
    * @public
    */
   export type RepositoryForkPolicyEnum =
-    typeof RepositoryForkPolicyEnum[keyof typeof RepositoryForkPolicyEnum];
+    (typeof RepositoryForkPolicyEnum)[keyof typeof RepositoryForkPolicyEnum];
 
   /**
    * @public
@@ -436,7 +481,7 @@ export namespace Models {
    * @public
    */
   export type RepositoryScmEnum =
-    typeof RepositoryScmEnum[keyof typeof RepositoryScmEnum];
+    (typeof RepositoryScmEnum)[keyof typeof RepositoryScmEnum];
 
   /**
    * @public

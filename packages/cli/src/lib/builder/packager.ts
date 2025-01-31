@@ -21,8 +21,7 @@ import { relative as relativePath, resolve as resolvePath } from 'path';
 import { paths } from '../paths';
 import { makeRollupConfigs } from './config';
 import { BuildOptions, Output } from './types';
-import { buildTypeDefinitions } from './buildTypeDefinitions';
-import { getRoleInfo } from '../role';
+import { PackageRoles } from '@backstage/cli-node';
 import { runParallelWorkers } from '../parallel';
 
 export function formatErrorMessage(error: any) {
@@ -108,13 +107,9 @@ export const buildPackage = async (options: BuildOptions) => {
 
   const rollupConfigs = await makeRollupConfigs(options);
 
-  await fs.remove(paths.resolveTarget('dist'));
+  await fs.remove(resolvePath(options.targetDir ?? paths.targetDir, 'dist'));
 
   const buildTasks = rollupConfigs.map(rollupBuild);
-
-  if (options.outputs.has(Output.types) && options.useApiExtractor) {
-    buildTasks.push(buildTypeDefinitions());
-  }
 
   await Promise.all(buildTasks);
 };
@@ -131,18 +126,6 @@ export const buildPackages = async (options: BuildOptions[]) => {
 
   const buildTasks = rollupConfigs.flat().map(opts => () => rollupBuild(opts));
 
-  const typeDefinitionTargetDirs = options
-    .filter(
-      ({ outputs, useApiExtractor }) =>
-        outputs.has(Output.types) && useApiExtractor,
-    )
-    .map(_ => _.targetDir!);
-
-  if (typeDefinitionTargetDirs.length > 0) {
-    // Make sure this one is started first
-    buildTasks.unshift(() => buildTypeDefinitions(typeDefinitionTargetDirs));
-  }
-
   await runParallelWorkers({
     items: buildTasks,
     worker: async task => task(),
@@ -152,7 +135,7 @@ export const buildPackages = async (options: BuildOptions[]) => {
 export function getOutputsForRole(role: string): Set<Output> {
   const outputs = new Set<Output>();
 
-  for (const output of getRoleInfo(role).output) {
+  for (const output of PackageRoles.getRoleInfo(role).output) {
     if (output === 'cjs') {
       outputs.add(Output.cjs);
     }

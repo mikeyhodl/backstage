@@ -15,40 +15,47 @@
  */
 
 import { Entity } from '@backstage/catalog-model';
-import { Link, Progress, ResponseErrorPanel } from '@backstage/core-components';
-import { useRouteRef } from '@backstage/core-plugin-api';
-import { BackstageTheme } from '@backstage/theme';
 import {
-  Box,
-  createStyles,
-  Grid,
-  makeStyles,
-  Typography,
-} from '@material-ui/core';
+  Link,
+  OverflowTooltip,
+  Progress,
+  ResponseErrorPanel,
+} from '@backstage/core-components';
+import { useRouteRef } from '@backstage/core-plugin-api';
+import Box from '@material-ui/core/Box';
+import Grid from '@material-ui/core/Grid';
+import Typography from '@material-ui/core/Typography';
+import { createStyles, makeStyles } from '@material-ui/core/styles';
 import React from 'react';
 import pluralize from 'pluralize';
 import { catalogIndexRouteRef } from '../../../routes';
 import { useGetEntities } from './useGetEntities';
+import { EntityRelationAggregation } from '../types';
 
-const useStyles = makeStyles((theme: BackstageTheme) =>
+const useStyles = makeStyles(theme =>
   createStyles({
     card: {
       border: `1px solid ${theme.palette.divider}`,
       boxShadow: theme.shadows[2],
       borderRadius: '4px',
       padding: theme.spacing(2),
-      color: '#fff',
       transition: `${theme.transitions.duration.standard}ms`,
       '&:hover': {
         boxShadow: theme.shadows[4],
       },
+      height: '100%',
     },
     bold: {
       fontWeight: theme.typography.fontWeightBold,
     },
+    smallFont: {
+      fontSize: theme.typography.body2.fontSize,
+    },
     entityTypeBox: {
       background: (props: { type: string }) =>
         theme.getPageTheme({ themeId: props.type }).backgroundImage,
+      color: (props: { type: string }) =>
+        theme.getPageTheme({ themeId: props.type }).fontColor,
     },
   }),
 );
@@ -62,49 +69,74 @@ const EntityCountTile = ({
   counter: number;
   type?: string;
   kind: string;
-  url: string;
+  url?: string;
 }) => {
   const classes = useStyles({ type: type ?? kind });
 
   const rawTitle = type ?? kind;
+  const isLongText = rawTitle.length > 10;
 
-  return (
-    <Link to={url} variant="body2">
-      <Box
-        className={`${classes.card} ${classes.entityTypeBox}`}
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-      >
-        <Typography className={classes.bold} variant="h6">
-          {counter}
+  const tile = (
+    <Box
+      className={`${classes.card} ${classes.entityTypeBox}`}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+    >
+      <Typography className={classes.bold} variant="h6">
+        {counter}
+      </Typography>
+      <Box sx={{ width: '100%', textAlign: 'center' }}>
+        <Typography
+          className={`${classes.bold} ${isLongText && classes.smallFont}`}
+          variant="h6"
+        >
+          <OverflowTooltip
+            text={pluralize(rawTitle.toLocaleUpperCase('en-US'), counter)}
+          />
         </Typography>
-        <Typography className={classes.bold} variant="h6">
-          {pluralize(rawTitle.toLocaleUpperCase('en-US'), counter)}
-        </Typography>
-        {type && <Typography variant="subtitle1">{kind}</Typography>}
       </Box>
-    </Link>
+      {type && <Typography variant="subtitle1">{kind}</Typography>}
+    </Box>
   );
+
+  if (url) {
+    return (
+      <Link to={url} variant="body2">
+        {tile}
+      </Link>
+    );
+  }
+  return tile;
 };
 
 export const ComponentsGrid = ({
+  className,
   entity,
   relationsType,
-  isGroup,
+  relationAggregation,
   entityFilterKind,
+  entityLimit = 6,
 }: {
+  className?: string;
   entity: Entity;
-  relationsType: string;
-  isGroup: boolean;
+  /** @deprecated Please use relationAggregation instead */
+  relationsType?: EntityRelationAggregation;
+  relationAggregation?: EntityRelationAggregation;
   entityFilterKind?: string[];
+  entityLimit?: number;
 }) => {
   const catalogLink = useRouteRef(catalogIndexRouteRef);
+  if (!relationsType && !relationAggregation) {
+    throw new Error(
+      'The relationAggregation property must be set as an EntityRelationAggregation type.',
+    );
+  }
   const { componentsWithCounters, loading, error } = useGetEntities(
     entity,
-    relationsType,
-    isGroup,
+    (relationAggregation ?? relationsType)!, // we can safely use the non-null assertion here because of the run-time check above
     entityFilterKind,
+    entityLimit,
   );
 
   if (loading) {
@@ -114,14 +146,14 @@ export const ComponentsGrid = ({
   }
 
   return (
-    <Grid container>
+    <Grid container className={className}>
       {componentsWithCounters?.map(c => (
         <Grid item xs={6} md={6} lg={4} key={c.type ?? c.kind}>
           <EntityCountTile
             counter={c.counter}
             kind={c.kind}
             type={c.type}
-            url={`${catalogLink()}/?${c.queryParams}`}
+            url={catalogLink && `${catalogLink()}/?${c.queryParams}`}
           />
         </Grid>
       ))}

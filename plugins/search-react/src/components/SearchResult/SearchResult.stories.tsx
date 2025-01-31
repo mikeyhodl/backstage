@@ -14,25 +14,27 @@
  * limitations under the License.
  */
 
-import React, { ComponentType } from 'react';
-import { MemoryRouter } from 'react-router';
+import React, { ComponentType, PropsWithChildren } from 'react';
 
-import { List, ListItem } from '@material-ui/core';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
 import DefaultIcon from '@material-ui/icons/InsertDriveFile';
 import CustomIcon from '@material-ui/icons/NoteAdd';
 
 import { Link } from '@backstage/core-components';
-import { TestApiProvider } from '@backstage/test-utils';
+import { TestApiProvider, wrapInTestApp } from '@backstage/test-utils';
+import { createPlugin } from '@backstage/core-plugin-api';
 import { SearchDocument } from '@backstage/plugin-search-common';
 
-import { searchApiRef, MockSearchApi } from '../../api';
 import { SearchContextProvider } from '../../context';
+import { searchApiRef, MockSearchApi } from '../../api';
+import { createSearchResultListItemExtension } from '../../extensions';
 
-import { DefaultResultListItem } from '../DefaultResultListItem';
 import { SearchResultListLayout } from '../SearchResultList';
+import { SearchResultGroupLayout } from '../SearchResultGroup';
+import { DefaultResultListItem } from '../DefaultResultListItem';
 
 import { SearchResult } from './SearchResult';
-import { SearchResultGroupLayout } from '../SearchResultGroup';
 
 const mockResults = {
   results: [
@@ -69,15 +71,14 @@ export default {
   title: 'Plugins/Search/SearchResult',
   component: SearchResult,
   decorators: [
-    (Story: ComponentType<{}>) => (
-      <MemoryRouter>
+    (Story: ComponentType<PropsWithChildren<{}>>) =>
+      wrapInTestApp(
         <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
           <SearchContextProvider>
             <Story />
           </SearchContextProvider>
-        </TestApiProvider>
-      </MemoryRouter>
-    ),
+        </TestApiProvider>,
+      ),
   ],
 };
 
@@ -215,6 +216,50 @@ export const GroupLayout = () => {
           />
         </>
       )}
+    </SearchResult>
+  );
+};
+
+export const WithCustomNoResultsComponent = () => {
+  return (
+    <SearchResult noResultsComponent={<>No results were found</>}>
+      {({ results }) => (
+        <List>
+          {results.map(({ type, document }) => {
+            switch (type) {
+              case 'custom-result-item':
+                return (
+                  <CustomResultListItem
+                    key={document.location}
+                    result={document}
+                  />
+                );
+              default:
+                return (
+                  <DefaultResultListItem
+                    key={document.location}
+                    result={document}
+                  />
+                );
+            }
+          })}
+        </List>
+      )}
+    </SearchResult>
+  );
+};
+
+export const UsingSearchResultItemExtensions = () => {
+  const plugin = createPlugin({ id: 'plugin' });
+  const DefaultResultItem = plugin.provide(
+    createSearchResultListItemExtension({
+      name: 'DefaultResultListItem',
+      component: async () => DefaultResultListItem,
+    }),
+  );
+  return (
+    <SearchResult>
+      <DefaultResultItem />
     </SearchResult>
   );
 };

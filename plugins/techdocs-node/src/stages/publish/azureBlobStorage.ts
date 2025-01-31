@@ -26,7 +26,6 @@ import express from 'express';
 import JSON5 from 'json5';
 import limiterFactory from 'p-limit';
 import { default as path, default as platformPath } from 'path';
-import { Logger } from 'winston';
 import {
   bulkStorageOperation,
   getCloudPathForLocalPath,
@@ -43,6 +42,7 @@ import {
   ReadinessResponse,
   TechDocsMetadata,
 } from './types';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 // The number of batches that may be ongoing at the same time.
 const BATCH_CONCURRENCY = 3;
@@ -51,13 +51,13 @@ export class AzureBlobStoragePublish implements PublisherBase {
   private readonly storageClient: BlobServiceClient;
   private readonly containerName: string;
   private readonly legacyPathCasing: boolean;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
 
   constructor(options: {
     storageClient: BlobServiceClient;
     containerName: string;
     legacyPathCasing: boolean;
-    logger: Logger;
+    logger: LoggerService;
   }) {
     this.storageClient = options.storageClient;
     this.containerName = options.containerName;
@@ -65,7 +65,8 @@ export class AzureBlobStoragePublish implements PublisherBase {
     this.logger = options.logger;
   }
 
-  static fromConfig(config: Config, logger: Logger): PublisherBase {
+  static fromConfig(config: Config, logger: LoggerService): PublisherBase {
+    let storageClient: BlobServiceClient;
     let containerName = '';
     try {
       containerName = config.getString(
@@ -78,40 +79,52 @@ export class AzureBlobStoragePublish implements PublisherBase {
       );
     }
 
-    let accountName = '';
-    try {
-      accountName = config.getString(
-        'techdocs.publisher.azureBlobStorage.credentials.accountName',
-      );
-    } catch (error) {
-      throw new Error(
-        "Since techdocs.publisher.type is set to 'azureBlobStorage' in your app config, " +
-          'techdocs.publisher.azureBlobStorage.credentials.accountName is required.',
-      );
-    }
-
-    // Credentials is an optional config. If missing, default Azure Blob Storage environment variables will be used.
-    // https://docs.microsoft.com/en-us/azure/storage/common/storage-auth-aad-app
-    const accountKey = config.getOptionalString(
-      'techdocs.publisher.azureBlobStorage.credentials.accountKey',
-    );
-
-    let credential;
-    if (accountKey) {
-      credential = new StorageSharedKeyCredential(accountName, accountKey);
-    } else {
-      credential = new DefaultAzureCredential();
-    }
-
-    const storageClient = new BlobServiceClient(
-      `https://${accountName}.blob.core.windows.net`,
-      credential,
-    );
-
     const legacyPathCasing =
       config.getOptionalBoolean(
         'techdocs.legacyUseCaseSensitiveTripletPaths',
       ) || false;
+
+    // Give more priority for connectionString, if configured, return the AzureBlobStoragePublish object here itself
+    const connectionStringKey =
+      'techdocs.publisher.azureBlobStorage.connectionString';
+    const connectionString = config.getOptionalString(connectionStringKey);
+
+    if (connectionString) {
+      logger.info(
+        `Using '${connectionStringKey}' configuration to create storage client`,
+      );
+      storageClient = BlobServiceClient.fromConnectionString(connectionString);
+    } else {
+      let accountName = '';
+      try {
+        accountName = config.getString(
+          'techdocs.publisher.azureBlobStorage.credentials.accountName',
+        );
+      } catch (error) {
+        throw new Error(
+          "Since techdocs.publisher.type is set to 'azureBlobStorage' in your app config, " +
+            'techdocs.publisher.azureBlobStorage.credentials.accountName is required.',
+        );
+      }
+
+      // Credentials is an optional config. If missing, default Azure Blob Storage environment variables will be used.
+      // https://docs.microsoft.com/en-us/azure/storage/common/storage-auth-aad-app
+      const accountKey = config.getOptionalString(
+        'techdocs.publisher.azureBlobStorage.credentials.accountKey',
+      );
+
+      let credential;
+      if (accountKey) {
+        credential = new StorageSharedKeyCredential(accountName, accountKey);
+      } else {
+        credential = new DefaultAzureCredential();
+      }
+
+      storageClient = new BlobServiceClient(
+        `https://${accountName}.blob.core.windows.net`,
+        credential,
+      );
+    }
 
     return new AzureBlobStoragePublish({
       storageClient: storageClient,
@@ -408,7 +421,7 @@ export class AzureBlobStoragePublish implements PublisherBase {
 
     if (originalPath === newPath) return;
     try {
-      this.logger.verbose(`Migrating ${originalPath}`);
+      this.logger.debug(`Migrating ${originalPath}`);
       await this.renameBlob(originalPath, newPath, removeOriginal);
     } catch (e) {
       assertError(e);

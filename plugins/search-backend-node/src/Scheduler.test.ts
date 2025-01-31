@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import { Scheduler } from './index';
+import { mockServices } from '@backstage/backend-test-utils';
 
 describe('Scheduler', () => {
   let testScheduler: Scheduler;
 
   beforeEach(() => {
-    const logger = getVoidLogger();
+    const logger = mockServices.logger.mock();
     testScheduler = new Scheduler({
       logger,
     });
@@ -202,6 +202,42 @@ describe('Scheduler', () => {
           fn: mockTask2,
         }),
       );
+    });
+  });
+
+  describe('stop', () => {
+    it('should abort tasks on stop', () => {
+      const run = jest.fn();
+
+      // Add tasks and interval to schedule
+      testScheduler.addToSchedule({
+        id: '1',
+        task: jest.fn(),
+        scheduledRunner: { run },
+      });
+      testScheduler.addToSchedule({
+        id: '2',
+        task: jest.fn(),
+        scheduledRunner: { run },
+      });
+
+      // Starts scheduling process
+      testScheduler.start();
+
+      const signals = run.mock.calls.map(([options]) => options.signal);
+
+      expect(signals).toHaveLength(2);
+
+      for (const signal of signals) {
+        expect(signal.aborted).toBeFalsy();
+      }
+
+      // Stops scheduling process
+      testScheduler.stop();
+
+      for (const signal of signals) {
+        expect(signal.aborted).toBeTruthy();
+      }
     });
   });
 });

@@ -21,6 +21,7 @@ import { Page } from '@backstage/core-components';
 import { CompoundEntityRef } from '@backstage/catalog-model';
 import {
   TECHDOCS_ADDONS_WRAPPER_KEY,
+  TECHDOCS_ADDONS_KEY,
   TechDocsReaderPageProvider,
 } from '@backstage/plugin-techdocs-react';
 
@@ -34,6 +35,10 @@ import {
   getComponentData,
   useRouteRefParams,
 } from '@backstage/core-plugin-api';
+
+import { CookieAuthRefreshProvider } from '@backstage/plugin-auth-react';
+import { ThemeOptions } from '@material-ui/core/styles';
+import { createTheme, ThemeProvider, useTheme } from '@material-ui/core/styles';
 
 /* An explanation for the multiple ways of customizing the TechDocs reader page
 
@@ -101,6 +106,7 @@ CONFIGURATION 4: <TechDocsReaderPage> and provided content in <Route>
     <ExpandableNavigation />
     <ReportIssue />
     <TextSize />
+    <LightBox />
   </TechDocsAddons>
 </Route>
 
@@ -130,10 +136,8 @@ export type TechDocsReaderLayoutProps = {
  * Default TechDocs reader page structure composed with a header and content
  * @public
  */
-export const TechDocsReaderLayout = ({
-  withSearch,
-  withHeader = true,
-}: TechDocsReaderLayoutProps) => {
+export const TechDocsReaderLayout = (props: TechDocsReaderLayoutProps) => {
+  const { withSearch, withHeader = true } = props;
   return (
     <Page themeId="documentation">
       {withHeader && <TechDocsReaderPageHeader />}
@@ -149,6 +153,7 @@ export const TechDocsReaderLayout = ({
 export type TechDocsReaderPageProps = {
   entityRef?: CompoundEntityRef;
   children?: TechDocsReaderPageRenderFunction | ReactNode;
+  overrideThemeOptions?: Partial<ThemeOptions>;
 };
 
 /**
@@ -157,6 +162,12 @@ export type TechDocsReaderPageProps = {
  * @public
  */
 export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
+  const currentTheme = useTheme();
+
+  const readerPageTheme = createTheme({
+    ...currentTheme,
+    ...(props.overrideThemeOptions || {}),
+  });
   const { kind, name, namespace } = useRouteRefParams(rootDocsRouteRef);
   const { children, entityRef = { kind, name, namespace } } = props;
 
@@ -165,38 +176,49 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
   if (!children) {
     const childrenList = outlet ? Children.toArray(outlet.props.children) : [];
 
-    const grandChildren = childrenList.flatMap(
+    const grandChildren = childrenList.flatMap<ReactElement>(
       child => (child as ReactElement)?.props?.children ?? [],
     );
+
     const page: React.ReactNode = grandChildren.find(
-      grandChild => !getComponentData(grandChild, TECHDOCS_ADDONS_WRAPPER_KEY),
+      grandChild =>
+        !getComponentData(grandChild, TECHDOCS_ADDONS_WRAPPER_KEY) &&
+        !getComponentData(grandChild, TECHDOCS_ADDONS_KEY),
     );
 
     // As explained above, "page" is configuration 4 and <TechDocsReaderLayout> is 1
     return (
-      <TechDocsReaderPageProvider entityRef={entityRef}>
-        {(page as JSX.Element) || <TechDocsReaderLayout />}
-      </TechDocsReaderPageProvider>
+      <ThemeProvider theme={readerPageTheme}>
+        <CookieAuthRefreshProvider pluginId="techdocs">
+          <TechDocsReaderPageProvider entityRef={entityRef}>
+            {(page as JSX.Element) || <TechDocsReaderLayout />}
+          </TechDocsReaderPageProvider>
+        </CookieAuthRefreshProvider>
+      </ThemeProvider>
     );
   }
 
   // As explained above, a render function is configuration 3 and React element is 2
   return (
-    <TechDocsReaderPageProvider entityRef={entityRef}>
-      {({ metadata, entityMetadata, onReady }) => (
-        <div className="techdocs-reader-page">
-          <Page themeId="documentation">
-            {children instanceof Function
-              ? children({
-                  entityRef,
-                  techdocsMetadataValue: metadata.value,
-                  entityMetadataValue: entityMetadata.value,
-                  onReady,
-                })
-              : children}
-          </Page>
-        </div>
-      )}
-    </TechDocsReaderPageProvider>
+    <ThemeProvider theme={readerPageTheme}>
+      <CookieAuthRefreshProvider pluginId="techdocs">
+        <TechDocsReaderPageProvider entityRef={entityRef}>
+          {({ metadata, entityMetadata, onReady }) => (
+            <div className="techdocs-reader-page">
+              <Page themeId="documentation">
+                {children instanceof Function
+                  ? children({
+                      entityRef,
+                      techdocsMetadataValue: metadata.value,
+                      entityMetadataValue: entityMetadata.value,
+                      onReady,
+                    })
+                  : children}
+              </Page>
+            </div>
+          )}
+        </TechDocsReaderPageProvider>
+      </CookieAuthRefreshProvider>
+    </ThemeProvider>
   );
 };

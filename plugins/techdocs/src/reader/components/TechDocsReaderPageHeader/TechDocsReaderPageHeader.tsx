@@ -17,8 +17,8 @@
 import React, { PropsWithChildren, useEffect } from 'react';
 import Helmet from 'react-helmet';
 
-import { Grid } from '@material-ui/core';
-import { Skeleton } from '@material-ui/lab';
+import Grid from '@material-ui/core/Grid';
+import Skeleton from '@material-ui/lab/Skeleton';
 import CodeIcon from '@material-ui/icons/Code';
 
 import {
@@ -127,19 +127,16 @@ export const TechDocsReaderPageHeader = (
           }
         />
       )}
-      {lifecycle ? <HeaderLabel label="Lifecycle" value={lifecycle} /> : null}
+      {lifecycle ? (
+        <HeaderLabel label="Lifecycle" value={String(lifecycle)} />
+      ) : null}
       {locationMetadata &&
       locationMetadata.type !== 'dir' &&
       locationMetadata.type !== 'file' ? (
         <HeaderLabel
           label=""
           value={
-            <Grid
-              container
-              direction="column"
-              alignItems="center"
-              style={{ color: '#fff' }}
-            >
+            <Grid container direction="column" alignItems="center">
               <Grid style={{ padding: 0 }} item>
                 <CodeIcon style={{ marginTop: '-25px' }} />
               </Grid>

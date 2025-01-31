@@ -14,27 +14,32 @@
  * limitations under the License.
  */
 
-import { CatalogApi } from '@backstage/catalog-client';
+import { catalogApiMock } from '@backstage/plugin-catalog-react/testUtils';
 import { Entity } from '@backstage/catalog-model';
 import {
   alertApiRef,
-  ConfigApi,
   configApiRef,
-  IdentityApi,
+  errorApiRef,
   identityApiRef,
   storageApiRef,
 } from '@backstage/core-plugin-api';
-import { MockStorageApi, TestApiProvider } from '@backstage/test-utils';
-import { act, renderHook } from '@testing-library/react-hooks';
+import { TestApiProvider, mockApis } from '@backstage/test-utils';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import qs from 'qs';
 import React, { PropsWithChildren } from 'react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter } from 'react-router-dom';
 import { catalogApiRef } from '../api';
-import { starredEntitiesApiRef, MockStarredEntitiesApi } from '../apis';
-import { EntityKindPicker, UserListPicker } from '../components';
-import { EntityKindFilter, EntityTypeFilter, UserListFilter } from '../filters';
-import { UserListFilterKind } from '../types';
+import { MockStarredEntitiesApi, starredEntitiesApiRef } from '../apis';
+import {
+  EntityKindFilter,
+  EntityTextFilter,
+  EntityTypeFilter,
+  EntityUserFilter,
+} from '../filters';
 import { EntityListProvider, useEntityList } from './useEntityListProvider';
+import { useMountEffect } from '@react-hookz/web';
+import { translationApiRef } from '@backstage/core-plugin-api/alpha';
+import { EntityListPagination } from '../types';
 
 const entities: Entity[] = [
   {
@@ -59,54 +64,61 @@ const entities: Entity[] = [
   },
 ];
 
-const mockConfigApi = {
-  getOptionalString: () => '',
-} as Partial<ConfigApi>;
-const mockIdentityApi: Partial<IdentityApi> = {
-  getBackstageIdentity: async () => ({
-    type: 'user',
-    userEntityRef: 'user:default/guest',
-    ownershipEntityRefs: [],
-  }),
-  getCredentials: async () => ({ token: undefined }),
-};
-const mockCatalogApi: Partial<CatalogApi> = {
-  getEntities: jest.fn().mockImplementation(async () => ({ items: entities })),
-  getEntityByRef: async () => undefined,
-};
+const ownershipEntityRefs = ['user:default/guest'];
 
-const wrapper = ({
-  userFilter,
-  location,
-  children,
-}: PropsWithChildren<{
-  userFilter?: UserListFilterKind;
-  location?: string;
-}>) => {
-  return (
-    <MemoryRouter initialEntries={[location ?? '']}>
-      <TestApiProvider
-        apis={[
-          [configApiRef, mockConfigApi],
-          [catalogApiRef, mockCatalogApi],
-          [identityApiRef, mockIdentityApi],
-          [storageApiRef, MockStorageApi.create()],
-          [starredEntitiesApiRef, new MockStarredEntitiesApi()],
-          [alertApiRef, { post: jest.fn() }],
-        ]}
-      >
-        <EntityListProvider>
-          <EntityKindPicker initialFilter="component" hidden />
-          <UserListPicker initialFilter={userFilter} />
-          {children}
-        </EntityListProvider>
-      </TestApiProvider>
-    </MemoryRouter>
-  );
-};
+const mockIdentityApi = mockApis.identity({
+  userEntityRef: 'user:default/guest',
+  ownershipEntityRefs,
+});
+const mockCatalogApi = catalogApiMock.mock({
+  getEntities: jest.fn().mockResolvedValue({ items: entities }),
+  queryEntities: jest.fn().mockResolvedValue({
+    items: entities,
+    pageInfo: { prevCursor: 'prevCursor', nextCursor: 'nextCursor' },
+    totalItems: 10,
+  }),
+  getEntityByRef: jest.fn().mockResolvedValue(undefined),
+});
+
+const createWrapper =
+  (options: { location?: string; pagination: EntityListPagination }) =>
+  (props: PropsWithChildren) => {
+    const InitialFiltersWrapper = ({ children }: PropsWithChildren) => {
+      const { updateFilters } = useEntityList();
+
+      useMountEffect(() => {
+        updateFilters({ kind: new EntityKindFilter('component', 'Component') });
+      });
+
+      return <>{children}</>;
+    };
+
+    return (
+      <MemoryRouter initialEntries={[options.location ?? '']}>
+        <TestApiProvider
+          apis={[
+            [configApiRef, mockApis.config()],
+            [catalogApiRef, mockCatalogApi],
+            [identityApiRef, mockIdentityApi],
+            [storageApiRef, mockApis.storage()],
+            [starredEntitiesApiRef, new MockStarredEntitiesApi()],
+            [alertApiRef, { post: jest.fn() }],
+            [translationApiRef, mockApis.translation()],
+            [errorApiRef, { error$: jest.fn(), post: jest.fn() }],
+          ]}
+        >
+          <EntityListProvider pagination={options.pagination}>
+            <InitialFiltersWrapper>{props.children}</InitialFiltersWrapper>
+          </EntityListProvider>
+        </TestApiProvider>
+      </MemoryRouter>
+    );
+  };
 
 describe('<EntityListProvider />', () => {
   const origReplaceState = window.history.replaceState;
+  const pagination = false;
+
   beforeEach(() => {
     window.history.replaceState = jest.fn();
   });
@@ -118,34 +130,33 @@ describe('<EntityListProvider />', () => {
     jest.clearAllMocks();
   });
 
-  it('resolves backend filters', async () => {
-    const { result, waitForValueToChange } = renderHook(() => useEntityList(), {
-      wrapper,
+  it('should send backend filters', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
     });
-    await waitForValueToChange(() => result.current.backendEntities);
-    expect(result.current.backendEntities.length).toBe(2);
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBe(2);
+    });
+
+    expect(result.current.entities.length).toBe(2);
+    expect(mockCatalogApi.getEntities).toHaveBeenCalledTimes(1);
     expect(mockCatalogApi.getEntities).toHaveBeenCalledWith({
       filter: { kind: 'component' },
     });
   });
 
   it('resolves frontend filters', async () => {
-    const { result, waitFor } = renderHook(() => useEntityList(), {
-      wrapper,
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
       initialProps: {
         userFilter: 'all',
       },
     });
-    await waitFor(() => !!result.current.entities.length);
-    expect(result.current.backendEntities.length).toBe(2);
 
     act(() =>
       result.current.updateFilters({
-        user: new UserListFilter(
-          'owned',
-          entity => entity.metadata.name === 'component-1',
-          () => true,
-        ),
+        user: EntityUserFilter.owned(ownershipEntityRefs),
       }),
     );
 
@@ -156,17 +167,44 @@ describe('<EntityListProvider />', () => {
     });
   });
 
+  it('ignores search text when not paginating', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+      initialProps: {
+        userFilter: 'all',
+      },
+    });
+
+    act(() =>
+      result.current.updateFilters({
+        text: new EntityTextFilter('1'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBe(2);
+      expect(result.current.entities.length).toBe(1);
+      expect(mockCatalogApi.getEntities).toHaveBeenCalledTimes(1);
+      expect(mockCatalogApi.getEntities).toHaveBeenCalledWith({
+        filter: { kind: 'component' },
+      });
+    });
+  });
+
   it('resolves query param filter values', async () => {
     const query = qs.stringify({
       filters: { kind: 'component', type: 'service' },
     });
-    const { result, waitFor } = renderHook(() => useEntityList(), {
-      wrapper,
-      initialProps: {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({
         location: `/catalog?${query}`,
-      },
+        pagination,
+      }),
     });
-    await waitFor(() => !!result.current.queryParameters);
+
+    await waitFor(() => {
+      expect(result.current.queryParameters).toBeTruthy();
+    });
     expect(result.current.queryParameters).toEqual({
       kind: 'component',
       type: 'service',
@@ -174,8 +212,8 @@ describe('<EntityListProvider />', () => {
   });
 
   it('does not fetch when only frontend filters change', async () => {
-    const { result, waitFor } = renderHook(() => useEntityList(), {
-      wrapper,
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
     });
 
     await waitFor(() => {
@@ -185,52 +223,576 @@ describe('<EntityListProvider />', () => {
 
     act(() =>
       result.current.updateFilters({
-        user: new UserListFilter(
-          'owned',
-          entity => entity.metadata.name === 'component-1',
-          () => true,
-        ),
+        user: EntityUserFilter.owned(ownershipEntityRefs),
       }),
     );
 
     await waitFor(() => {
       expect(result.current.entities.length).toBe(1);
-      expect(mockCatalogApi.getEntities).toHaveBeenCalledTimes(1);
+    });
+    expect(result.current.totalItems).toBe(1);
+
+    await expect(() =>
+      waitFor(() => {
+        expect(mockCatalogApi.getEntities).not.toHaveBeenCalledTimes(1);
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('debounces multiple filter changes', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBeGreaterThan(0);
+    });
+    expect(result.current.totalItems).toBe(2);
+    expect(result.current.backendEntities.length).toBe(2);
+    expect(mockCatalogApi.getEntities).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      result.current.updateFilters({
+        kind: new EntityKindFilter('api', 'API'),
+      });
+      result.current.updateFilters({ type: new EntityTypeFilter('service') });
+    });
+
+    await waitFor(() => {
+      expect(mockCatalogApi.getEntities).toHaveBeenNthCalledWith(2, {
+        filter: { kind: 'api', 'spec.type': ['service'] },
+      });
+    });
+  });
+
+  it('returns an error on catalogApi failure', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBeGreaterThan(0);
+    });
+    expect(result.current.backendEntities.length).toBe(2);
+
+    expect(result.current.totalItems).toBe(2);
+
+    mockCatalogApi.getEntities!.mockRejectedValueOnce('error');
+    act(() => {
+      result.current.updateFilters({
+        kind: new EntityKindFilter('api', 'API'),
+      });
+    });
+    await waitFor(() => {
+      expect(result.current.error).toBeDefined();
+    });
+  });
+
+  it('returns an empty pageInfo', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+    await waitFor(() => {
+      expect(mockCatalogApi.getEntities).toHaveBeenCalled();
+    });
+
+    expect(result.current.pageInfo).toBeUndefined();
+  });
+});
+
+describe('<EntityListProvider pagination />', () => {
+  const origReplaceState = window.history.replaceState;
+  const pagination = true;
+  const limit = 20;
+  const orderFields = [{ field: 'metadata.name', order: 'asc' }];
+
+  beforeEach(() => {
+    window.history.replaceState = jest.fn();
+  });
+  afterEach(() => {
+    window.history.replaceState = origReplaceState;
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('sends search text to the backend', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+      initialProps: {
+        userFilter: 'all',
+      },
+    });
+
+    act(() =>
+      result.current.updateFilters({
+        text: new EntityTextFilter('2'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mockCatalogApi.getEntities).not.toHaveBeenCalledTimes(1);
+      expect(result.current.entities.length).toBe(1);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledWith({
+        filter: { kind: 'component' },
+        limit,
+        orderFields,
+        fullTextFilter: {
+          term: '2',
+          fields: [
+            'metadata.name',
+            'metadata.title',
+            'spec.profile.displayName',
+          ],
+        },
+      });
+    });
+  });
+
+  it('should send backend filters', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBe(2);
+    });
+
+    expect(result.current.entities.length).toBe(2);
+    expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+    expect(mockCatalogApi.queryEntities).toHaveBeenCalledWith({
+      filter: { kind: 'component' },
+      limit,
+      orderFields,
+    });
+  });
+
+  it('resolves frontend filters', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+      initialProps: {
+        userFilter: 'all',
+      },
+    });
+
+    act(() =>
+      result.current.updateFilters({
+        user: EntityUserFilter.owned(ownershipEntityRefs),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBe(2);
+      expect(result.current.entities.length).toBe(1);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('resolves query param filter values', async () => {
+    const query = qs.stringify({
+      filters: { kind: 'component', type: 'service' },
+    });
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({
+        location: `/catalog?${query}`,
+        pagination,
+      }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.queryParameters).toBeTruthy();
+    });
+    expect(result.current.queryParameters).toEqual({
+      kind: 'component',
+      type: 'service',
+    });
+  });
+
+  it('fetch when frontend filters change', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.entities.length).toBe(2);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+    });
+
+    act(() =>
+      result.current.updateFilters({
+        user: EntityUserFilter.owned(ownershipEntityRefs),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.entities.length).toBe(1);
+    });
+
+    await waitFor(() => {
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(2);
     });
   });
 
   it('debounces multiple filter changes', async () => {
-    const { result, waitForNextUpdate, waitForValueToChange } = renderHook(
-      () => useEntityList(),
-      {
-        wrapper,
-      },
-    );
-    await waitForValueToChange(() => result.current.backendEntities);
-    expect(result.current.backendEntities.length).toBe(2);
-    expect(mockCatalogApi.getEntities).toHaveBeenCalledTimes(1);
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
 
-    act(() => {
-      result.current.updateFilters({ kind: new EntityKindFilter('component') });
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBeGreaterThan(0);
+    });
+    expect(result.current.backendEntities.length).toBe(2);
+    expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      result.current.updateFilters({
+        kind: new EntityKindFilter('api', 'API'),
+      });
       result.current.updateFilters({ type: new EntityTypeFilter('service') });
     });
-    await waitForNextUpdate();
-    expect(mockCatalogApi.getEntities).toHaveBeenCalledTimes(2);
+
+    await waitFor(() => {
+      expect(mockCatalogApi.queryEntities).toHaveBeenNthCalledWith(2, {
+        filter: { kind: 'api', 'spec.type': ['service'] },
+        limit,
+        orderFields,
+      });
+    });
+
+    expect(result.current.totalItems).toBe(10);
   });
 
   it('returns an error on catalogApi failure', async () => {
-    const { result, waitForValueToChange, waitFor } = renderHook(
-      () => useEntityList(),
-      {
-        wrapper,
-      },
-    );
-    await waitForValueToChange(() => result.current.backendEntities);
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBeGreaterThan(0);
+    });
     expect(result.current.backendEntities.length).toBe(2);
 
-    mockCatalogApi.getEntities = jest.fn().mockRejectedValue('error');
+    mockCatalogApi.queryEntities!.mockRejectedValueOnce('error');
     act(() => {
-      result.current.updateFilters({ kind: new EntityKindFilter('api') });
+      result.current.updateFilters({
+        kind: new EntityKindFilter('api', 'API'),
+      });
+    });
+    await waitFor(() => {
+      expect(result.current.error).toBeDefined();
+    });
+  });
+
+  describe('pageInfo', () => {
+    it('returns an empty pageInfo', async () => {
+      mockCatalogApi.queryEntities!.mockResolvedValueOnce({
+        items: [],
+        pageInfo: {},
+        totalItems: 10,
+      });
+      const { result } = renderHook(() => useEntityList(), {
+        wrapper: createWrapper({ pagination }),
+      });
+      await waitFor(() => {
+        expect(mockCatalogApi.queryEntities).toHaveBeenCalled();
+      });
+
+      expect(result.current.pageInfo).toStrictEqual({
+        prev: undefined,
+        next: undefined,
+      });
+    });
+
+    it('returns pageInfo with next function and properly fetch next batch', async () => {
+      const { result } = renderHook(() => useEntityList(), {
+        wrapper: createWrapper({ pagination }),
+      });
+      await waitFor(() => {
+        expect(mockCatalogApi.queryEntities).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(result.current.pageInfo!.next).toBeDefined();
+      });
+
+      act(() => {
+        result.current.pageInfo!.next!();
+      });
+
+      await waitFor(() => {
+        expect(mockCatalogApi.queryEntities).toHaveBeenCalledWith({
+          cursor: 'nextCursor',
+          limit,
+        });
+      });
+    });
+
+    it('returns pageInfo with prev function and properly fetch prev batch', async () => {
+      const { result } = renderHook(() => useEntityList(), {
+        wrapper: createWrapper({ pagination }),
+      });
+      await waitFor(() => {
+        expect(mockCatalogApi.queryEntities).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(result.current.pageInfo!.prev).toBeDefined();
+      });
+
+      act(() => {
+        result.current.pageInfo!.prev!();
+      });
+
+      await waitFor(() => {
+        expect(mockCatalogApi.queryEntities).toHaveBeenCalledWith({
+          cursor: 'prevCursor',
+          limit,
+        });
+      });
+    });
+  });
+});
+
+describe(`<EntityListProvider pagination={{ mode: 'offset' }} />`, () => {
+  const origReplaceState = window.history.replaceState;
+  const pagination: EntityListPagination = { mode: 'offset' };
+  const limit = 20;
+  const orderFields = [{ field: 'metadata.name', order: 'asc' }];
+
+  beforeEach(() => {
+    window.history.replaceState = jest.fn();
+  });
+  afterEach(() => {
+    window.history.replaceState = origReplaceState;
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('sends search text to the backend', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+      initialProps: {
+        userFilter: 'all',
+      },
+    });
+
+    act(() =>
+      result.current.updateFilters({
+        text: new EntityTextFilter('2'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mockCatalogApi.getEntities).not.toHaveBeenCalledTimes(1);
+      expect(result.current.entities.length).toBe(1);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledWith({
+        filter: { kind: 'component' },
+        limit,
+        orderFields,
+        fullTextFilter: {
+          term: '2',
+          fields: [
+            'metadata.name',
+            'metadata.title',
+            'spec.profile.displayName',
+          ],
+        },
+      });
+    });
+  });
+
+  it('should send backend filters', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBe(2);
+    });
+
+    expect(result.current.entities.length).toBe(2);
+    expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+    expect(mockCatalogApi.queryEntities).toHaveBeenCalledWith({
+      filter: { kind: 'component' },
+      limit,
+      orderFields,
+    });
+  });
+
+  it('resolves frontend filters', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+      initialProps: {
+        userFilter: 'all',
+      },
+    });
+
+    act(() =>
+      result.current.updateFilters({
+        user: EntityUserFilter.owned(ownershipEntityRefs),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBe(2);
+      expect(result.current.entities.length).toBe(1);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('resolves query param filter values', async () => {
+    const query = qs.stringify({
+      filters: { kind: 'component', type: 'service' },
+    });
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({
+        location: `/catalog?${query}`,
+        pagination,
+      }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.queryParameters).toBeTruthy();
+    });
+    expect(result.current.queryParameters).toEqual({
+      kind: 'component',
+      type: 'service',
+    });
+  });
+
+  it('fetch when frontend filters change', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.entities.length).toBe(2);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+    });
+
+    act(() =>
+      result.current.updateFilters({
+        user: EntityUserFilter.owned(ownershipEntityRefs),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.entities.length).toBe(1);
+    });
+
+    await waitFor(() => {
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(2);
+    });
+
+    act(() =>
+      result.current.updateFilters({
+        user: EntityUserFilter.owned(ownershipEntityRefs),
+      }),
+    );
+
+    await expect(() =>
+      waitFor(() => {
+        expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(3);
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('fetch when limit change', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.entities.length).toBe(2);
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+    });
+
+    act(() => result.current.setLimit(50));
+
+    await waitFor(() => {
+      expect(result.current.entities.length).toBe(2);
+    });
+
+    await waitFor(() => {
+      expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(2);
+      expect(result.current.limit).toEqual(50);
+    });
+  });
+
+  it('debounces multiple filter changes', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBeGreaterThan(0);
+    });
+    expect(result.current.backendEntities.length).toBe(2);
+    expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.updateFilters({
+        kind: new EntityKindFilter('api', 'API'),
+      });
+      result.current.updateFilters({ type: new EntityTypeFilter('service') });
+    });
+
+    await waitFor(() => {
+      expect(mockCatalogApi.queryEntities).toHaveBeenNthCalledWith(2, {
+        filter: { kind: 'api', 'spec.type': ['service'] },
+        limit,
+        orderFields,
+      });
+    });
+  });
+
+  it('debounces multiple offset changes', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBeGreaterThan(0);
+    });
+    expect(result.current.backendEntities.length).toBe(2);
+    expect(mockCatalogApi.queryEntities).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.setOffset!(5);
+      result.current.setOffset!(10);
+    });
+
+    await waitFor(() => {
+      expect(mockCatalogApi.queryEntities).toHaveBeenNthCalledWith(2, {
+        filter: { kind: 'component' },
+        limit,
+        offset: 10,
+        orderFields,
+      });
+      expect(result.current.offset).toEqual(10);
+    });
+  });
+
+  it('returns an error on catalogApi failure', async () => {
+    const { result } = renderHook(() => useEntityList(), {
+      wrapper: createWrapper({ pagination }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.backendEntities.length).toBeGreaterThan(0);
+    });
+    expect(result.current.backendEntities.length).toBe(2);
+
+    mockCatalogApi.queryEntities!.mockRejectedValueOnce('error');
+    act(() => {
+      result.current.updateFilters({
+        kind: new EntityKindFilter('api', 'API'),
+      });
     });
     await waitFor(() => {
       expect(result.current.error).toBeDefined();

@@ -15,19 +15,16 @@
  */
 
 import React from 'react';
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Typography,
-  IconButton,
-  Theme,
-} from '@material-ui/core';
+import { SettingsModal } from '@backstage/plugin-home-react';
+import Accordion from '@material-ui/core/Accordion';
+import AccordionDetails from '@material-ui/core/AccordionDetails';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
+import Typography from '@material-ui/core/Typography';
+import IconButton from '@material-ui/core/IconButton';
+import { Theme } from '@material-ui/core/styles';
 import { makeStyles } from '@material-ui/core/styles';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import SettingsIcon from '@material-ui/icons/Settings';
-
-import { SettingsModal } from '../components';
 
 const useStyles = makeStyles((theme: Theme) => ({
   settingsIconButton: {
@@ -39,7 +36,7 @@ const useStyles = makeStyles((theme: Theme) => ({
 }));
 
 export const ComponentAccordion = (props: {
-  title: string;
+  title?: string;
   expanded?: boolean;
   Content: () => JSX.Element;
   Actions?: () => JSX.Element;

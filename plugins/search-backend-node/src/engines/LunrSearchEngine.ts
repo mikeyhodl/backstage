@@ -18,14 +18,13 @@ import {
   IndexableDocument,
   IndexableResultSet,
   SearchQuery,
-  QueryTranslator,
-  SearchEngine,
 } from '@backstage/plugin-search-common';
+import { QueryTranslator, SearchEngine } from '../types';
 import { MissingIndexError } from '../errors';
 import lunr from 'lunr';
 import { v4 as uuid } from 'uuid';
-import { Logger } from 'winston';
 import { LunrSearchEngineIndexer } from './LunrSearchEngineIndexer';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 /**
  * Type of translated query for the Lunr Search Engine.
@@ -55,11 +54,11 @@ export type LunrQueryTranslator = (query: SearchQuery) => ConcreteLunrQuery;
 export class LunrSearchEngine implements SearchEngine {
   protected lunrIndices: Record<string, lunr.Index> = {};
   protected docStore: Record<string, IndexableDocument>;
-  protected logger: Logger;
+  protected logger: LoggerService;
   protected highlightPreTag: string;
   protected highlightPostTag: string;
 
-  constructor(options: { logger: Logger }) {
+  constructor(options: { logger: LoggerService }) {
     this.logger = options.logger;
     this.docStore = {};
     const uuidTag = uuid();
@@ -153,12 +152,37 @@ export class LunrSearchEngine implements SearchEngine {
 
   async getIndexer(type: string) {
     const indexer = new LunrSearchEngineIndexer();
+    const indexerLogger = this.logger.child({ documentType: type });
+    let errorThrown: Error | undefined;
+
+    indexer.on('error', err => {
+      errorThrown = err;
+    });
 
     indexer.on('close', () => {
       // Once the stream is closed, build the index and store the documents in
       // memory for later retrieval.
-      this.lunrIndices[type] = indexer.buildIndex();
-      this.docStore = { ...this.docStore, ...indexer.getDocumentStore() };
+      const newDocuments = indexer.getDocumentStore();
+      const docStoreExists = this.lunrIndices[type] !== undefined;
+      const documentsIndexed = Object.keys(newDocuments).length;
+
+      // Do not set the index if there was an error or if no documents were
+      // indexed. This ensures search continues to work for an index, even in
+      // case of transient issues in underlying collators.
+      if (!errorThrown && documentsIndexed > 0) {
+        this.lunrIndices[type] = indexer.buildIndex();
+        this.docStore = { ...this.docStore, ...newDocuments };
+      } else {
+        indexerLogger.warn(
+          `Index for ${type} was not ${
+            docStoreExists ? 'replaced' : 'created'
+          }: ${
+            errorThrown
+              ? 'an error was encountered'
+              : 'indexer received 0 documents'
+          }`,
+        );
+      }
     });
 
     return indexer;
@@ -238,6 +262,7 @@ export class LunrSearchEngine implements SearchEngine {
           }),
         },
       })),
+      numberOfResults: results.length,
       nextPageCursor,
       previousPageCursor,
     };
@@ -283,8 +308,13 @@ export function parseHighlightFields({
   const highlightFieldPositions = Object.values(positionMetadata).reduce(
     (fieldPositions, metadata) => {
       Object.keys(metadata).map(fieldKey => {
-        fieldPositions[fieldKey] = fieldPositions[fieldKey] ?? [];
-        fieldPositions[fieldKey].push(...metadata[fieldKey].position);
+        const validFieldMetadataPositions = metadata[
+          fieldKey
+        ]?.position?.filter(position => Array.isArray(position));
+        if (validFieldMetadataPositions.length) {
+          fieldPositions[fieldKey] = fieldPositions[fieldKey] ?? [];
+          fieldPositions[fieldKey].push(...validFieldMetadataPositions);
+        }
       });
 
       return fieldPositions;
@@ -298,11 +328,11 @@ export function parseHighlightFields({
 
       const highlightedField = positions.reduce((content, pos) => {
         return (
-          `${content.substring(0, pos[0])}${preTag}` +
-          `${content.substring(pos[0], pos[0] + pos[1])}` +
-          `${postTag}${content.substring(pos[0] + pos[1])}`
+          `${String(content).substring(0, pos[0])}${preTag}` +
+          `${String(content).substring(pos[0], pos[0] + pos[1])}` +
+          `${postTag}${String(content).substring(pos[0] + pos[1])}`
         );
-      }, doc[field]);
+      }, doc[field] ?? '');
 
       return [field, highlightedField];
     }),

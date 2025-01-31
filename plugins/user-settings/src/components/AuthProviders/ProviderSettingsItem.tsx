@@ -15,16 +15,14 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import {
-  Button,
-  Grid,
-  ListItem,
-  ListItemIcon,
-  ListItemSecondaryAction,
-  ListItemText,
-  Tooltip,
-  Typography,
-} from '@material-ui/core';
+import Button from '@material-ui/core/Button';
+import Grid from '@material-ui/core/Grid';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import ListItemText from '@material-ui/core/ListItemText';
+import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
 import {
   ApiRef,
   SessionApi,
@@ -36,6 +34,8 @@ import {
   IconComponent,
 } from '@backstage/core-plugin-api';
 import { ProviderSettingsAvatar } from './ProviderSettingsAvatar';
+
+const emptyProfile: ProfileInfo = {};
 
 /** @public */
 export const ProviderSettingsItem = (props: {
@@ -49,8 +49,7 @@ export const ProviderSettingsItem = (props: {
   const api = useApi(apiRef);
   const errorApi = useApi(errorApiRef);
   const [signedIn, setSignedIn] = useState(false);
-  const emptyProfile: ProfileInfo = {};
-  const [profile, setProfile] = useState(emptyProfile);
+  const [profile, setProfile] = useState<ProfileInfo>(emptyProfile);
 
   useEffect(() => {
     let didCancel = false;
@@ -58,6 +57,10 @@ export const ProviderSettingsItem = (props: {
     const subscription = api
       .sessionState$()
       .subscribe((sessionState: SessionState) => {
+        if (sessionState !== SessionState.SignedIn) {
+          setProfile(emptyProfile);
+          setSignedIn(false);
+        }
         if (!didCancel) {
           api
             .getProfile({ optional: true })
@@ -89,14 +92,14 @@ export const ProviderSettingsItem = (props: {
         primary={title}
         secondary={
           <Tooltip placement="top" arrow title={description}>
-            <span>
-              <Grid container spacing={6}>
-                <Grid item>
-                  <ProviderSettingsAvatar size={48} picture={profile.picture} />
-                </Grid>
-                <Grid item xs={12} sm container>
-                  <Grid item xs container direction="column" spacing={2}>
-                    <Grid item xs>
+            <Grid container spacing={6}>
+              <Grid item>
+                <ProviderSettingsAvatar size={48} picture={profile.picture} />
+              </Grid>
+              <Grid item xs={12} sm container>
+                <Grid item xs container direction="column" spacing={2}>
+                  <Grid item xs>
+                    {profile.displayName && (
                       <Typography
                         variant="subtitle1"
                         color="textPrimary"
@@ -104,17 +107,19 @@ export const ProviderSettingsItem = (props: {
                       >
                         {profile.displayName}
                       </Typography>
+                    )}
+                    {profile.email && (
                       <Typography variant="body2" color="textSecondary">
                         {profile.email}
                       </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {description}
-                      </Typography>
-                    </Grid>
+                    )}
+                    <Typography variant="body2" color="textSecondary">
+                      {description}
+                    </Typography>
                   </Grid>
                 </Grid>
               </Grid>
-            </span>
+            </Grid>
           </Tooltip>
         }
         secondaryTypographyProps={{ noWrap: true, style: { width: '80%' } }}

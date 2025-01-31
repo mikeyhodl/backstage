@@ -14,29 +14,40 @@
  * limitations under the License.
  */
 
-import { ServiceFactory, BackendFeature } from '@backstage/backend-plugin-api';
+import { BackendFeature, ServiceFactory } from '@backstage/backend-plugin-api';
 import { BackendInitializer } from './BackendInitializer';
-import { ServiceRegistry } from './ServiceRegistry';
+import { unwrapFeature } from './helpers';
 import { Backend } from './types';
 
 export class BackstageBackend implements Backend {
-  #services: ServiceRegistry;
   #initializer: BackendInitializer;
 
-  constructor(apiFactories: ServiceFactory[]) {
-    this.#services = new ServiceRegistry(apiFactories);
-    this.#initializer = new BackendInitializer(this.#services);
+  constructor(defaultServiceFactories: ServiceFactory[]) {
+    this.#initializer = new BackendInitializer(defaultServiceFactories);
   }
 
-  add(feature: BackendFeature): void {
-    this.#initializer.add(feature);
+  add(feature: BackendFeature | Promise<{ default: BackendFeature }>): void {
+    if (isPromise(feature)) {
+      this.#initializer.add(feature.then(f => unwrapFeature(f.default)));
+    } else {
+      this.#initializer.add(unwrapFeature(feature));
+    }
   }
 
   async start(): Promise<void> {
     await this.#initializer.start();
   }
 
-  // async stop(): Promise<void> {
-  //   await this.#initializer.stop();
-  // }
+  async stop(): Promise<void> {
+    await this.#initializer.stop();
+  }
+}
+
+function isPromise<T>(value: unknown | Promise<T>): value is Promise<T> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'then' in value &&
+    typeof value.then === 'function'
+  );
 }

@@ -244,7 +244,7 @@ export interface PermissionEvaluator {
    */
   authorize(
     requests: AuthorizePermissionRequest[],
-    options?: EvaluatorRequestOptions,
+    options?: EvaluatorRequestOptions & { _ignored?: never }, // Since the options are empty we add this placeholder to reject all options
   ): Promise<AuthorizePermissionResponse[]>;
 
   /**
@@ -257,15 +257,20 @@ export interface PermissionEvaluator {
    */
   authorizeConditional(
     requests: QueryPermissionRequest[],
-    options?: EvaluatorRequestOptions,
+    options?: EvaluatorRequestOptions & { _ignored?: never }, // Since the options are empty we add this placeholder to reject all options
   ): Promise<QueryPermissionResponse[]>;
 }
 
+// Note(Rugvip): I kept the below type around in case we want to add new options
+// in the future, for example a signal. It also helps out enabling API
+// constraints, as without this we can't have the permissions service implement
+// the evaluator interface due to the mismatch in parameter count.
+
 /**
  * Options for {@link PermissionEvaluator} requests.
- * The Backstage identity token should be defined if available.
+ *
+ * This is currently empty, as there are no longer any common options for the permission evaluator.
+ *
  * @public
  */
-export type EvaluatorRequestOptions = {
-  token?: string;
-};
+export interface EvaluatorRequestOptions {}

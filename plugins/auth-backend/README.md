@@ -158,6 +158,21 @@ To try out SAML, you can use the mock identity provider:
 
 [How to add an auth provider](https://github.com/backstage/backstage/blob/master/docs/auth/add-auth-provider.md)
 
+## Token issuers
+
+[Configuring token issuers](https://github.com/backstage/backstage/blob/master/docs/auth/index.md)
+
 ## Links
 
 - [The Backstage homepage](https://backstage.io)
+
+## Configuring Token Expiration in App Config
+
+If you need to change Backstage token expiration from the default value of one hour you can do so through configuration. Note that this is **not** the session duration, but rather the duration that the short-term cryptographic tokens are valid for. The expiration can not be set lower than 10 minutes or above 24 hours.
+
+This is what the configuration looks like:
+
+```
+auth:
+   backstageTokenExpiration: { minutes: <user_defined_value> }
+```

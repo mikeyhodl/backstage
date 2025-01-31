@@ -1,11 +1,1313 @@
 # @backstage/create-app
 
+## 0.5.25-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.25-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.24
+
+### Patch Changes
+
+- 2e3fbc1: Bumped create-app version.
+- 0980e40: Bumped create-app version.
+- 828c993: Added `--jobs unlimited` to `dev` script to help cases where the backend does not start up during local development
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.24-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.24-next.1
+
+### Patch Changes
+
+- 828c993: Added `-j 2` to `dev` script to help cases where the backend does not start up during local development
+
+## 0.5.24-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.23
+
+### Patch Changes
+
+- 5819f8d: Updated Dockerfile to include `backstage.json` file
+- 583f3d4: Updated the template to use `@backstage/cli/config/prettier` instead of `@spotify/prettier-config`.
+- e913fdf: Add github backend module to create-app and improve error messages
+- 5c9cc05: Use native fetch instead of node-fetch
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.23-next.2
+
+### Patch Changes
+
+- e913fdf: Add github backend module to create-app and improve error messages
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.23-next.1
+
+### Patch Changes
+
+- 5c9cc05: Use native fetch instead of node-fetch
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.23-next.0
+
+### Patch Changes
+
+- 5819f8d: Updated Dockerfile to include `backstage.json` file
+- 583f3d4: Updated the template to use `@backstage/cli/config/prettier` instead of `@spotify/prettier-config`.
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.22
+
+### Patch Changes
+
+- 7907e3b: Bumped create-app version.
+- 42386c2: Bumped create-app version.
+- 702f41d: Updated engines to support Node 20 or 22
+- a917f86: This update adds the @backstage/repo-tools package to the versions.ts file, enabling proper version resolution for templates. The {{version '@backstage/repo-tools'}} placeholder now works as expected in the create-app process.
+- 5872964: Use the main entrypoint for `create-app` installs
+- 702f41d: Bumped dev dependencies `@types/node`
+- Updated dependencies
+  - @backstage/cli-common@0.1.15
+
+## 0.5.22-next.3
+
+### Patch Changes
+
+- 5872964: Use the main entrypoint for `create-app` installs
+- Updated dependencies
+  - @backstage/cli-common@0.1.15-next.0
+
+## 0.5.22-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.15-next.0
+
+## 0.5.22-next.1
+
+### Patch Changes
+
+- 702f41d: Updated engines to support Node 20 or 22
+- 702f41d: Bumped dev dependencies `@types/node`
+- Updated dependencies
+  - @backstage/cli-common@0.1.15-next.0
+
+## 0.5.22-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.21
+
+### Patch Changes
+
+- c42c710: Bumped create-app version.
+- 56a8118: Bumped create-app version.
+- a7674d6: Fixed lack of `.yarnrc.yml` in the template.
+- ab89e45: Remove some dependencies that aren't required anymore
+- b452088: Tweak `Dockerfile` to fix deprecated syntax.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.21-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.21-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.21-next.0
+
+### Patch Changes
+
+- a7674d6: Fixed lack of `.yarnrc.yml` in the template.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.19
+
+### Patch Changes
+
+- d2d2313: Add `config.d.ts` files to the list of included file in `tsconfig.json`.
+
+  This allows ESLint to detect issues or deprecations in those files.
+
+- 4975e63: Yarn 4 is now the default for `create-app`. Also updated `yarn dev` script to use `yarn workspaces foreach` and removed unused Lerna and Concurrently dependencies.
+- 4735881: Bumped create-app version.
+- 97422b0: Update templates to not refer to backend-common
+- 019d9ad: Minor dockerfile syntax update
+- e03acd8: Updated Dockerfile base image to `node:20-bookworm-slim` from `node:18-bookworm-slim`
+- bf370c2: Remove references to the `@backstage/backend-tasks` in versions of the `create-app` package, as it has been deprecated.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.19-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.19-next.1
+
+### Patch Changes
+
+- d2d2313: Add `config.d.ts` files to the list of included file in `tsconfig.json`.
+
+  This allows ESLint to detect issues or deprecations in those files.
+
+- 97422b0: Update templates to not refer to backend-common
+- bf370c2: Remove references to the `@backstage/backend-tasks` in versions of the `create-app` package, as it has been deprecated.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.19-next.0
+
+### Patch Changes
+
+- 019d9ad: Minor dockerfile syntax update
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.18
+
+### Patch Changes
+
+- c0a705d: Added the Kubernetes plugin to `create-app`
+- d7a0aa3: Bumped create-app version.
+- 93095ee: Make sure node-fetch is version 2.7.0 or greater
+- 6c1081c: Updated dockerfile and `app-config.production.yaml` to make it easier to get started with example data
+- bfeba46: Included permission config and enabled it out of the box
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.18-next.4
+
+### Patch Changes
+
+- bfeba46: Included permission config and enabled it out of the box
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.18-next.3
+
+### Patch Changes
+
+- 93095ee: Make sure node-fetch is version 2.7.0 or greater
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.18-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.18-next.1
+
+### Patch Changes
+
+- 6c1081c: Updated dockerfile and `app-config.production.yaml` to make it easier to get started with example data
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.18-next.0
+
+### Patch Changes
+
+- c0a705d: Added the Kubernetes plugin to `create-app`
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.17
+
+### Patch Changes
+
+- 780d994: Added `MyGroupsSidebarItem` to the sidebar in the `create-app` template
+- f03d12a: Bumped create-app version.
+- e90a2cd: Added the Catalog logs module to the `create-app` template
+- 3ac2a6a: Added the Postgres Search Engine to the `create-app` template
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.17-next.2
+
+### Patch Changes
+
+- e90a2cd: Added the Catalog logs module to the `create-app` template
+
+## 0.5.17-next.1
+
+### Patch Changes
+
+- 780d994: Added `MyGroupsSidebarItem` to the sidebar in the `create-app` template
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.17-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.16
+
+### Patch Changes
+
+- cce0495: Bumped create-app version.
+- 77da22e: Bumped create-app version.
+- 2110d76: Removed `dockerode` dependency.
+- 34daaea: Fixed a broken link to the node-postgres documentation
+- 78363f6: Bumped TypeScript to version `5.4`.
+- 1a212f9: Remove Tech Radar menu item from sidebar of scaffolded app to align with removal of tech-radar plugin from backend
+- 81507c8: Updated `node-gyp` to v10
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.5.16-next.3
+
+### Patch Changes
+
+- 34daaea: Fixed a broken link to the node-postgres documentation
+- 1a212f9: Remove Tech Radar menu item from sidebar of scaffolded app to align with removal of tech-radar plugin from backend
+- Updated dependencies
+  - @backstage/cli-common@0.1.14-next.0
+
+## 0.5.16-next.2
+
+### Patch Changes
+
+- 78363f6: Bumped TypeScript to version `5.4`.
+- 81507c8: Updated `node-gyp` to v10
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.16-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.5.16-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.15
+
+### Patch Changes
+
+- c066c88: Removed `packages/backend/src/types.ts` from the template as it is unused. It was mistakenly left in after moving the template to the new backend system.
+- 5d99272: Update local development dependencies.
+- 0478509: Bumped create-app version.
+- d85dd88: Bumped create-app version.
+- 8105aad: Removed the Tech Radar and GitHub Actions plugins from the template, which have been moved to the community plugins repository.
+
+## 0.5.15-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.5.15-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.5.15-next.0
+
+### Patch Changes
+
+- c066c88: Removed `packages/backend/src/types.ts` from the template as it is unused. It was mistakenly left in after moving the template to the new backend system.
+- 5d99272: Update local development dependencies.
+- 8105aad: Removed the Tech Radar and GitHub Actions plugins from the template, which have been moved to the community plugins repository.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.14
+
+### Patch Changes
+
+- 366cf07: Bumped create-app version.
+- 036b9b3: Bumped create-app version.
+- 2e1218c: Fix docs reference
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.14-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.14-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.13
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.12
+
+### Patch Changes
+
+- 4cca80f: Bumped create-app version.
+- 8db51ca: Bumped create-app version.
+- 778bc48: Bumped create-app version.
+- 1bd4596: Removed the `ts-node` dev dependency.
+- 829a249: Migrated the backend of the create app template to use the new backend system. For information on how to migrate your existing backend, see the [migration guide](https://backstage.io/docs/backend-system/building-backends/migrating).
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.12-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.12-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.12-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.11
+
+### Patch Changes
+
+- c70c3dc: Bumped create-app version.
+- c420081: Add a seed file for `yarn.lock` in newly created apps. This file is downloaded directly from `https://github.com/backstage/backstage` at the time of creating a new project, ensuring that users always receive the latest version. The purpose of the seed file is to initialize the lock file with known good versions of individual dependencies that have had bad new releases published. The seed file will have no effect if the dependency is not present, it can not be used to install additional packages.
+- f71352c: Bumped TypeScript to version `5.3`.
+- 03e55b1: Updated the default app index template at `packages/app/public/index.html` to have a fallback value for the `app.title` config.
+- 6bb6f3e: Updated dependency `fs-extra` to `^11.2.0`.
+  Updated dependency `@types/fs-extra` to `^11.0.0`.
+- 6ba64c4: Updated dependency `commander` to `^12.0.0`.
+- aeec29c: Updated `packages/app` as well as the root `package.json` type resolutions to use React v18.
+
+  The `@testing-library/*` dependencies have also been updated to the ones compatible with React v18, and the test at `packages/app/src/App.test.tsx` had been updated to use more modern patterns that work better with these new versions.
+
+  For information on how to migrate existing apps to React v18, see the [migration guide](https://backstage.io/docs/tutorials/react18-migration)
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.11-next.3
+
+### Patch Changes
+
+- 03e55b1: Updated the default app index template at `packages/app/public/index.html` to have a fallback value for the `app.title` config.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.11-next.2
+
+### Patch Changes
+
+- c420081: Add a seed file for `yarn.lock` in newly created apps. This file is downloaded directly from `https://github.com/backstage/backstage` at the time of creating a new project, ensuring that users always receive the latest version. The purpose of the seed file is to initialize the lock file with known good versions of individual dependencies that have had bad new releases published. The seed file will have no effect if the dependency is not present, it can not be used to install additional packages.
+- f71352c: Bumped TypeScript to version `5.3`.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.11-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.11-next.0
+
+### Patch Changes
+
+- aeec29c: Updated `packages/app` as well as the root `package.json` type resolutions to use React v18.
+
+  The `@testing-library/*` dependencies have also been updated to the ones compatible with React v18, and the test at `packages/app/src/App.test.tsx` had been updated to use more modern patterns that work better with these new versions.
+
+  For information on how to migrate existing apps to React v18, see the [migration guide](https://backstage.io/docs/tutorials/react18-migration)
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.9
+
+### Patch Changes
+
+- c9f71fb: Bumped create-app version.
+- ac277f3: Bumped create-app version.
+- 7acbb5a: Removed `mock-fs` dev dependency.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.9-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.5.9-next.1
+
+### Patch Changes
+
+- 7acbb5a: Removed `mock-fs` dev dependency.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.9-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.8
+
+### Patch Changes
+
+- 8ece804: Bumped create-app version.
+- 0351e09: Bumped create-app version.
+- 3f1192f: Bumped create-app version.
+- a96c2d4: Include the `<EntityLinksCard />` for group entities by default
+- 375b6f7: CircelCI plugin moved permanently
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.8-next.4
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.8-next.3
+
+### Patch Changes
+
+- a96c2d4: Include the `<EntityLinksCard />` for group entities by default
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.8-next.2
+
+### Patch Changes
+
+- 375b6f7d68: CircelCI plugin moved permanently
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.8-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.5.8-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.7
+
+### Patch Changes
+
+- 770763487a: Cleaned up cases where deprecated code was being used but had a new location they should be imported from
+- 013611b42e: `knex` has been bumped to major version 3 and `better-sqlite3` to major version 9, which deprecate node 16 support.
+
+  You can do the same in your own Backstage repository to ensure that you get future node 18+ relevant updates, by having the following lines in your `packages/backend/package.json`:
+
+  ```
+  "dependencies": {
+    // ...
+    "knex": "^3.0.0"
+  },
+  "devDependencies": {
+    // ...
+    "better-sqlite3": "^9.0.0",
+  ```
+
+- f577e1176f: Bumped create-app version.
+- 6c2b872153: Add official support for React 18.
+- ae1602e54d: If create app installs dependencies, don't suggest to user that they also need to do it.
+- e6b7ab8d2b: Added missing node-gyp dependency to fix Docker image build
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.7-next.2
+
+### Patch Changes
+
+- [#20771](https://github.com/backstage/backstage/pull/20771) [`770763487a`](https://github.com/backstage/backstage/commit/770763487a5d14f33748643ceaa2f2981f1f918b) Thanks [@awanlin](https://github.com/awanlin)! - Cleaned up cases where deprecated code was being used but had a new location they should be imported from
+
+- [#20570](https://github.com/backstage/backstage/pull/20570) [`013611b42e`](https://github.com/backstage/backstage/commit/013611b42ed457fefa9bb85fddf416cf5e0c1f76) Thanks [@freben](https://github.com/freben)! - `knex` has been bumped to major version 3 and `better-sqlite3` to major version 9, which deprecate node 16 support.
+
+  You can do the same in your own Backstage repository to ensure that you get future node 18+ relevant updates, by having the following lines in your `packages/backend/package.json`:
+
+  ```
+  "dependencies": {
+    // ...
+    "knex": "^3.0.0"
+  },
+  "devDependencies": {
+    // ...
+    "better-sqlite3": "^9.0.0",
+  ```
+
+- [#20695](https://github.com/backstage/backstage/pull/20695) [`e6b7ab8d2b`](https://github.com/backstage/backstage/commit/e6b7ab8d2bc179d543648e143fa1f2eecb08809e) Thanks [@fjudith](https://github.com/fjudith)! - Added missing node-gyp dependency to fix Docker image build
+
+## 0.5.7-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.7-next.0
+
+### Patch Changes
+
+- 6c2b872153: Add official support for React 18.
+- ae1602e54d: If create app installs dependencies, don't suggest to user that they also need to do it.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.6
+
+### Patch Changes
+
+- ba6a3b59c1: Removed duplicate `apple-touch-icon` link from `packages/app/public/index.html` that linked to nonexistent icon.
+- c8ec0dea4a: Create unique temp directory for each `create-app` execution.
+- e43d3eb1b7: Bumped create-app version.
+- b665f2ce65: Change base node image from node:18-bullseye-slim to node:18-bookworm-slim due to Docker build error on bullseye.
+
+  You can apply these change to your own `Dockerfile` by replacing `node:18-bullseye-slim` with `node:18-bookworm-slim`
+
+- deed089a3d: Bump `cypress` to fix the end-to-end tests
+- de42eebaaf: Bumped dev dependencies `@types/node` and `mock-fs`.
+- 04a3f65e15: Bump Docker base images to `node:18-bookworm-slim` to fix node compatibility issues raised during image build.
+
+  You can apply these change to your own `Dockerfile` by replacing `node:16-bullseye-slim` with `node:18-bookworm-slim`
+
+- 9864f263ba: Bump dev dependencies `lerna@7.3.0` on the template
+- 5eacd5d213: The E2E test setup based on Cypress has been replaced with one based on [Playwright](https://playwright.dev/). Migrating existing apps is not required as this is a standalone setup, only do so if you also want to switch from Cypress to Playwright.
+
+  The scripts to run the E2E tests have been removed from `packages/app/package.json`, as they are now instead run from the root. Instead, a new script has been added to the root `package.json`, `yarn test:e2e`, which runs the E2E tests in development mode, unless `CI` is set in the environment.
+
+  The Playwright setup uses utilities from the new `@backstage/e2e-test-utils` package to find and include all packages in the monorepo that have an `e2e-tests` folder.
+
+- 8d2e640af4: Added missing `.eslintignore` file
+
+  To apply this change to an existing app, create a new `.eslintignore` file at the root of your project with the following content:
+
+  ```diff
+  + playwright.config.ts
+  ```
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.5.6-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13-next.0
+
+## 0.5.6-next.1
+
+### Patch Changes
+
+- 8d2e640af4: Added missing `.eslintignore` file
+
+  To apply this change to an existing app, create a new `.eslintignore` file at the root of your project with the following content:
+
+  ```diff
+  + playwright.config.ts
+  ```
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.13-next.0
+
+## 0.5.6-next.0
+
+### Patch Changes
+
+- ba6a3b59c1: Removed duplicate `apple-touch-icon` link from `packages/app/public/index.html` that linked to nonexistent icon.
+- c8ec0dea4a: Create unique temp directory for each `create-app` execution.
+- b665f2ce65: Change base node image from node:18-bullseye-slim to node:18-bookworm-slim due to Docker build error on bullseye.
+
+  You can apply these change to your own `Dockerfile` by replacing `node:18-bullseye-slim` with `node:18-bookworm-slim`
+
+- deed089a3d: Bump `cypress` to fix the end-to-end tests
+- de42eebaaf: Bumped dev dependencies `@types/node` and `mock-fs`.
+- 04a3f65e15: Bump Docker base images to `node:18-bookworm-slim` to fix node compatibility issues raised during image build.
+
+  You can apply these change to your own `Dockerfile` by replacing `node:16-bullseye-slim` with `node:18-bookworm-slim`
+
+- 5eacd5d213: The E2E test setup based on Cypress has been replaced with one based on [Playwright](https://playwright.dev/). Migrating existing apps is not required as this is a standalone setup, only do so if you also want to switch from Cypress to Playwright.
+
+  The scripts to run the E2E tests have been removed from `packages/app/package.json`, as they are now instead run from the root. Instead, a new script has been added to the root `package.json`, `yarn test:e2e`, which runs the E2E tests in development mode, unless `CI` is set in the environment.
+
+  The Playwright setup uses utilities from the new `@backstage/e2e-test-utils` package to find and include all packages in the monorepo that have an `e2e-tests` folder.
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.13-next.0
+
+## 0.5.5
+
+### Patch Changes
+
+- 05508a9757d2: Updated the backend template to no longer create duplicate connection pools to plugins that use the task scheduler.
+
+  To apply this change in your own repository, perform the following small update:
+
+  ```diff
+  // in packages/backend/src/index.ts
+  -  const taskScheduler = TaskScheduler.fromConfig(config);
+  +  const taskScheduler = TaskScheduler.fromConfig(config, { databaseManager });
+  ```
+
+- a4c08241ad92: Switched the template to use TypeScript 5.2 by default.
+- f8c8e8de37b6: Bumped create-app version.
+- fc1a38bc5723: Bumped create-app version.
+- 4606e005df5d: Added a `fix` scripts that calls the new `backstage-cli repo fix` command.
+
+  To apply this change to an existing app, make the following change to your root `package.json`:
+
+  ```diff
+       "test": "backstage-cli repo test",
+       "test:all": "backstage-cli repo test --coverage",
+  +    "fix": "backstage-cli repo fix",
+       "lint": "backstage-cli repo lint --since origin/master",
+  ```
+
+- 612594022245: Add a notification when `yarn install` is taking a long time.
+- 8db70ecbb325: Updated Dockerfile to include `apt-get update` when installing the SQLite dependency
+- 8cec7664e146: Removed `@types/node` dependency
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.5-next.3
+
+### Patch Changes
+
+- 4606e005df5d: Added a `fix` scripts that calls the new `backstage-cli repo fix` command.
+
+  To apply this change to an existing app, make the following change to your root `package.json`:
+
+  ```diff
+       "test": "backstage-cli repo test",
+       "test:all": "backstage-cli repo test --coverage",
+  +    "fix": "backstage-cli repo fix",
+       "lint": "backstage-cli repo lint --since origin/master",
+  ```
+
+- 612594022245: Add a notification when `yarn install` is taking a long time.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.5-next.2
+
+### Patch Changes
+
+- 8db70ecbb325: Updated Dockerfile to include `apt-get update` when installing the SQLite dependency
+- 8cec7664e146: Removed `@types/node` dependency
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.5-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.5-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.4
+
+### Patch Changes
+
+- b441642fbe0d: Bumped create-app version.
+- 572abc7edf55: Bumped create-app version.
+- 74f77f151a96: Bumped create-app version.
+- 5cc0ac5ef3d1: Bump to a newer version of the `concurrently` library
+- 46c9a798e41d: Updated the `app-config.yaml` template to use `proxy.endpoints`.
+- 971bdd6a4732: Bumped internal `nodemon` dependency.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.4-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.5.4-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.4-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.3
+
+### Patch Changes
+
+- 76b83a4422bb: Post-create message - added instruction to run `yarn install` when app was created with `--skip-install`
+- d72e2eeba6f1: Bumped create-app version.
+- e3ce5dd3f89a: add cy.\*\*.should to cypress eslintrc
+- f920a61031c5: Enable specifying an external application template when using the `create-app` CLI command.
+- 294b1629de28: Display a warning alert if relations are defined, which don't exist in the catalog.
+- 4f7292c74dff: Updated included Dockerfile to include `g++`. Also updated the comments to note that some of the dependencies are also needed by isolated-vm
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.3-next.2
+
+### Patch Changes
+
+- 4f7292c74dff: Updated included Dockerfile to include `g++`. Also updated the comments to note that some of the dependencies are also needed by isolated-vm
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.3-next.1
+
+### Patch Changes
+
+- 76b83a4422bb: Post-create message - added instruction to run `yarn install` when app was created with `--skip-install`
+- e3ce5dd3f89a: add cy.\*\*.should to cypress eslintrc
+- 294b1629de28: Display a warning alert if relations are defined, which don't exist in the catalog.
+
+## 0.5.3-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.2
+
+### Patch Changes
+
+- 08f177b91084: Add link from Template entity to the scaffolder launch page for the template in the AboutCard.
+- 75a1c93784fe: Bumped create-app version.
+- e37573d60e79: Bumped create-app version.
+- 320ed502747a: Bumped create-app version.
+- 52d599817680: Changed the default backend CacheClient to an in-memory cache when not explicitly configured.
+
+  Explicit configuration of an **in-memory cache** can be removed from `app-config.yaml`, as this is now the default:
+
+  ```diff
+  backend:
+  -  cache:
+  -    store: memory
+  ```
+
+- 68a21956ef52: Remove reference to deprecated import
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.2-next.3
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.2-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.5.2-next.1
+
+### Patch Changes
+
+- 08f177b91084: Add link from Template entity to the scaffolder launch page for the template in the AboutCard.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.2-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.1
+
+### Patch Changes
+
+- 1d5e42655cd: Correct command to create new plugins
+- e04bb20bdc4: Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.1-next.2
+
+### Patch Changes
+
+- 1d5e42655cd: Correct command to create new plugins
+
+## 0.5.1-next.1
+
+### Patch Changes
+
+- 4027aa9e753: Pin some octokit dependencies to avoid failing typescript build under `tsc:full`
+
+## 0.5.1-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.5.0
+
+### Minor Changes
+
+- 10744537bf5: Renamed `permissionApi` to `permissions` when passed as dependency of the scaffolder-backend plugin
+
+### Patch Changes
+
+- 5af2c4f412f: Bumped create-app version.
+- ab75a16da7a: Bumped create-app version.
+- 71fd0966d10: Add `permissionApi` as dependency of the scaffolder-backend plugin
+- 2945923b133: Upgraded the TypeScript version to 5.0
+
+  To apply this change in your own project, switch the TypeScript version in your root `package.json`:
+
+  ```diff
+  -    "typescript": "~4.6.4",
+  +    "typescript": "~5.0.0",
+  ```
+
+- e0c6e8b9c3c: Update peer dependencies
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.4.39-next.3
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.4.39-next.2
+
+### Patch Changes
+
+- 2945923b133: Upgraded the TypeScript version to 5.0
+
+  To apply this change in your own project, switch the TypeScript version in your root `package.json`:
+
+  ```diff
+  -    "typescript": "~4.6.4",
+  +    "typescript": "~5.0.0",
+  ```
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.4.39-next.1
+
+### Patch Changes
+
+- 71fd0966d10: Add `permissionApi` as dependency of the scaffolder-backend plugin
+- e0c6e8b9c3c: Update peer dependencies
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.4.39-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.4.38
+
+### Patch Changes
+
+- b4627f23b28: Bumped create-app version.
+- 0eceadb9502: Bumped create-app version.
+- 482dae5de1c: Updated link to docs.
+- 6ace2dd2c58: Added to the template `packages/app/.eslintignore` file to packages to ignore the contents of `packages/app/public`.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.4.38-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.4.38-next.1
+
+### Patch Changes
+
+- 482dae5de1c: Updated link to docs.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12-next.0
+
+## 0.4.38-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.37
+
+### Patch Changes
+
+- 12a7b316ee: Bumped create-app version.
+- 86a8dfd7b0: Added a check to ensure that Yarn v1 is used when creating new projects.
+- 0eaa579f89: Update `SearchPage` template to use `SearchResult` extensions.
+- 02f1316e57: Updated `packages/app/cypress/.eslintrc.json` to remove the unnecessary `import/no-extraneous-dependencies` rule.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.37-next.2
+
+### Patch Changes
+
+- 02f1316e57: Updated `packages/app/cypress/.eslintrc.json` to remove the unnecessary `import/no-extraneous-dependencies` rule.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.37-next.1
+
+### Patch Changes
+
+- 86a8dfd7b0: Added a check to ensure that Yarn v1 is used when creating new projects.
+- 0eaa579f89: Update `SearchPage` template to use `SearchResult` extensions.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.37-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.4.36
+
+### Patch Changes
+
+- f834622f56: Bumped create-app version.
+- 724b55689b: Avoid potential temporary directory conflict.
+- a2a70504e3: Remove deprecated `create-plugin` script from the `default-app` template's `package.json.hbs`.
+  Also, update the documentation to not mention the `create-plugin` script and instead mention
+  the `new` script.
+- 016a52c28f: Bumped the minimum version of `better-sqlite3`. You can make the following change to your `packages/backend/package.json` to keep your instance of Backstage updated.
+
+  ```diff
+  - "better-sqlite3": "^7.5.0",
+  + "better-sqlite3": "^8.0.0",
+  ```
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.36-next.2
+
+### Patch Changes
+
+- 016a52c28f: Bumped the minimum version of `better-sqlite3`. You can make the following change to your `packages/backend/package.json` to keep your instance of Backstage updated.
+
+  ```diff
+  - "better-sqlite3": "^7.5.0",
+  + "better-sqlite3": "^8.0.0",
+  ```
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.36-next.1
+
+### Patch Changes
+
+- 724b55689b: Avoid potential temporary directory conflict.
+- a2a70504e3: Remove deprecated `create-plugin` script from the `default-app` template's `package.json.hbs`.
+  Also, update the documentation to not mention the `create-plugin` script and instead mention
+  the `new` script.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.36-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.35
+
+### Patch Changes
+
+- c4788dbb58: Fix dependency ordering in templated packages.
+- 83d3167594: Bumped create-app version.
+- 2cb6963f9b: Bumped create-app version.
+- 6465ab3686: Bumped create-app version.
+- af1358bb07: added default project name for CI job compatibility
+- 935b66a646: Change step output template examples to use square bracket syntax.
+- dfb269fab2: Updated the template to have the `'/test'` proxy endpoint in `app-config.yaml` be commented out by default.
+- d9b3753f87: Updated the app template to use the new `AppRouter` component instead of `app.getRouter()`, as well as `app.createRoot()` instead of `app.getProvider()`.
+
+  To apply this change to an existing app, make the following change to `packages/app/src/App.tsx`:
+
+  ```diff
+  -import { FlatRoutes } from '@backstage/core-app-api';
+  +import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
+
+   ...
+
+  -const AppProvider = app.getProvider();
+  -const AppRouter = app.getRouter();
+
+   ...
+
+  -const App = () => (
+  +export default app.createRoot(
+  -  <AppProvider>
+  +  <>
+       <AlertDisplay />
+       <OAuthRequestDialog />
+       <AppRouter>
+         <Root>{routes}</Root>
+       </AppRouter>
+  -  </AppProvider>
+  +  </>,
+   );
+  ```
+
+  The final export step should end up looking something like this:
+
+  ```tsx
+  export default app.createRoot(
+    <>
+      <AlertDisplay />
+      <OAuthRequestDialog />
+      <AppRouter>
+        <Root>{routes}</Root>
+      </AppRouter>
+    </>,
+  );
+  ```
+
+  Note that `app.createRoot()` accepts a React element, rather than a component.
+
+- 71e75c0b70: Removed the `react-router` dependency from the app package, using only `react-router-dom` instead.
+
+  This change is just a bit of cleanup and is optional. If you want to apply it to your app, remove the `react-router` dependency from `packages/app/package.json`, and replace any imports from `react-router` with `react-router-dom` instead.
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.35-next.4
+
+### Patch Changes
+
+- 935b66a646: Change step output template examples to use square bracket syntax.
+- dfb269fab2: Updated the template to have the `'/test'` proxy endpoint in `app-config.yaml` be commented out by default.
+- d9b3753f87: Updated the app template to use the new `AppRouter` component instead of `app.getRouter()`, as well as `app.createRoot()` instead of `app.getProvider()`.
+
+  To apply this change to an existing app, make the following change to `packages/app/src/App.tsx`:
+
+  ```diff
+  -import { FlatRoutes } from '@backstage/core-app-api';
+  +import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
+
+   ...
+
+  -const AppProvider = app.getProvider();
+  -const AppRouter = app.getRouter();
+
+   ...
+
+  -const App = () => (
+  +export default app.createRoot(
+  -  <AppProvider>
+  +  <>
+       <AlertDisplay />
+       <OAuthRequestDialog />
+       <AppRouter>
+         <Root>{routes}</Root>
+       </AppRouter>
+  -  </AppProvider>
+  +  </>,
+   );
+  ```
+
+  The final export step should end up looking something like this:
+
+  ```tsx
+  export default app.createRoot(
+    <>
+      <AlertDisplay />
+      <OAuthRequestDialog />
+      <AppRouter>
+        <Root>{routes}</Root>
+      </AppRouter>
+    </>,
+  );
+  ```
+
+  Note that `app.createRoot()` accepts a React element, rather than a component.
+
+- 71e75c0b70: Removed the `react-router` dependency from the app package, using only `react-router-dom` instead.
+
+  This change is just a bit of cleanup and is optional. If you want to apply it to your app, remove the `react-router` dependency from `packages/app/package.json`, and replace any imports from `react-router` with `react-router-dom` instead.
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+
+## 0.4.35-next.3
+
+### Patch Changes
+
+- c4788dbb58: Fix dependency ordering in templated packages.
+- af1358bb07: added default project name for CI job compatibility
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+
+## 0.4.35-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+
+## 0.4.35-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.10
+
+## 0.4.35-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.10
+
 ## 0.4.34
 
 ### Patch Changes
 
 - f1c3cdfb2d: Bumped create-app version.
-- df21bbd4ad: The [Analytics API](https://backstage.io/docs/plugins/analytics) is the recommended way to track usage in Backstage; an optionally installable [Google Analytics module](https://github.com/backstage/backstage/tree/master/plugins/analytics-module-ga#installation) has superseded the old app.googleAnalyticsTrackingId config and its corresponding script tags in packages/app/public/index.html.
+- df21bbd4ad: The [Analytics API](https://backstage.io/docs/plugins/analytics) is the recommended way to track usage in Backstage; an optionally installable [Google Analytics module](https://github.com/backstage/community-plugins/tree/main/workspaces/analytics/plugins/analytics-module-ga#installation) has superseded the old app.googleAnalyticsTrackingId config and its corresponding script tags in packages/app/public/index.html.
 
   For an existing installation where you want to remove the redundant app.googleAnalyticsTrackingId, you should make the following adjustment to `packages/app/public/index.html`:
 
@@ -185,8 +1487,7 @@
 
   Migrating to the stable version of `react-router` is optional for the time
   being. But if you want to do the same for your existing repository, please
-  follow [this
-  guide](https://backstage.io/docs/tutorials/react-router-stable-migration).
+  follow [this guide](https://backstage.io/docs/tutorials/react-router-stable-migration).
 
 - e05e0f021b: Update versions of packages used in the create-app template, to match those in the main repo
 - 01dff06be4: Leverage cache mounts in Dockerfile during `yarn install ...` and `apt-get ...` commands to speed up repeated builds.
@@ -233,8 +1534,7 @@
 
   Migrating to the stable version of `react-router` is optional for the time
   being. But if you want to do the same for your existing repository, please
-  follow [this
-  guide](https://backstage.io/docs/tutorials/react-router-stable-migration).
+  follow [this guide](https://backstage.io/docs/tutorials/react-router-stable-migration).
 
 - e05e0f021b: Update versions of packages used in the create-app template, to match those in the main repo
 - 52f25858a8: Added `*.session.sql` Visual Studio Code database functionality files to `.gitignore` in the default template. This is optional but potentially helpful if your developers use Visual Studio Code; you can add a line with that exact value to your own root `.gitignore` if you want the same.
@@ -2217,8 +3517,7 @@
 
   The old `sqlite3` NPM library has been abandoned by its maintainers, which has
   led to unhandled security reports and other issues. Therefore, in the `knex` 1.x
-  release line they have instead switched over to the [`@vscode/sqlite3`
-  library](https://github.com/microsoft/vscode-node-sqlite3) by default, which is
+  release line they have instead switched over to the [`@vscode/sqlite3` library](https://github.com/microsoft/vscode-node-sqlite3) by default, which is
   actively maintained by Microsoft.
 
   This means that as you update to this version of Backstage, there are two
@@ -2243,7 +3542,7 @@
   fields that clarify a previous grey area such that the intent of the alteration
   is made explicit. This is caught by `tsc` and your editor if you are using the
   `@ts-check` and `@param` syntax in your migration files
-  ([example](https://github.com/backstage/backstage/blob/master/plugins/catalog-backend/migrations/20220116144621_remove_legacy.js#L17)),
+  ([example](https://github.com/backstage/backstage/blob/e0506af8fc54074a160fb91c83d6cae8172d3bb3/plugins/catalog-backend/migrations/20220116144621_remove_legacy.js#L17)),
   which we strongly recommend.
 
   See the [`knex` documentation](https://knexjs.org/#Schema-alter) for more
@@ -2287,8 +3586,7 @@
 
   The old `sqlite3` NPM library has been abandoned by its maintainers, which has
   led to unhandled security reports and other issues. Therefore, in the `knex` 1.x
-  release line they have instead switched over to the [`@vscode/sqlite3`
-  library](https://github.com/microsoft/vscode-node-sqlite3) by default, which is
+  release line they have instead switched over to the [`@vscode/sqlite3` library](https://github.com/microsoft/vscode-node-sqlite3) by default, which is
   actively maintained by Microsoft.
 
   This means that as you update to this version of Backstage, there are two
@@ -2313,7 +3611,7 @@
   fields that clarify a previous grey area such that the intent of the alteration
   is made explicit. This is caught by `tsc` and your editor if you are using the
   `@ts-check` and `@param` syntax in your migration files
-  ([example](https://github.com/backstage/backstage/blob/master/plugins/catalog-backend/migrations/20220116144621_remove_legacy.js#L17)),
+  ([example](https://github.com/backstage/backstage/blob/e0506af8fc54074a160fb91c83d6cae8172d3bb3/plugins/catalog-backend/migrations/20220116144621_remove_legacy.js#L17)),
   which we strongly recommend.
 
   See the [`knex` documentation](https://knexjs.org/#Schema-alter) for more

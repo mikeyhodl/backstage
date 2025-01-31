@@ -16,19 +16,21 @@
 
 import { ConfigReader } from '@backstage/core-app-api';
 import { ScmIntegrations } from '@backstage/integration';
-import { MockFetchApi, setupRequestMockHandlers } from '@backstage/test-utils';
+import { MockFetchApi, registerMswTestHooks } from '@backstage/test-utils';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import { ScaffolderClient } from './api';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 
-const MockedEventSource = global.EventSource as jest.MockedClass<
-  typeof EventSource
+jest.mock('@microsoft/fetch-event-source');
+const mockFetchEventSource = fetchEventSource as jest.MockedFunction<
+  typeof fetchEventSource
 >;
 
 const server = setupServer();
 
 describe('api', () => {
-  setupRequestMockHandlers(server);
+  registerMswTestHooks(server);
   const mockBaseUrl = 'http://backstage/api';
 
   const discoveryApi = { getBaseUrl: async () => mockBaseUrl };
@@ -84,23 +86,23 @@ describe('api', () => {
   describe('streamEvents', () => {
     describe('eventsource', () => {
       it('should work', async () => {
-        MockedEventSource.prototype.addEventListener.mockImplementation(
-          (type, fn) => {
-            if (typeof fn !== 'function') {
-              return;
-            }
-
-            if (type === 'log') {
-              fn({
-                data: '{"id":1,"taskId":"a-random-id","type":"log","createdAt":"","body":{"message":"My log message"}}',
-              } as any);
-            } else if (type === 'completion') {
-              fn({
-                data: '{"id":2,"taskId":"a-random-id","type":"completion","createdAt":"","body":{"message":"Finished!"}}',
-              } as any);
-            }
-          },
-        );
+        mockFetchEventSource.mockImplementation(async (_url, options) => {
+          const { onopen, onmessage } = options;
+          await Promise.resolve();
+          await onopen?.({ ok: true } as Response);
+          await Promise.resolve();
+          onmessage?.({
+            id: '',
+            event: 'log',
+            data: '{"id":1,"taskId":"a-random-id","type":"log","createdAt":"","body":{"message":"My log message"}}',
+          });
+          await Promise.resolve();
+          onmessage?.({
+            id: '',
+            event: 'completion',
+            data: '{"id":2,"taskId":"a-random-id","type":"completion","createdAt":"","body":{"message":"Finished!"}}',
+          });
+        });
 
         const next = jest.fn();
 
@@ -110,11 +112,15 @@ describe('api', () => {
             .subscribe({ next, complete });
         });
 
-        expect(MockedEventSource).toHaveBeenCalledWith(
+        expect(mockFetchEventSource).toHaveBeenCalledWith(
           'http://backstage/api/v2/tasks/a-random-task-id/eventstream',
-          { withCredentials: true },
+          {
+            fetch: fetchApi.fetch,
+            onmessage: expect.any(Function),
+            onerror: expect.any(Function),
+            signal: expect.any(AbortSignal),
+          },
         );
-        expect(MockedEventSource.prototype.close).toHaveBeenCalled();
 
         expect(next).toHaveBeenCalledTimes(2);
         expect(next).toHaveBeenCalledWith({
@@ -350,6 +356,34 @@ describe('api', () => {
       const result = await apiClient.listTasks({ filterByOwnership: 'all' });
       expect(result).toHaveLength(2);
     });
+
+    it('should list tasks with limit and offset', async () => {
+      server.use(
+        rest.get(
+          `${mockBaseUrl}/v2/tasks?limit=5&offset=0`,
+          (_req, res, ctx) => {
+            return res(
+              ctx.json([
+                {
+                  createdBy: null,
+                },
+                {
+                  createdBy: null,
+                },
+              ]),
+            );
+          },
+        ),
+      );
+
+      const result = await apiClient.listTasks({
+        filterByOwnership: 'all',
+        limit: 5,
+        offset: 0,
+      });
+      expect(result).toHaveLength(2);
+    });
+
     it('should list task using the current user as owner', async () => {
       server.use(
         rest.get(`${mockBaseUrl}/v2/tasks`, (req, res, ctx) => {

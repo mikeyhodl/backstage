@@ -19,50 +19,38 @@ backend. The provider is not installed by default, therefore you have to add a
 dependency to `@backstage/plugin-catalog-backend-module-bitbucket-cloud` to your backend
 package.
 
-```bash
-# From your Backstage root directory
-yarn add --cwd packages/backend @backstage/plugin-catalog-backend-module-bitbucket-cloud
+```bash title="From your Backstage root directory"
+yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-bitbucket-cloud
 ```
 
-### Installation without Events Support
+### Installation with New Backend System
 
-And then add the entity provider to your catalog builder:
-
-```diff
-// packages/backend/src/plugins/catalog.ts
-+ import { BitbucketCloudEntityProvider } from '@backstage/plugin-catalog-backend-module-bitbucket-cloud';
-
-  export default async function createPlugin(
-    env: PluginEnvironment,
-  ): Promise<Router> {
-    const builder = await CatalogBuilder.create(env);
-+   builder.addEntityProvider(
-+     BitbucketCloudEntityProvider.fromConfig(env.config, {
-+       logger: env.logger,
-+       scheduler: env.scheduler,
-+     }),
-+   );
-
-    // [...]
-  }
+```ts
+// optional if you want HTTP endpoints to receive external events
+// backend.add(import('@backstage/plugin-events-backend'));
+// optional if you want to use AWS SQS instead of HTTP endpoints to receive external events
+// backend.add(import('@backstage/plugin-events-backend-module-aws-sqs'));
+backend.add(import('@backstage/plugin-events-backend-module-bitbucket-cloud'));
+backend.add(import('@backstage/plugin-catalog-backend-module-bitbucket-cloud'));
 ```
 
-Alternatively to the config-based schedule, you can use
+You need to decide how you want to receive events from external sources like
 
-```diff
--       scheduler: env.scheduler,
-+       schedule: env.scheduler.createScheduledTaskRunner({
-+         frequency: { minutes: 30 },
-+         timeout: { minutes: 3 },
-+       }),
-```
+- [via HTTP endpoint](https://github.com/backstage/backstage/tree/master/plugins/events-backend/README.md)
+- [via an AWS SQS queue](https://github.com/backstage/backstage/tree/master/plugins/events-backend-module-aws-sqs/README.md)
 
-### Installation with Events Support
+Further documentation:
+
+- <https://github.com/backstage/backstage/tree/master/plugins/events-backend/README.md>
+- <https://github.com/backstage/backstage/tree/master/plugins/events-backend-module-aws-sqs/README.md>
+- <https://github.com/backstage/backstage/tree/master/plugins/events-backend-module-bitbucket-cloud/README.md>
+
+### Installation with Legacy Backend System
 
 Please follow the installation instructions at
 
-- https://github.com/backstage/backstage/tree/master/plugins/events-backend/README.md
-- https://github.com/backstage/backstage/tree/master/plugins/events-backend-module-bitbucket-cloud/README.md
+- <https://github.com/backstage/backstage/tree/master/plugins/events-backend/README.md>
+- <https://github.com/backstage/backstage/tree/master/plugins/events-backend-module-bitbucket-cloud/README.md>
 
 Additionally, you need to decide how you want to receive events from external sources like
 
@@ -71,32 +59,37 @@ Additionally, you need to decide how you want to receive events from external so
 
 Set up your provider
 
-```diff
-// packages/backend/src/plugins/catalogEventBasedProviders.ts
-+import { CatalogClient } from '@backstage/catalog-client';
-+import { BitbucketCloudEntityProvider } from '@backstage/plugin-catalog-backend-module-bitbucket-cloud';
- import { EntityProvider } from '@backstage/plugin-catalog-node';
- import { EventSubscriber } from '@backstage/plugin-events-node';
- import { PluginEnvironment } from '../types';
+```ts title="packages/backend/src/plugins/catalog.ts"
+import { CatalogBuilder } from '@backstage/plugin-catalog-backend';
+/* highlight-add-start */
+import { BitbucketCloudEntityProvider } from '@backstage/plugin-catalog-backend-module-bitbucket-cloud';
+/* highlight-add-end */
 
- export default async function createCatalogEventBasedProviders(
--  _: PluginEnvironment,
-+  env: PluginEnvironment,
- ): Promise<Array<EntityProvider & EventSubscriber>> {
-   const providers: Array<
-     (EntityProvider & EventSubscriber) | Array<EntityProvider & EventSubscriber>
-   > = [];
--  // add your event-based entity providers here
-+  providers.push(
-+    BitbucketCloudEntityProvider.fromConfig(env.config, {
-+      catalogApi: new CatalogClient({ discoveryApi: env.discovery }),
-+      logger: env.logger,
-+      scheduler: env.scheduler,
-+      tokenManager: env.tokenManager,
-+    }),
-+  );
-   return providers.flat();
- }
+import { ScaffolderEntitiesProcessor } from '@backstage/plugin-scaffolder-backend';
+import { Router } from 'express';
+import { PluginEnvironment } from '../types';
+
+export default async function createPlugin(
+  env: PluginEnvironment,
+): Promise<Router> {
+  const builder = await CatalogBuilder.create(env);
+  /* highlight-add-start */
+  const bitbucketCloudProvider = BitbucketCloudEntityProvider.fromConfig(
+    env.config,
+    {
+      auth: env.auth,
+      catalogApi: new CatalogClient({ discoveryApi: env.discovery }),
+      events: env.events,
+      logger: env.logger,
+      scheduler: env.scheduler,
+    },
+  );
+  builder.addEntityProvider(bitbucketCloudProvider);
+  /* highlight-add-end */
+  const { processingEngine, router } = await builder.build();
+  await processingEngine.start();
+  return router;
+}
 ```
 
 **Attention:**
@@ -111,9 +104,7 @@ Very likely a `username` and `appPassword` will be required
 
 Additionally, you need to configure your entity provider instance(s):
 
-```yaml
-# app-config.yaml
-
+```yaml title="app-config.yaml"
 catalog:
   providers:
     bitbucketCloud:
@@ -122,7 +113,7 @@ catalog:
         filters: # optional
           projectKey: '^apis-.*$' # optional; RegExp
           repoSlug: '^service-.*$' # optional; RegExp
-        schedule: # optional; same options as in TaskScheduleDefinition
+        schedule: # same options as in SchedulerServiceTaskScheduleDefinition
           # supports cron, ISO duration, "human duration" as used in code
           frequency: { minutes: 30 }
           # supports ISO duration, "human duration" as used in code
@@ -144,7 +135,7 @@ catalog:
     Regular expression used to filter results based on the project key.
   - **`repoSlug`** _(optional)_:
     Regular expression used to filter results based on the repo slug.
-- **`schedule`** _(optional)_:
+- **`schedule`**:
   - **`frequency`**:
     How often you want the task to run. The system does its best to avoid overlapping invocations.
   - **`timeout`**:

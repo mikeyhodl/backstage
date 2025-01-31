@@ -1,5 +1,2361 @@
 # @backstage/cli
 
+## 0.30.0-next.1
+
+### Patch Changes
+
+- 207f88f: Fixed the file path pattern of many static assets output as part of the frontend build process, where there was an extra `.` before the extension, leading to names like `image-af7946b..png`.
+- Updated dependencies
+  - @backstage/catalog-model@1.7.3
+  - @backstage/cli-common@0.1.15
+  - @backstage/cli-node@0.2.13-next.0
+  - @backstage/config@1.3.2
+  - @backstage/config-loader@1.9.6-next.0
+  - @backstage/errors@1.2.7
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.16.1
+  - @backstage/release-manifests@0.0.12
+  - @backstage/types@1.2.1
+
+## 0.30.0-next.0
+
+### Minor Changes
+
+- cb76663: **BREAKING**: Add support for native ESM in Node.js code. This changes the behavior of dynamic import expressions in Node.js code. Typically this can be fixed by replacing `import(...)` with `require(...)`, with an `as typeof import(...)` cast if needed for types. This is because dynamic imports will no longer be transformed to `require(...)` calls, but instead be left as-is. This in turn allows you to load ESM modules from CommonJS code using `import(...)`.
+
+  This change adds support for the following in Node.js packages, across type checking, package builds, runtime transforms and Jest tests:
+
+  - Dynamic imports that load ESM modules from CommonJS code.
+  - Both `.mjs` and `.mts` files as explicit ESM files, as well as `.cjs` and `.cts` as explicit CommonJS files.
+  - Support for the `"type": "module"` field in `package.json` to indicate that the package is an ESM package.
+
+  There are a few caveats to be aware of:
+
+  - To enable support for native ESM in tests, you need to run the tests with the `--experimental-vm-modules` flag enabled, typically via `NODE_OPTIONS='--experimental-vm-modules'`.
+  - Declaring a package as `"type": "module"` in `package.json` is supported, but in tests it will cause all local transitive dependencies to also be treated as ESM, regardless of whether they declare `"type": "module"` or not.
+  - Node.js has an [ESM interoperability layer with CommonJS](https://nodejs.org/docs/latest-v22.x/api/esm.html#interoperability-with-commonjs) that allows for imports from ESM to identify named exports in CommonJS packages. This interoperability layer is **only** enabled when importing packages with a `.cts` or `.cjs` extension. This is because the interoperability layer is not fully compatible with the NPM ecosystem, and would break package if it was enabled for `.js` files.
+  - Dynamic imports of CommonJS packages will vary in shape depending on the runtime, i.e. test vs local development, etc. It is therefore recommended to avoid dynamic imports of CommonJS packages and instead use `require`, or to use the explicit CommonJS extensions as mentioned above. If you do need to dynamically import CommonJS packages, avoid using `default` exports, as the shape of them vary across different environments and you would otherwise need to manually unwrap the import based on the shape of the module object.
+
+### Patch Changes
+
+- f21b125: Ensure that both global-agent and undici agents are enabled when proxying is enabled.
+- Updated dependencies
+  - @backstage/cli-node@0.2.13-next.0
+  - @backstage/config-loader@1.9.6-next.0
+  - @backstage/catalog-model@1.7.3
+  - @backstage/cli-common@0.1.15
+  - @backstage/config@1.3.2
+  - @backstage/errors@1.2.7
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.16.1
+  - @backstage/release-manifests@0.0.12
+  - @backstage/types@1.2.1
+
+## 0.29.5
+
+### Patch Changes
+
+- e937ce0: Fixed incompatible `@typescript-eslint` versions with current `eslint@8.x.x`
+- 8557e09: Removed the `EXPERIMENTAL_VITE` flag for using Vite as a dev server. If you were using this feature, we recommend switching to Rspack via the `EXPERIMENTAL_RSPACK` flag.
+- Updated dependencies
+  - @backstage/types@1.2.1
+  - @backstage/config-loader@1.9.5
+  - @backstage/integration@1.16.1
+  - @backstage/catalog-model@1.7.3
+  - @backstage/cli-common@0.1.15
+  - @backstage/cli-node@0.2.12
+  - @backstage/config@1.3.2
+  - @backstage/errors@1.2.7
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/release-manifests@0.0.12
+
+## 0.29.5-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/types@1.2.1-next.0
+  - @backstage/catalog-model@1.7.3-next.0
+  - @backstage/cli-node@0.2.12-next.0
+  - @backstage/config@1.3.2-next.0
+  - @backstage/config-loader@1.9.5-next.1
+  - @backstage/errors@1.2.7-next.0
+  - @backstage/release-manifests@0.0.12
+  - @backstage/cli-common@0.1.15
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.16.1-next.0
+
+## 0.29.5-next.0
+
+### Patch Changes
+
+- e937ce0: Fixed incompatible `@typescript-eslint` versions with current `eslint@8.x.x`
+- Updated dependencies
+  - @backstage/config-loader@1.9.5-next.0
+  - @backstage/catalog-model@1.7.2
+  - @backstage/cli-common@0.1.15
+  - @backstage/cli-node@0.2.11
+  - @backstage/config@1.3.1
+  - @backstage/errors@1.2.6
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.16.0
+  - @backstage/release-manifests@0.0.12
+  - @backstage/types@1.2.0
+
+## 0.29.4
+
+### Patch Changes
+
+- 2b6c1ea: If the Backstage yarn plugin is installed, it will now be automatically updated as part of `versions:bump`.
+- 7dcff85: Remove special-casing for `@types` packages when generating dependency entries
+  during templating
+- 3c3a7e6: Revert `css-loader@v7` bump
+- 0aff006: Bumped the version range for `html-webpack-plugin` to fix the `htmlPluginExports.getCompilationHooks is not a function` error when using experimental Rspack.
+- 583f3d4: Added `@backstage/cli/config/prettier` as a replacement for `@spotify/prettier-config`, but with the same configuration.
+- 62a9062: Updated dependency `@module-federation/enhanced` to `^0.8.0`.
+- 5f04976: Update `rollup` to avoid issues with build output when running `backstage-cli package build`.
+- 5f04976: Fixed a bug that caused missing code in published packages.
+- a49030a: Add support for `--output-file` option from ESLint to `package lint` and `repo lint` commands.
+- 96331fa: Enhance the behavior of the experimental support for module federation in the backstage CLI,
+  by using the `package.json` exports (when present) to complete the list of exposed modules.
+  This allows, for example, using exported `alpha` definitions through module federation.
+- 5c9cc05: Use native fetch instead of node-fetch
+- dcd99d2: added experimental RSPack support for build command in the repo scope
+- Updated dependencies
+  - @backstage/integration@1.16.0
+  - @backstage/release-manifests@0.0.12
+  - @backstage/cli-node@0.2.11
+  - @backstage/config-loader@1.9.3
+  - @backstage/errors@1.2.6
+  - @backstage/catalog-model@1.7.2
+  - @backstage/cli-common@0.1.15
+  - @backstage/config@1.3.1
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/types@1.2.0
+
+## 0.29.3-next.2
+
+### Patch Changes
+
+- 62a9062: Updated dependency `@module-federation/enhanced` to `^0.8.0`.
+- Updated dependencies
+  - @backstage/errors@1.2.6-next.0
+  - @backstage/cli-node@0.2.11-next.1
+  - @backstage/config-loader@1.9.3-next.1
+  - @backstage/catalog-model@1.7.2-next.0
+  - @backstage/cli-common@0.1.15
+  - @backstage/config@1.3.1-next.0
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.16.0-next.1
+  - @backstage/release-manifests@0.0.12-next.1
+  - @backstage/types@1.2.0
+
+## 0.29.3-next.1
+
+### Patch Changes
+
+- a49030a: Add support for `--output-file` option from ESLint to `package lint` and `repo lint` commands.
+- 5c9cc05: Use native fetch instead of node-fetch
+- Updated dependencies
+  - @backstage/config-loader@1.9.3-next.0
+  - @backstage/release-manifests@0.0.12-next.1
+  - @backstage/catalog-model@1.7.1
+  - @backstage/cli-common@0.1.15
+  - @backstage/cli-node@0.2.11-next.0
+  - @backstage/config@1.3.0
+  - @backstage/errors@1.2.5
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.16.0-next.0
+  - @backstage/types@1.2.0
+
+## 0.29.3-next.0
+
+### Patch Changes
+
+- 2b6c1ea: If the Backstage yarn plugin is installed, it will now be automatically updated as part of `versions:bump`.
+- 7dcff85: Remove special-casing for `@types` packages when generating dependency entries
+  during templating
+- 0aff006: Bumped the version range for `html-webpack-plugin` to fix the `htmlPluginExports.getCompilationHooks is not a function` error when using experimental Rspack.
+- 583f3d4: Added `@backstage/cli/config/prettier` as a replacement for `@spotify/prettier-config`, but with the same configuration.
+- 5f04976: Update `rollup` to avoid issues with build output when running `backstage-cli package build`.
+- 5f04976: Fixed a bug that caused missing code in published packages.
+- Updated dependencies
+  - @backstage/integration@1.16.0-next.0
+  - @backstage/release-manifests@0.0.12-next.0
+  - @backstage/cli-node@0.2.11-next.0
+  - @backstage/catalog-model@1.7.1
+  - @backstage/cli-common@0.1.15
+  - @backstage/config@1.3.0
+  - @backstage/config-loader@1.9.2
+  - @backstage/errors@1.2.5
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/types@1.2.0
+
+## 0.29.0
+
+### Minor Changes
+
+- bc47b17: **BREAKING**: Updates ESLint config to ignore all generated source code under `src/**/generated/**/*.ts`.
+- 6819f8c: Added a new optimization to the `repo test` command that will filter out unused packages in watch mode if all provide filters are paths that point from the repo root. This significantly speeds up running individual tests from the repo root in a large workspace, for example:
+
+  ```sh
+  yarn test packages/app/src/App.test.tsx
+  ```
+
+- d849865: The package packing now populates `typesVersions` for additional entry points rather than using additional `package.json` files for type resolution. This improves auto completion of separate entry points when consuming published packages.
+- bc71665: **BREAKING**: The `LEGACY_BACKEND_START` flag has been removed, along with support for `src/run.ts` as the development entry point.
+
+### Patch Changes
+
+- 4046d53: Fixed an issue where the `--successCache` option for the `repo test` and `repo lint` commands would be include the workspace path in generated cache keys. This previously broke caching in environments where the workspace path varies across builds.
+- 4a378d3: Fix dev server reloads of plugin discovery for new frontend system.
+- 28b60ad: The check for `react-dom/client` in the Jest configuration will now properly always run from the target directory.
+- 6b2888c: Fixed an issue with the `--successCache` flag for `repo test` where the tree hash for the wrong package directory would sometimes be used to generate the cache key.
+- e30b65d: Added `--alwaysPack` as a replacement for the now hidden `--alwaysYarnPack` flag for the `build-workspace` command.
+- be0278e: Removed circular import
+- a7f97e4: Added a new `"rejectFrontendNetworkRequests"` configuration flag that can be set in the `"jest"` field in the root `package.json`:
+
+  ```json
+  {
+    "jest": {
+      "rejectFrontendNetworkRequests": true
+    }
+  }
+  ```
+
+  This flag causes rejection of any form of network requests that are attempted to be made in frontend or common package tests. This flag can only be set in the root `package.json` and can not be overridden in individual package configurations.
+
+- 6c48ebd: Add `--max-warnings -1` support to `backstage-cli package lint`
+- 04297a0: The `--successCache` option for the `repo test` and `repo lint` commands now use an additive store that keeps old entries around for a week before they are cleaned up automatically.
+- a2f0559: When using the experimental Rspack flag the app build and dev server now injects configuration via a `<script type="backstage.io/config">...</script>` tag in `index.html` rather than the `process.env.APP_CONFIG` definition, which will now be defined as an empty array instead.
+
+  This requires the app to be using the config loader from the 1.31 release of Backstage. Make sure your app is using at least that version if you are upgrading to this version of the CLI.
+
+  If you have copied the implementation of the `defaultConfigLoader`, make sure to update it to the new implementation. In particular the config loader needs to be able to read configuration from `script` tags with the type `backstage.io/config`.
+
+- b4627f2: Fixed an issue where the `raw-loader` for loading HTML templates was not resolved from the context of the CLI package.
+- cd1ef2b: Updated dependency `vite` to `^5.0.0`.
+- 23f1da2: Updated dependency `ts-morph` to `^24.0.0`.
+- b533056: Updated dependency `css-loader` to `^7.0.0`.
+- be008c3: Updated dependency `@module-federation/enhanced` to `^0.7.0`.
+- 6266ed3: Updated dependency `del` to `^8.0.0`.
+- 4046d53: Fixed an issue with the `repo lint` command where the cache key for the `--successCache` option would not properly ignore files that should be ignored according to `.eslintignore`s.
+- e19c53c: Fix for the `--link` flag for `package start` to deduplicate `react-router` and `react-router-dom`.
+- 17850a5: Update upgrade-helper link in `versions:bump` command to include `yarnPlugin` parameter when the yarn plugin is installed
+- 09ea093: Fixed an issue where `.css` style injection would fail for published packages.
+- 702f41d: Bumped dev dependencies `@types/node`
+- 5d74716: Remove unused backend-common dependency
+- b084f5a: Bump the Webpack dependency range to `^5.94.0`, as our current configuration is not compatible with some older versions.
+- e565f73: Added support for `.webp` files in the frontend tooling.
+- 946fa34: Added a new `--link <workspace-path>` option for frontend builds that allow you to override module resolution to link in an external workspace at runtime.
+
+  As part of this change the Webpack linked workspace resolution plugin for frontend builds has been removed. It was in place to support the old workspace linking where it was done by Yarn, which is no longer a working option.
+
+- Updated dependencies
+  - @backstage/config@1.3.0
+  - @backstage/types@1.2.0
+  - @backstage/config-loader@1.9.2
+  - @backstage/cli-common@0.1.15
+  - @backstage/catalog-model@1.7.1
+  - @backstage/cli-node@0.2.10
+  - @backstage/errors@1.2.5
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.15.2
+  - @backstage/release-manifests@0.0.11
+
+## 0.29.0-next.3
+
+### Minor Changes
+
+- d849865: The package packing now populates `typesVersions` for additional entry points rather than using additional `package.json` files for type resolution. This improves auto completion of separate entry points when consuming published packages.
+
+### Patch Changes
+
+- 4a378d3: Fix dev server reloads of plugin discovery for new frontend system.
+- 6c48ebd: Add `--max-warnings -1` support to `backstage-cli package lint`
+- 23f1da2: Updated dependency `ts-morph` to `^24.0.0`.
+- b533056: Updated dependency `css-loader` to `^7.0.0`.
+- be008c3: Updated dependency `@module-federation/enhanced` to `^0.7.0`.
+- 09ea093: Fixed an issue where `.css` style injection would fail for published packages.
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-common@0.1.15-next.0
+  - @backstage/cli-node@0.2.10-next.0
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.2-next.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.15.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.29.0-next.2
+
+### Minor Changes
+
+- bc47b17: **BREAKING**: Updates ESLint config to ignore all generated source code under `src/**/generated/**/*.ts`.
+
+### Patch Changes
+
+- e19c53c: Fix for the `--link` flag for `package start` to deduplicate `react-router` and `react-router-dom`.
+- e565f73: Added support for `.webp` files in the frontend tooling.
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-common@0.1.15-next.0
+  - @backstage/cli-node@0.2.10-next.0
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.2-next.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.15.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.29.0-next.1
+
+### Minor Changes
+
+- 6819f8c: Added a new optimization to the `repo test` command that will filter out unused packages in watch mode if all provide filters are paths that point from the repo root. This significantly speeds up running individual tests from the repo root in a large workspace, for example:
+
+  ```sh
+  yarn test packages/app/src/App.test.tsx
+  ```
+
+### Patch Changes
+
+- 4046d53: Fixed an issue where the `--successCache` option for the `repo test` and `repo lint` commands would be include the workspace path in generated cache keys. This previously broke caching in environments where the workspace path varies across builds.
+- 6b2888c: Fixed an issue with the `--successCache` flag for `repo test` where the tree hash for the wrong package directory would sometimes be used to generate the cache key.
+- 6266ed3: Updated dependency `del` to `^8.0.0`.
+- 4046d53: Fixed an issue with the `repo lint` command where the cache key for the `--successCache` option would not properly ignore files that should be ignored according to `.eslintignore`s.
+- 702f41d: Bumped dev dependencies `@types/node`
+- Updated dependencies
+  - @backstage/cli-common@0.1.15-next.0
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-node@0.2.10-next.0
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.2-next.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.15.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.29.0-next.0
+
+### Minor Changes
+
+- bc71665: **BREAKING**: The `LEGACY_BACKEND_START` flag has been removed, along with support for `src/run.ts` as the development entry point.
+
+### Patch Changes
+
+- 28b60ad: The check for `react-dom/client` in the Jest configuration will now properly always run from the target directory.
+- e30b65d: Added `--alwaysPack` as a replacement for the now hidden `--alwaysYarnPack` flag for the `build-workspace` command.
+- a7f97e4: Added a new `"rejectFrontendNetworkRequests"` configuration flag that can be set in the `"jest"` field in the root `package.json`:
+
+  ```json
+  {
+    "jest": {
+      "rejectFrontendNetworkRequests": true
+    }
+  }
+  ```
+
+  This flag causes rejection of any form of network requests that are attempted to be made in frontend or common package tests. This flag can only be set in the root `package.json` and can not be overridden in individual package configurations.
+
+- 04297a0: The `--successCache` option for the `repo test` and `repo lint` commands now use an additive store that keeps old entries around for a week before they are cleaned up automatically.
+- b4627f2: Fixed an issue where the `raw-loader` for loading HTML templates was not resolved from the context of the CLI package.
+- 17850a5: Update upgrade-helper link in `versions:bump` command to include `yarnPlugin` parameter when the yarn plugin is installed
+- b084f5a: Bump the Webpack dependency range to `^5.94.0`, as our current configuration is not compatible with some older versions.
+- 946fa34: Added a new `--link <workspace-path>` option for frontend builds that allow you to override module resolution to link in an external workspace at runtime.
+
+  As part of this change the Webpack linked workspace resolution plugin for frontend builds has been removed. It was in place to support the old workspace linking where it was done by Yarn, which is no longer a working option.
+
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.9
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.1
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.15.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.28.0
+
+### Minor Changes
+
+- 264058c: The `repo test` command will no longer default to watch mode if the `--since` flag is provided.
+- 55b8b84: **BREAKING**: The Jest configuration defined at `@backstage/cli/config/jest` no longer collects configuration defined in the `"jest"` field from all parent `package.json` files. Instead, it will only read and merge configuration from the `package.json` in the monorepo root if it exists, as well as the target package. In addition, configuration defined in the root `package.json` will now only be merged into each package configuration if it is a valid project-level configuration key.
+- 6129076: **BREAKING**: Removed the following deprecated commands:
+
+  - `create`: Use `backstage-cli new` instead
+  - `create-plugin`: Use `backstage-cli new` instead
+  - `plugin:diff`: Use `backstage-cli fix` instead
+  - `test`: Use `backstage-cli repo test` or `backstage-cli package test` instead
+  - `versions:check`: Use `yarn dedupe` or `yarn-deduplicate` instead
+  - `clean`: Use `backstage-cli package clean` instead
+
+  In addition, the experimental `install` and `onboard` commands have been removed since they have not received any updates since their introduction and we're expecting usage to be low. If you where relying on these commands, please let us know by opening an issue towards the main Backstage repository.
+
+### Patch Changes
+
+- ea16633: Preserve directory structure for CommonJS build output, just like ESM. This makes the build output more stable and easier to browse, and allows for more effective tree shaking and lazy imports.
+- 520a383: Added functionality to the prepack script that will append the default export type for entry points to the `exports` object before publishing. This is to help with identifying the declarative integration points for plugins without needing to fetch or run the plugins first.
+- 9625a97: The `scaffolder-module` template has been updated to use a more modern layout and new testing utilities for scaffolder actions.
+- 03810d2: Remove unknown dependency `diff`
+- cebee4f: Added support for a new experimental `EXPERIMENTAL_TRIM_NEXT_ENTRY` flag which removes any `./next` entry points present in packages when building and publishing.
+- 54c8aa3: The check for `react-dom/client` will now properly always run from the target directory.
+- b676cc9: feat: experimentally support using rspack instead under `EXPERIMENTAL_RSPACK` env flag
+- 094eaa3: Remove references to in-repo backend-common
+- 95999c5: The backend plugin template for the `new` command has been updated to provide more guidance and use a more modern structure.
+- 7955f9b: Tweaked the new package feature detection to not be active when building backend packages.
+- 4bfc2ce: Updated the Vite implementation behind the `EXPERIMENTAL_VITE` flag to work with more recent versions of Backstage.
+- 720a2f9: Updated dependency `git-url-parse` to `^15.0.0`.
+- 8f0898b: Updated dependency `esbuild` to `^0.24.0`.
+- 2c5ecf5: Support `--max-warnings` flag for package linting
+- 88407c3: Running `repo lint` with the `--successCache` flag now respects `.gitinore`, and it ignores projects without a `lint` script.
+- 8fe740d: Added a new `--successCache` option to the `backstage-cli repo test` and `backstage-cli repo lint` commands. The cache keeps track of successful runs and avoids re-running for individual packages if they haven't changed. This option is intended only to be used in CI.
+
+  In addition a `--successCacheDir <path>` option has also been added to be able to override the default cache directory.
+
+- 55b8b84: The Jest configuration will now search for a `src/setupTests.*` file with any valid script extension, not only `.ts`.
+- 79ba5a8: The `LEGACY_BACKEND_START` flag is now deprecated.
+- f0514c7: Disabled parsing of input source maps in the SWC transform for Jest.
+- Updated dependencies
+  - @backstage/cli-node@0.2.9
+  - @backstage/eslint-plugin@0.1.10
+  - @backstage/integration@1.15.1
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.1
+  - @backstage/errors@1.2.4
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.28.0-next.2
+
+### Patch Changes
+
+- ea16633: Preserve directory structure for CommonJS build output, just like ESM. This makes the build output more stable and easier to browse, and allows for more effective tree shaking and lazy imports.
+- 7955f9b: Tweaked the new package feature detection to not be active when building backend packages.
+- 720a2f9: Updated dependency `git-url-parse` to `^15.0.0`.
+- 2c5ecf5: Support `--max-warnings` flag for package linting
+- 8fe740d: Added a new `--successCache` option to the `backstage-cli repo test` and `backstage-cli repo lint` commands. The cache keeps track of successful runs and avoids re-running for individual packages if they haven't changed. This option is intended only to be used in CI.
+
+  In addition a `--successCacheDir <path>` option has also been added to be able to override the default cache directory.
+
+- f0514c7: Disabled parsing of input source maps in the SWC transform for Jest.
+- Updated dependencies
+  - @backstage/cli-node@0.2.9-next.0
+  - @backstage/eslint-plugin@0.1.10-next.1
+  - @backstage/integration@1.15.1-next.1
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.1
+  - @backstage/errors@1.2.4
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.28.0-next.1
+
+### Minor Changes
+
+- 55b8b84: **BREAKING**: The Jest configuration defined at `@backstage/cli/config/jest` no longer collects configuration defined in the `"jest"` field from all parent `package.json` files. Instead, it will only read and merge configuration from the `package.json` in the monorepo root if it exists, as well as the target package. In addition, configuration defined in the root `package.json` will now only be merged into each package configuration if it is a valid project-level configuration key.
+
+### Patch Changes
+
+- 03810d2: Remove unknown dependency `diff`
+- cebee4f: Added support for a new experimental `EXPERIMENTAL_TRIM_NEXT_ENTRY` flag which removes any `./next` entry points present in packages when building and publishing.
+- 55b8b84: The Jest configuration will now search for a `src/setupTests.*` file with any valid script extension, not only `.ts`.
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.10-next.0
+  - @backstage/integration@1.15.1-next.0
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.8
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.1
+  - @backstage/errors@1.2.4
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.28.0-next.0
+
+### Minor Changes
+
+- 6129076: **BREAKING**: Removed the following deprecated commands:
+
+  - `create`: Use `backstage-cli new` instead
+  - `create-plugin`: Use `backstage-cli new` instead
+  - `plugin:diff`: Use `backstage-cli fix` instead
+  - `test`: Use `backstage-cli repo test` or `backstage-cli package test` instead
+  - `versions:check`: Use `yarn dedupe` or `yarn-deduplicate` instead
+  - `clean`: Use `backstage-cli package clean` instead
+
+  In addition, the experimental `install` and `onboard` commands have been removed since they have not received any updates since their introduction and we're expecting usage to be low. If you where relying on these commands, please let us know by opening an issue towards the main Backstage repository.
+
+### Patch Changes
+
+- 520a383: Added functionality to the prepack script that will append the default export type for entry points to the `exports` object before publishing. This is to help with identifying the declarative integration points for plugins without needing to fetch or run the plugins first.
+- 094eaa3: Remove references to in-repo backend-common
+- 79ba5a8: The `LEGACY_BACKEND_START` flag is now deprecated.
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.8
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.1
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.9
+  - @backstage/integration@1.15.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.1
+
+### Patch Changes
+
+- d2d2313: Add `config.d.ts` files to the list of included file in `tsconfig.json`.
+
+  This allows ESLint to detect issues or deprecations in those files.
+
+- 16ffdd6: Remove direct `vite` dependency
+- 8069f4a: Update Scaffolder module template to add itself to the backend
+- 97422b0: Update templates to not refer to backend-common
+- 0e1a817: The app build process now outputs an additional `index.html.tmpl` file. This is an non-templated version of the `index.html` file, which can be used to delay templating until runtime.
+
+  The new `index.html.tmpl` file also sets a `backstage-public-path` meta tag to be templated at runtime. The meta tag is in turn picked up by the new `@backstage/cli/config/webpack-public-path.js` entry point script, which uses it to set the runtime public path of the Webpack bundle.
+
+- 1b5c264: Add `checks: 'read'` for default GitHub app permissions
+- b4685e7: Added `watchOptions` to frontend webpack config for compatibility with Yarn PnP
+- d29fc1b: Updated dependency `@module-federation/enhanced` to `^0.6.0`.
+- f865103: Updated dependency `esbuild` to `^0.23.0`.
+- ab7713a: Updated dependency `eslint-plugin-jest` to `^28.0.0`.
+- c78ff91: Updated dependency `@rollup/plugin-commonjs` to `^26.0.0`.
+- 4ebf36f: Upgrade to `vite@v5`
+- 2d3caaf: The build commands now support the new `backstage.inline` flag in `package.json`, which causes the contents of private packages to be inlined into the consuming package, rather than be treated as an external dependency.
+- 569c3f0: Fixed an issue where published frontend packages would end up with an invalid import structure if a single module imported both `.css` and `.svg` files.
+- 3d88455: Add support for `backstage:^` version ranges to versions:bump when using the experimental yarn plugin
+- d10f6b6: Allow overriding minify flag with build repo command
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/cli-node@0.2.8
+  - @backstage/integration@1.15.0
+  - @backstage/config-loader@1.9.1
+  - @backstage/eslint-plugin@0.1.9
+  - @backstage/cli-common@0.1.14
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.1-next.2
+
+### Patch Changes
+
+- 16ffdd6: Remove direct `vite` dependency
+- 8069f4a: Update Scaffolder module template to add itself to the backend
+- 0e1a817: The app build process now outputs an additional `index.html.tmpl` file. This is an non-templated version of the `index.html` file, which can be used to delay templating until runtime.
+
+  The new `index.html.tmpl` file also sets a `backstage-public-path` meta tag to be templated at runtime. The meta tag is in turn picked up by the new `@backstage/cli/config/webpack-public-path.js` entry point script, which uses it to set the runtime public path of the Webpack bundle.
+
+- d29fc1b: Updated dependency `@module-federation/enhanced` to `^0.6.0`.
+- 4ebf36f: Upgrade to `vite@v5`
+- 2d3caaf: The build commands now support the new `backstage.inline` flag in `package.json`, which causes the contents of private packages to be inlined into the consuming package, rather than be treated as an external dependency.
+- 3d88455: Add support for `backstage:^` version ranges to versions:bump when using the experimental yarn plugin
+- Updated dependencies
+  - @backstage/cli-node@0.2.8-next.0
+  - @backstage/integration@1.15.0-next.0
+  - @backstage/config-loader@1.9.1-next.0
+  - @backstage/eslint-plugin@0.1.9-next.0
+  - @backstage/catalog-model@1.6.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.1-next.1
+
+### Patch Changes
+
+- d2d2313: Add `config.d.ts` files to the list of included file in `tsconfig.json`.
+
+  This allows ESLint to detect issues or deprecations in those files.
+
+- 97422b0: Update templates to not refer to backend-common
+- f865103: Updated dependency `esbuild` to `^0.23.0`.
+- 569c3f0: Fixed an issue where published frontend packages would end up with an invalid import structure if a single module imported both `.css` and `.svg` files.
+- Updated dependencies
+  - @backstage/catalog-model@1.6.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.7
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/integration@1.14.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.1-next.0
+
+### Patch Changes
+
+- 1b5c264: Add `checks: 'read'` for default GitHub app permissions
+- Updated dependencies
+  - @backstage/catalog-model@1.6.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.7
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/integration@1.14.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.0
+
+### Minor Changes
+
+- 32a38e1: **BREAKING**: The lockfile (`yarn.lock`) dependency analysis and mutations have been removed from several commands.
+
+  The `versions:bump` command will no longer attempt to bump and deduplicate dependencies by modifying the lockfile, it will only update `package.json` files.
+
+  The `versions:check` command has been removed, since its only purpose was verification and mutation of the lockfile. We recommend using the `yarn dedupe` command instead, or the `yarn-deduplicate` package if you're using Yarn classic.
+
+  The check that was built into the `package start` command has been removed, it will no longer warn about lockfile mismatches.
+
+  The packages in the Backstage ecosystem handle package duplications much better now than when these CLI features were first introduced, so the need for these features has diminished. By removing them, we drastically reduce the integration between the Backstage CLI and Yarn, making it much easier to add support for other package managers in the future.
+
+### Patch Changes
+
+- 7eb08a6: Add frontend-dynamic-container role to eslint config factory
+- b2d97fd: Fixing loading of additional config files with new `ConfigSources`
+- fbc7819: Use ES2022 in CLI bundler
+- 93095ee: Make sure node-fetch is version 2.7.0 or greater
+- 6d898d8: Switched the `process` polyfill to use `require.resolve` for greater compatability.
+- e53074f: Updated default backend plugin to use `RootConfigService` instead of `Config`. This also removes the dependency on `@backstage/config` as it's no longer used.
+- ee2b0e5: The experimental module federation build now has the ability to force the use of development versions of `react` and `react-dom` by setting the `FORCE_REACT_DEVELOPMENT` flag.
+- 239dffc: Remove usage of deprecated functionality from @backstage/config-loader
+- e6e7d86: Switched the target from `'ES2022'` to `'es2022'` for better compatibility with older versions of `swc`.
+- 2ced236: Updated dependency `@module-federation/enhanced` to `0.3.1`
+- 0eedec3: Add support for dynamic plugins via the EXPERIMENTAL_MODULE_FEDERATION environment variable when running `yarn start`.
+- adabb40: New command now supports setting package license
+- dc4fb4f: Fix for `repo build --all` not properly detecting the experimental public entry point.
+- Updated dependencies
+  - @backstage/config-loader@1.9.0
+  - @backstage/integration@1.14.0
+  - @backstage/catalog-model@1.6.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.7
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.0-next.4
+
+### Patch Changes
+
+- 6d898d8: Switched the `process` polyfill to use `require.resolve` for greater compatability.
+- 2ced236: Updated dependency `@module-federation/enhanced` to `0.3.1`
+- Updated dependencies
+  - @backstage/catalog-model@1.6.0-next.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.7
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.0-next.2
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/integration@1.14.0-next.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.0-next.3
+
+### Patch Changes
+
+- 93095ee: Make sure node-fetch is version 2.7.0 or greater
+- Updated dependencies
+  - @backstage/config-loader@1.9.0-next.2
+  - @backstage/cli-node@0.2.7
+  - @backstage/integration@1.14.0-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.0-next.2
+
+### Patch Changes
+
+- b2d97fd: Fixing loading of additional config files with new `ConfigSources`
+- adabb40: New command now supports setting package license
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.7
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.9.0-next.1
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/integration@1.14.0-next.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.0-next.1
+
+### Patch Changes
+
+- e6e7d86: Switched the target from `'ES2022'` to `'es2022'` for better compatibility with older versions of `swc`.
+- Updated dependencies
+  - @backstage/config-loader@1.9.0-next.1
+  - @backstage/integration@1.14.0-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.7
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.27.0-next.0
+
+### Minor Changes
+
+- 32a38e1: **BREAKING**: The lockfile (`yarn.lock`) dependency analysis and mutations have been removed from several commands.
+
+  The `versions:bump` command will no longer attempt to bump and deduplicate dependencies by modifying the lockfile, it will only update `package.json` files.
+
+  The `versions:check` command has been removed, since its only purpose was verification and mutation of the lockfile. We recommend using the `yarn dedupe` command instead, or the `yarn-deduplicate` package if you're using Yarn classic.
+
+  The check that was built into the `package start` command has been removed, it will no longer warn about lockfile mismatches.
+
+  The packages in the Backstage ecosystem handle package duplications much better now than when these CLI features were first introduced, so the need for these features has diminished. By removing them, we drastically reduce the integration between the Backstage CLI and Yarn, making it much easier to add support for other package managers in the future.
+
+### Patch Changes
+
+- 7eb08a6: Add frontend-dynamic-container role to eslint config factory
+- fbc7819: Use ES2022 in CLI bundler
+- e53074f: Updated default backend plugin to use `RootConfigService` instead of `Config`. This also removes the dependency on `@backstage/config` as it's no longer used.
+- ee2b0e5: The experimental module federation build now has the ability to force the use of development versions of `react` and `react-dom` by setting the `FORCE_REACT_DEVELOPMENT` flag.
+- 239dffc: Remove usage of deprecated functionality from @backstage/config-loader
+- 0eedec3: Add support for dynamic plugins via the EXPERIMENTAL_MODULE_FEDERATION environment variable when running `yarn start`.
+- dc4fb4f: Fix for `repo build --all` not properly detecting the experimental public entry point.
+- Updated dependencies
+  - @backstage/integration@1.14.0-next.0
+  - @backstage/config-loader@1.8.2-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.7
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.11
+
+### Patch Changes
+
+- 133464c: Added experimental support for dynamic frontend plugin builds, enabled via setting `EXPERIMENTAL_MODULE_FEDERATION` for the app build, and using the `frontend-dynamic-container` package role to create a container. Both of these are experimental and will change in the future.
+- e2e320c: - remove unused dependencies `winston` and `yn` from the template of backend plugins;
+  - update `msw` to version `2.3.1` in the template of backend plugins;
+    starting with v1 and switching later to v2 is tedious and not straight forward; it's easier to start with v2;
+- 0540c5a: Updated the scaffolding output message for `plugin-common` in `backstage-cli`. Now, when executing `backstage-cli new` to create a new `plugin-common` package, the output message accurately reflects the action by displaying `Creating common plugin package...` instead of the previous, less accurate `Creating backend plugin...`.
+- 7652db4: Only bootstrap global-agent if it's actually being used
+- f0c0039: Fix issue with CLI that was preventing upgrading from 1.28
+- d228862: Update default backend plugin created by the cli to use non-deprecated error handling middleware
+- da90cce: Updated dependency `esbuild` to `^0.21.0`.
+- a60d73b: Fix a few minor issues with the backend template that were causing failing linting checks in the main repo.
+- 0510d98: Subpath export `package.json` should be of a unique name to avoid typescript resolution issues
+- 4baac0c: The `backendPlugin` and `backendModule` factory now includes a step for automatically adding the new backend plugin/module to the `index.ts` file of the backend.
+- Updated dependencies
+  - @backstage/cli-node@0.2.7
+  - @backstage/integration@1.13.0
+  - @backstage/config-loader@1.8.1
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.11-next.1
+
+### Patch Changes
+
+- 4baac0c: The `backendPlugin` and `backendModule` factory now includes a step for automatically adding the new backend plugin/module to the `index.ts` file of the backend.
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.6
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.8.1
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/integration@1.13.0-next.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.10-next.0
+
+### Patch Changes
+
+- e2e320c: - remove unused dependencies `winston` and `yn` from the template of backend plugins;
+  - update `msw` to version `2.3.1` in the template of backend plugins;
+    starting with v1 and switching later to v2 is tedious and not straight forward; it's easier to start with v2;
+- 0540c5a: Updated the scaffolding output message for `plugin-common` in `backstage-cli`. Now, when executing `backstage-cli new` to create a new `plugin-common` package, the output message accurately reflects the action by displaying `Creating common plugin package...` instead of the previous, less accurate `Creating backend plugin...`.
+- 7652db4: Only bootstrap global-agent if it's actually being used
+- f0c0039: Fix issue with CLI that was preventing upgrading from 1.28
+- d228862: Update default backend plugin created by the cli to use non-deprecated error handling middleware
+- da90cce: Updated dependency `esbuild` to `^0.21.0`.
+- a60d73b: Fix a few minor issues with the backend template that were causing failing linting checks in the main repo.
+- 0510d98: Subpath export `package.json` should be of a unique name to avoid typescript resolution issues
+- Updated dependencies
+  - @backstage/integration@1.13.0-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/cli-node@0.2.6
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.8.1
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.7
+
+### Patch Changes
+
+- 788eca7: Fix readme for new plugins created using cli
+- 90c5268: Add `peerDependencies` to `devDependencies` in `package.json.hbs` templates.
+- c00f7ee: Fix issue with `esm` loaded dependencies being different from the `cjs` import for Vite dependencies
+- b0f66e9: Updated dependency `vite-plugin-node-polyfills` to `^0.22.0`.
+- c328131: Added a new `--publish` flag to the `repo fix` command. This command will validate and if possible generate the metadata required for publishing packages with the Backstage CLI. In addition, a check has been added that the `backstage.pluginId` and `backstage.pluginPackage(s)` fields are present when packing a package for publishing.
+- 5afbe1d: Export default module for `scaffolder-action` cli template
+- 009da47: Fix `versions:check --fix` when `yarn.lock` has multiple joint versions in the same section
+- 9ee948a: Bump `esbuild` target for package builds to `ES2022`.
+- Updated dependencies
+  - @backstage/cli-node@0.2.6
+  - @backstage/integration@1.12.0
+  - @backstage/cli-common@0.1.14
+  - @backstage/config-loader@1.8.1
+  - @backstage/catalog-model@1.5.0
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.7-next.3
+
+### Patch Changes
+
+- c328131: Added a new `--publish` flag to the `repo fix` command. This command will validate and if possible generate the metadata required for publishing packages with the Backstage CLI. In addition, a check has been added that the `backstage.pluginId` and `backstage.pluginPackage(s)` fields are present when packing a package for publishing.
+- Updated dependencies
+  - @backstage/cli-node@0.2.6-next.2
+  - @backstage/integration@1.12.0-next.1
+  - @backstage/cli-common@0.1.14-next.0
+  - @backstage/config-loader@1.8.1-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.7-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/cli-node@0.2.6-next.1
+  - @backstage/integration@1.12.0-next.0
+  - @backstage/config-loader@1.8.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.7-next.1
+
+### Patch Changes
+
+- 788eca7: Fix readme for new plugins created using cli
+- c00f7ee: Fix issue with `esm` loaded dependencies being different from the `cjs` import for Vite dependencies
+- Updated dependencies
+  - @backstage/cli-node@0.2.6-next.0
+  - @backstage/config-loader@1.8.0
+
+## 0.26.6-next.0
+
+### Patch Changes
+
+- 009da47: Fix `versions:check --fix` when `yarn.lock` has multiple joint versions in the same section
+- 9ee948a: Bump `esbuild` target for package builds to `ES2022`.
+- Updated dependencies
+  - @backstage/cli-node@0.2.6-next.0
+  - @backstage/config-loader@1.8.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/integration@1.11.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.5
+
+### Patch Changes
+
+- b8f1fc2: The `build-workspace` command no longer manually runs `yarn postpack`, relying instead on the fact that running `yarn pack` will automatically invoke the `postpack` script. No action is necessary if you are running the latest version of yarn 1, 3, or 4.
+- fcd3462: Both the target and types library have been bumped from ES2021 to ES2022 in `@backstage/cli/config/tsconfig.json`.
+- 0cc5ed3: Add support for `versions:migrate` to do code changes. Can be skipped with `--no-code-changes`
+- f97ad04: Add preserveModules to rollup, which allows better async loading and tree-shaking in webpack
+- 2a6f10d: The `versions:bump` command will no longer exit with a non-zero status if the version bump fails due to forbidden duplicate package installations. It will now also provide more information about how to troubleshoot such an error. The set of forbidden duplicates has also been expanded to include all `@backstage/*-app-api` packages.
+- c5d7b40: Allow passing a `--require` argument through to the Node process during `package start`
+- cc3c518: Fixed an issue causing the `repo fix` command to set an incorrect `workspace` property using Windows
+- 812dff0: Add previously-missing semicolon in file templated by `backstage-cli new --select plugin`.
+- f185603: Fixed the dynamic import of vite.
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0
+  - @backstage/eslint-plugin@0.1.8
+  - @backstage/integration@1.11.0
+
+## 0.26.5-next.1
+
+### Patch Changes
+
+- 2a6f10d: The `versions:bump` command will no longer exit with a non-zero status if the version bump fails due to forbidden duplicate package installations. It will now also provide more information about how to troubleshoot such an error. The set of forbidden duplicates has also been expanded to include all `@backstage/*-app-api` packages.
+- c5d7b40: Allow passing a `--require` argument through to the Node process during `package start`
+- cc3c518: Fixed an issue causing the `repo fix` command to set an incorrect `workspace` property using Windows
+- 812dff0: Add previously-missing semicolon in file templated by `backstage-cli new --select plugin`.
+- Updated dependencies
+  - @backstage/integration@1.11.0-next.0
+
+## 0.26.5-next.0
+
+### Patch Changes
+
+- fcd3462: Both the target and types library have been bumped from ES2021 to ES2022 in `@backstage/cli/config/tsconfig.json`.
+- 0cc5ed3: Add support for `versions:migrate` to do code changes. Can be skipped with `--no-code-changes`
+- f97ad04: Add preserveModules to rollup, which allows better async loading and tree-shaking in webpack
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0-next.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.5
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.8.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.7
+  - @backstage/integration@1.10.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.3
+
+### Patch Changes
+
+- c884b9a: Fix the bundle public subpath configuration.
+- e3c213e: Add the deprecation plugin to the default linter setup, switched off.
+
+  This allows to disable deprecation warnings for `backstage-cli repo list-deprecations` with inline comments.
+
+- 4946f03: Updated dependency `webpack-dev-server` to `^5.0.0`.
+- 6b5ddbe: Fix the backend plugin to use correct plugin id
+- 4fecffc: When building the frontend app public assets are now also copied to the public dist directory when in use.
+- ed9260f: Added `versions:migrate` command to help move packages to the new `@backstage-community` namespace
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.7
+  - @backstage/config-loader@1.8.0
+  - @backstage/integration@1.10.0
+  - @backstage/cli-node@0.2.5
+  - @backstage/catalog-model@1.4.5
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.3-next.1
+
+### Patch Changes
+
+- c884b9a: Fix the bundle public subpath configuration.
+- 6b5ddbe: Fix the backend plugin to use correct plugin id
+- 4fecffc: When building the frontend app public assets are now also copied to the public dist directory when in use.
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.7-next.0
+  - @backstage/catalog-model@1.4.5
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.4
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.8.0-next.0
+  - @backstage/errors@1.2.4
+  - @backstage/integration@1.10.0-next.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.3-next.0
+
+### Patch Changes
+
+- e3c213e: Add the deprecation plugin to the default linter setup, switched off.
+
+  This allows to disable deprecation warnings for `backstage-cli repo list-deprecations` with inline comments.
+
+- 4946f03: Updated dependency `webpack-dev-server` to `^5.0.0`.
+- Updated dependencies
+  - @backstage/integration@1.10.0-next.0
+  - @backstage/config-loader@1.8.0-next.0
+  - @backstage/catalog-model@1.4.5
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.4
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.6
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.2
+
+### Patch Changes
+
+- eeb226a: Updated dependency `rollup` to `^4.0.0`.
+- 91192f4: Updated backend plugin template to work better with new backend system
+- cc371d6: Ignore transforming only on `react-use/lib`, not whole `react-use` in jest.
+
+  ** POTENTIAL BREAKAGE **
+  If your tests fail, please change to use path import from `react-use/esm/`. It is also recommended to migrate from `react-user/lib` imports to `react-use/esm`
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.5
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.4
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.7.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.6
+  - @backstage/integration@1.9.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.1
+
+### Patch Changes
+
+- eeb226a: Updated dependency `rollup` to `^4.0.0`.
+- cc371d6: Ignore transforming only on `react-use/lib`, not whole `react-use` in jest.
+
+  ** POTENTIAL BREAKAGE **
+  If your tests fail, please change to use path import from `react-use/esm/`. It is also recommended to migrate from `react-user/lib` imports to `react-use/esm`
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.5
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.4
+  - @backstage/config@1.2.0
+  - @backstage/config-loader@1.7.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.6
+  - @backstage/integration@1.9.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.26.0
+
+### Minor Changes
+
+- 0d72065: The backend devlopment server transpilation has been replaced with a simplified solution based on SWC, which is already the transpiler used for tests. This fixed an issue where never versions of the `tsx` dependency had a new contract for signalling dependencies, breaking watch mode. This change fixed file watches as well as enables sourcemaps.
+
+### Patch Changes
+
+- fe1a55e: Extend option to minify generated code to the `backend` package.
+- b0875e5: Fixed a bug that could cause the `build-workspace` command to fail when invoked with `--alwaysYarnPack` enabled in environments with limited resources.
+- bdf9ec1: New backend plugins with cli are now created using the new backend system
+- cadbb82: Added a `EXPERIMENTAL_LAZY_COMPILATION` flag, which enables the experimental Webpack lazy compilation option in frontend builds.
+- 999224f: Bump dependency `minimatch` to v9
+- 1bd4596: Removed the `ts-node` dev dependency.
+- 8dce287: Fix prettier issues on default plugins & module templates
+- f86e34c: Removed unused `replace-in-file` dependency
+- 2398c7c: Updated dependency `@spotify/prettier-config` to `^15.0.0`.
+  Updated dependency `@spotify/eslint-config-base` to `^15.0.0`.
+  Updated dependency `@spotify/eslint-config-react` to `^15.0.0`.
+  Updated dependency `@spotify/eslint-config-typescript` to `^15.0.0`.
+- f4404e5: Add .ico import support
+- f39dfd3: Tweak the descriptions of the CLI templates
+- Updated dependencies
+  - @backstage/integration@1.9.1
+  - @backstage/config@1.2.0
+  - @backstage/errors@1.2.4
+  - @backstage/eslint-plugin@0.1.6
+  - @backstage/config-loader@1.7.0
+  - @backstage/cli-node@0.2.4
+  - @backstage/catalog-model@1.4.5
+  - @backstage/cli-common@0.1.13
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.3-next.2
+
+### Patch Changes
+
+- f39dfd3: Tweak the descriptions of the CLI templates
+- Updated dependencies
+  - @backstage/integration@1.9.1-next.2
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.4-next.0
+  - @backstage/config@1.2.0-next.1
+  - @backstage/config-loader@1.7.0-next.1
+  - @backstage/errors@1.2.4-next.0
+  - @backstage/eslint-plugin@0.1.6-next.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.3-next.1
+
+### Patch Changes
+
+- 8dce287: Fix prettier issues on default plugins & module templates
+- Updated dependencies
+  - @backstage/config@1.2.0-next.1
+  - @backstage/config-loader@1.7.0-next.1
+  - @backstage/integration@1.9.1-next.1
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.4-next.0
+  - @backstage/errors@1.2.4-next.0
+  - @backstage/eslint-plugin@0.1.6-next.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.3-next.0
+
+### Patch Changes
+
+- 999224f: Bump dependency `minimatch` to v9
+- f86e34c: Removed unused `replace-in-file` dependency
+- f4404e5: Add .ico import support
+- Updated dependencies
+  - @backstage/errors@1.2.4-next.0
+  - @backstage/eslint-plugin@0.1.6-next.0
+  - @backstage/cli-node@0.2.4-next.0
+  - @backstage/config-loader@1.6.3-next.0
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/config@1.1.2-next.0
+  - @backstage/integration@1.9.1-next.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.2
+
+### Patch Changes
+
+- d557d47: Added check for the `repository` field in the `repo fix` command.
+- b58673e: Upgrade jest
+- c624938: Add experimental support for an optional `public` app entry point that lets users sign-in before being able to access the full app.
+- c52e7d5: Make `http://localhost:3000` the default base URL for serving locally, and `/` the default public path for built apps. The app build no longer requires any configuration values to be present.
+- 9a96ef2: Updated dependency `vite-plugin-node-polyfills` to `^0.21.0`.
+- 6bb6f3e: Updated dependency `fs-extra` to `^11.2.0`.
+  Updated dependency `@types/fs-extra` to `^11.0.0`.
+- 2f1f8fd: Updated dependency `esbuild-loader` to `^4.0.0`.
+- fd20d5b: Updated dependency `eslint-config-prettier` to `^9.0.0`.
+- acd2860: Updated dependency `vite-plugin-node-polyfills` to `^0.19.0`.
+- 40c27f3: Updated dependency `eslint-webpack-plugin` to `^4.0.0`.
+- 6ba64c4: Updated dependency `commander` to `^12.0.0`.
+- ba56063: Updated dependency `fork-ts-checker-webpack-plugin` to `^9.0.0`.
+- 1cae748: Updated dependency `git-url-parse` to `^14.0.0`.
+- 52ae6b9: Updated dependency `esbuild` to `^0.20.0`.
+- 404e82b: Updated dependency `eslint-plugin-deprecation` to `^2.0.0`.
+- 5c05f8a: Harmonize the package naming and allow custom prefix
+- 35725e2: Updated dependencies in frontend plugin templates
+- c7259dc: Updated the backend module template to make the module instance the package default export.
+- 08804c3: Fixed an issue that would cause an invalid `__backstage-autodetected-plugins__.js` to be written when using experimental module discovery.
+- Updated dependencies
+  - @backstage/cli-node@0.2.3
+  - @backstage/catalog-model@1.4.4
+  - @backstage/integration@1.9.0
+  - @backstage/config-loader@1.6.2
+  - @backstage/eslint-plugin@0.1.5
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.2-next.3
+
+### Patch Changes
+
+- d557d47: Added check for the `repository` field in the `repo fix` command.
+- c52e7d5: Make `http://localhost:3000` the default base URL for serving locally, and `/` the default public path for built apps. The app build no longer requires any configuration values to be present.
+- ba56063: Updated dependency `fork-ts-checker-webpack-plugin` to `^9.0.0`.
+- 1cae748: Updated dependency `git-url-parse` to `^14.0.0`.
+- 404e82b: Updated dependency `eslint-plugin-deprecation` to `^2.0.0`.
+- Updated dependencies
+  - @backstage/cli-node@0.2.3-next.0
+  - @backstage/integration@1.9.0-next.1
+  - @backstage/config-loader@1.6.2-next.0
+  - @backstage/catalog-model@1.4.4-next.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.5-next.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.2-next.2
+
+### Patch Changes
+
+- 52ae6b9: Updated dependency `esbuild` to `^0.20.0`.
+- 5c05f8a: Harmonize the package naming and allow custom prefix
+- Updated dependencies
+  - @backstage/config@1.1.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/catalog-model@1.4.4-next.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.2
+  - @backstage/config-loader@1.6.1
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.5-next.0
+  - @backstage/integration@1.9.0-next.0
+  - @backstage/types@1.1.1
+
+## 0.25.2-next.1
+
+### Patch Changes
+
+- b58673e: Upgrade jest
+- 08804c3: Fixed an issue that would cause an invalid `__backstage-autodetected-plugins__.js` to be written when using experimental module discovery.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.4-next.0
+  - @backstage/integration@1.9.0-next.0
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.2
+  - @backstage/config@1.1.1
+  - @backstage/config-loader@1.6.1
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.5-next.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.2-next.0
+
+### Patch Changes
+
+- c624938: Add experimental support for optional `auth` app entry point.
+- acd2860: Updated dependency `vite-plugin-node-polyfills` to `^0.19.0`.
+- 35725e2: Updated dependencies in frontend plugin templates
+- c7259dc: Updated the backend module template to make the module instance the package default export.
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.5-next.0
+  - @backstage/cli-node@0.2.2
+  - @backstage/config-loader@1.6.1
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/integration@1.8.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.1
+
+### Patch Changes
+
+- b6b15b2: Use sha256 instead of md5 in build script cache key calculation
+
+  Makes it possible to build on FIPS nodejs.
+
+- Updated dependencies
+  - @backstage/config-loader@1.6.1
+  - @backstage/cli-node@0.2.2
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.4
+  - @backstage/integration@1.8.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/config-loader@1.6.1-next.0
+  - @backstage/cli-node@0.2.2-next.0
+  - @backstage/integration@1.8.0
+  - @backstage/config@1.1.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.4
+  - @backstage/types@1.1.1
+
+## 0.25.1-next.0
+
+### Patch Changes
+
+- b6b15b2: Use sha256 instead of md5 in build script cache key calculation
+
+  Makes it possible to build on FIPS nodejs.
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.1
+  - @backstage/config@1.1.1
+  - @backstage/config-loader@1.6.0
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.4
+  - @backstage/integration@1.8.0
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.0
+
+### Minor Changes
+
+- 3834067: Updates the ESLint config to ignore issues created by generated files in `**/src/generated/**`.
+
+### Patch Changes
+
+- 32018ff: Enable the `tsx` loader to work on Node 18.19 and up
+- 0ffee55: Toned down the warning message when git is not found
+- c6f3743: Added a warning when starting a standalone backend plugin that hasn't been updated to the new backend system.
+- 3e358b0: Added deprecation warning for React Router v6 beta, please make sure you have migrated your apps to use React Router v6 stable as support for the beta version will be removed. See the [migration tutorial](https://backstage.io/docs/tutorials/react-router-stable-migration) for more information.
+- 219d7f0: Updating template generation for scaffolder module
+- 8cda3c7: Tweaked Node.js version check for when to use the new module register API with the new backend `package start` command.
+- a3edc18: Updated dependency `vite-plugin-node-polyfills` to `^0.17.0`.
+- 627554e: Updated dependency `@rollup/plugin-node-resolve` to `^15.0.0`.
+- c07cee5: Updated dependency `@rollup/plugin-json` to `^6.0.0`.
+- bd586a5: Updated dependency `bfj` to `^8.0.0`.
+- 8056425: Updated dependency `@typescript-eslint/eslint-plugin` to `6.12.0`.
+- 017c425: Updated dependency `@typescript-eslint/eslint-plugin` to `6.11.0`.
+- 2565cc8: Updated dependency `@rollup/plugin-commonjs` to `^25.0.0`.
+- 33e96e5: Switched the `@typescript-eslint/eslint-plugin` dependency back to using a `^` version range.
+- 0cbb03b: Fixing regular expression ReDoS with zod packages. Upgrading to latest. ref: https://security.snyk.io/vuln/SNYK-JS-ZOD-5925617
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.4
+  - @backstage/config-loader@1.6.0
+  - @backstage/integration@1.8.0
+  - @backstage/cli-node@0.2.1
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.0-next.3
+
+### Patch Changes
+
+- 219d7f0: Updating template generation for scaffolder module
+- bd586a5: Updated dependency `bfj` to `^8.0.0`.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.0
+  - @backstage/config@1.1.1
+  - @backstage/config-loader@1.6.0-next.0
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.4-next.0
+  - @backstage/integration@1.8.0-next.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.0-next.2
+
+### Patch Changes
+
+- 32018ff: Enable the `tsx` loader to work on Node 18.19 and up
+- a3edc18: Updated dependency `vite-plugin-node-polyfills` to `^0.17.0`.
+- 627554e: Updated dependency `@rollup/plugin-node-resolve` to `^15.0.0`.
+- c07cee5: Updated dependency `@rollup/plugin-json` to `^6.0.0`.
+- 2565cc8: Updated dependency `@rollup/plugin-commonjs` to `^25.0.0`.
+- Updated dependencies
+  - @backstage/config-loader@1.6.0-next.0
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.0
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.4-next.0
+  - @backstage/integration@1.8.0-next.1
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.25.0-next.1
+
+### Minor Changes
+
+- 38340678c3: Updates the ESLint config to ignore issues created by generated files in `**/src/generated/**`.
+
+### Patch Changes
+
+- 0ffee55010: Toned down the warning message when git is not found
+- c6f3743172: Added a warning when starting a standalone backend plugin that hasn't been updated to the new backend system.
+- 3e358b0dff: Added deprecation warning for React Router v6 beta, please make sure you have migrated your apps to use React Router v6 stable as support for the beta version will be removed. See the [migration tutorial](https://backstage.io/docs/tutorials/react-router-stable-migration) for more information.
+- 8056425e09: Updated dependency `@typescript-eslint/eslint-plugin` to `6.12.0`.
+- 33e96e59e7: Switched the `@typescript-eslint/eslint-plugin` dependency back to using a `^` version range.
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.4-next.0
+  - @backstage/integration@1.8.0-next.1
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.0
+  - @backstage/config@1.1.1
+  - @backstage/config-loader@1.5.3
+  - @backstage/errors@1.2.3
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.24.1-next.0
+
+### Patch Changes
+
+- 8cda3c72f2: Tweaked Node.js version check for when to use the new module register API with the new backend `package start` command.
+- 017c425f93: Updated dependency `@typescript-eslint/eslint-plugin` to `6.11.0`.
+- Updated dependencies
+  - @backstage/integration@1.8.0-next.0
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.0
+  - @backstage/config@1.1.1
+  - @backstage/config-loader@1.5.3
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.11
+  - @backstage/types@1.1.1
+
+## 0.24.0
+
+### Minor Changes
+
+- 8db5c3cd7a: Removed support for the `publishConfig.alphaTypes` and `.betaTypes` fields that were used together with `--experimental-type-build` to generate `/alpha` and `/beta` entry points. Use the `exports` field to achieve this instead.
+- 4e36abef14: Remove support for the deprecated `--experimental-type-build` option for `package build`.
+
+### Patch Changes
+
+- 4ba4ac351f: Switch from using deprecated `@esbuild-kit/*` packages to using `tsx`. This also switches to using the new module loader `register` API when available, avoiding the experimental warning when starting backends.
+- cd80ebb062: Updated dependency `vite-plugin-node-polyfills` to `^0.16.0`.
+- 4aa43f62aa: Updated dependency `cross-fetch` to `^4.0.0`.
+- 971dcba764: Updated dependency `@typescript-eslint/eslint-plugin` to `6.10.0`.
+- 6bf7561d3c: The experimental package detection will now ignore packages that don't make `package.json` available.
+- e14cbf563d: Added `EXPERIMENTAL_VITE` flag for using [vite](https://vitejs.dev) as dev server instead of Webpack
+- 7cd34392f5: Ignore `stdin` when spawning backend child process for the `start` command. Fixing an issue where backend startup would hang.
+- Updated dependencies
+  - @backstage/config-loader@1.5.3
+  - @backstage/cli-node@0.2.0
+  - @backstage/integration@1.7.2
+  - @backstage/release-manifests@0.0.11
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/types@1.1.1
+
+## 0.24.0-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/integration@1.7.2-next.0
+  - @backstage/config-loader@1.5.3-next.0
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.2.0-next.0
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.10
+  - @backstage/types@1.1.1
+
+## 0.24.0-next.0
+
+### Minor Changes
+
+- 8db5c3cd7a: Removed support for the `publishConfig.alphaTypes` and `.betaTypes` fields that were used together with `--experimental-type-build` to generate `/alpha` and `/beta` entry points. Use the `exports` field to achieve this instead.
+- 4e36abef14: Remove support for the deprecated `--experimental-type-build` option for `package build`.
+
+### Patch Changes
+
+- 4ba4ac351f: Switch from using deprecated `@esbuild-kit/*` packages to using `tsx`. This also switches to using the new module loader `register` API when available, avoiding the experimental warning when starting backends.
+- 6bf7561d3c: The experimental package detection will now ignore packages that don't make `package.json` available.
+- e14cbf563d: Added `EXPERIMENTAL_VITE` flag for using [vite](https://vitejs.dev) as dev server instead of Webpack
+- 7cd34392f5: Ignore `stdin` when spawning backend child process for the `start` command. Fixing an issue where backend startup would hang.
+- Updated dependencies
+  - @backstage/config-loader@1.5.2-next.0
+  - @backstage/cli-node@0.2.0-next.0
+  - @backstage/integration@1.7.1
+  - @backstage/catalog-model@1.4.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.10
+  - @backstage/types@1.1.1
+
+## 0.23.0
+
+### Minor Changes
+
+- 8defbd5434: Update typescript-eslint to 6.7.x, adding compatibility with TypeScript 5.2.
+
+  This includes a major update on typescript-eslint, you can see the details in the [release notes](https://typescript-eslint.io/blog/announcing-typescript-eslint-v6/).
+
+- 7077dbf131: **BREAKING** The new backend start command that used to be enabled by setting `EXPERIMENTAL_BACKEND_START` is now the default. To revert to the old behavior set `LEGACY_BACKEND_START`, which is recommended if you haven't migrated to the new backend system.
+
+  This new command is no longer based on Webpack, but instead uses Node.js loaders to transpile on the fly. Rather than hot reloading modules the entire backend is now restarted on change, but the SQLite database state is still maintained across restarts via a parent process.
+
+### Patch Changes
+
+- 9468a67b92: In frontend builds and tests `process.env.HAS_REACT_DOM_CLIENT` will now be defined if `react-dom/client` is present, i.e. if using React 18. This allows for conditional imports of `react-dom/client`.
+- 68158034e8: Fix for the new backend `start` command to make it work on Windows.
+- 4f16e60e6d: Request slightly smaller pages of data from GitHub
+- 21cd3b1b24: Added a template for creating `node-library` packages with `yarn new`.
+- d0f26cfa4f: Fixed an issue where the new backend start command would not gracefully shut down the backend process on Windows.
+- 1ea20b0be5: Updated dependency `@typescript-eslint/eslint-plugin` to `6.7.5`.
+- 2ef6522552: Support for the `.icon.svg` extension has been deprecated and will be removed in the future. The implementation of this extension is too tied to a particular version of MUI and the SVGO, and it makes it harder to evolve the build system. We may introduce the ability to reintroduce this kind of functionality in the future through configuration for use in internal plugins, but for now we're forced to remove it.
+
+  To migrate existing code, rename the `.icon.svg` file to `.tsx` and replace the `<svg>` element with `<SvgIcon>` from MUI and add necessary imports. For example:
+
+  ```tsx
+  import React from 'react';
+  import SvgIcon from '@material-ui/core/SvgIcon';
+  import { IconComponent } from '@backstage/core-plugin-api';
+
+  export const CodeSceneIcon = (props: SvgIconProps) => (
+    <SvgIcon {...props}>
+      <g>
+        <path d="..." />
+      </g>
+    </SvgIcon>
+  );
+  ```
+
+- b9ec93430e: The scaffolder-module template now recommends usage of `createMockDirectory` instead of `mock-fs`.
+- de42eebaaf: Bumped dev dependencies `@types/node` and `mock-fs`.
+- 425203f898: Fixed recursive reloading issues of the backend, caused by unwanted watched files.
+- 3ef18f8c06: Explicitly set `exports: 'named'` for CJS builds, ensuring that they have e.g. `exports["default"] = catalogPlugin;`
+- 7187f2953e: The experimental package discovery will now always use the package name for include and exclude filtering, rather than the full module id. Entries pointing to a subpath export will now instead have an `export` field specifying the subpath that the import is from.
+- Updated dependencies
+  - @backstage/integration@1.7.1
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config-loader@1.5.1
+  - @backstage/errors@1.2.3
+  - @backstage/cli-common@0.1.13
+  - @backstage/cli-node@0.1.5
+  - @backstage/config@1.1.1
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.10
+  - @backstage/types@1.1.1
+
+## 0.23.0-next.2
+
+### Minor Changes
+
+- 8defbd5434: Update typescript-eslint to 6.7.x, adding compatibility with TypeScript 5.2.
+
+  This includes a major update on typescript-eslint, you can see the details in the [release notes](https://typescript-eslint.io/blog/announcing-typescript-eslint-v6/).
+
+### Patch Changes
+
+- 2ef6522552: Support for the `.icon.svg` extension has been deprecated and will be removed in the future. The implementation of this extension is too tied to a particular version of MUI and the SVGO, and it makes it harder to evolve the build system. We may introduce the ability to reintroduce this kind of functionality in the future through configuration for use in internal plugins, but for now we're forced to remove it.
+
+  To migrate existing code, rename the `.icon.svg` file to `.tsx` and replace the `<svg>` element with `<SvgIcon>` from MUI and add necessary imports. For example:
+
+  ```tsx
+  import React from 'react';
+  import SvgIcon from '@material-ui/core/SvgIcon';
+  import { IconComponent } from '@backstage/core-plugin-api';
+
+  export const CodeSceneIcon = (props: SvgIconProps) => (
+    <SvgIcon {...props}>
+      <g>
+        <path d="..." />
+      </g>
+    </SvgIcon>
+  );
+  ```
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3-next.0
+  - @backstage/config-loader@1.5.1-next.1
+  - @backstage/integration@1.7.1-next.1
+  - @backstage/errors@1.2.3-next.0
+  - @backstage/cli-common@0.1.13-next.0
+  - @backstage/cli-node@0.1.5-next.1
+  - @backstage/config@1.1.1-next.0
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.10
+  - @backstage/types@1.1.1
+
+## 0.23.0-next.1
+
+### Patch Changes
+
+- d0f26cfa4f: Fixed an issue where the new backend start command would not gracefully shut down the backend process on Windows.
+- Updated dependencies
+  - @backstage/config@1.1.0
+  - @backstage/release-manifests@0.0.10
+  - @backstage/catalog-model@1.4.2
+  - @backstage/cli-common@0.1.13-next.0
+  - @backstage/cli-node@0.1.5-next.0
+  - @backstage/config-loader@1.5.1-next.0
+  - @backstage/errors@1.2.2
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/integration@1.7.1-next.0
+  - @backstage/types@1.1.1
+
+## 0.23.0-next.0
+
+### Minor Changes
+
+- 7077dbf131: **BREAKING** The new backend start command that used to be enabled by setting `EXPERIMENTAL_BACKEND_START` is now the default. To revert to the old behavior set `LEGACY_BACKEND_START`, which is recommended if you haven't migrated to the new backend system.
+
+  This new command is no longer based on Webpack, but instead uses Node.js loaders to transpile on the fly. Rather than hot reloading modules the entire backend is now restarted on change, but the SQLite database state is still maintained across restarts via a parent process.
+
+### Patch Changes
+
+- 68158034e8: Fix for the new backend `start` command to make it work on Windows.
+- 21cd3b1b24: Added a template for creating `node-library` packages with `yarn new`.
+- de42eebaaf: Bumped dev dependencies `@types/node` and `mock-fs`.
+- 3ef18f8c06: Explicitly set `exports: 'named'` for CJS builds, ensuring that they have e.g. `exports["default"] = catalogPlugin;`
+- Updated dependencies
+  - @backstage/integration@1.7.1-next.0
+  - @backstage/config-loader@1.5.1-next.0
+  - @backstage/cli-common@0.1.13-next.0
+  - @backstage/config@1.1.0
+  - @backstage/release-manifests@0.0.10
+  - @backstage/catalog-model@1.4.2
+  - @backstage/cli-node@0.1.5-next.0
+  - @backstage/errors@1.2.2
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/types@1.1.1
+
+## 0.22.13
+
+### Patch Changes
+
+- 04eabd21bee4: Added the ability to specify the listen address for the `--inspect` and `--inspect-brk` command. You can now set the `ip` and port of the `inspect` and `inspectBrk` by adding for example `--inspect=0.0.0.0:9229`
+- 278d9326eb40: Added the ability to create a plain backend module with the `new` command.
+- 4d5eeec52d80: Add ESM loader for the experimental backend start command.
+- 3494c502aba7: Added a new `repo fix` command that fixes auto-fixable problems in all packages. Initially the command fixes package export declarations, as well as marks all non-bundled frontend packages as side-effect free. Marking packages as free of side-effects can drastically reduce the Webpack bundle size.
+- f36113ca2305: Add experimental support for frontend package discovery.
+- a23fce763c6a: Fixed a bug where package exports entry points could not be `.tsx` files.
+- 8cec7664e146: Removed `@types/node` dependency
+- ea779492ad88: Updated dependency `run-script-webpack-plugin` to `^0.2.0`.
+- 4af4defcc114: When running `version:bump` it will now log duplicates instead of throwing an error
+- 71d4368ae5cc: Added support for the `dev/index` entry point for backend plugins and modules.
+- 956d226eeeee: Add `"sideEffects": false` to `package.json` in frontend package templates. This can be added to existing packages using the new `yarn fix` command.
+- cd7331587eb3: Removed the experimental `package fix` command that was used to automatically add dependencies to `package.json`, but has since been replaced by the `no-undeclared-imports` rule from `@backstage/eslint-plugin`.
+- 219b46ae1a50: Include default alpha export during package detection
+- Updated dependencies
+  - @backstage/config@1.1.0
+  - @backstage/catalog-model@1.4.2
+  - @backstage/errors@1.2.2
+  - @backstage/integration@1.7.0
+  - @backstage/release-manifests@0.0.10
+  - @backstage/types@1.1.1
+  - @backstage/config-loader@1.5.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.4
+  - @backstage/eslint-plugin@0.1.3
+
+## 0.22.13-next.3
+
+### Patch Changes
+
+- 4d5eeec52d80: Add ESM loader for the experimental backend start command.
+- 3494c502aba7: Added a new `repo fix` command that fixes auto-fixable problems in all packages. Initially the command fixes package export declarations, as well as marks all non-bundled frontend packages as side-effect free. Marking packages as free of side-effects can drastically reduce the Webpack bundle size.
+- f36113ca2305: Add experimental support for frontend package discovery.
+- a23fce763c6a: Fixed a bug where package exports entry points could not be `.tsx` files.
+- 4af4defcc114: When running `version:bump` it will now log duplicates instead of throwing an error
+- 956d226eeeee: Add `"sideEffects": false` to `package.json` in frontend package templates. This can be added to existing packages using the new `yarn fix` command.
+- cd7331587eb3: Removed the experimental `package fix` command that was used to automatically add dependencies to `package.json`, but has since been replaced by the `no-undeclared-imports` rule from `@backstage/eslint-plugin`.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2-next.2
+  - @backstage/config@1.1.0-next.2
+  - @backstage/errors@1.2.2-next.0
+  - @backstage/integration@1.7.0-next.3
+  - @backstage/release-manifests@0.0.10-next.1
+  - @backstage/types@1.1.1-next.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.4-next.0
+  - @backstage/config-loader@1.5.0-next.3
+  - @backstage/eslint-plugin@0.1.3
+
+## 0.22.13-next.2
+
+### Patch Changes
+
+- 8cec7664e146: Removed `@types/node` dependency
+- ea779492ad88: Updated dependency `run-script-webpack-plugin` to `^0.2.0`.
+- Updated dependencies
+  - @backstage/release-manifests@0.0.10-next.0
+  - @backstage/config-loader@1.5.0-next.2
+  - @backstage/config@1.1.0-next.1
+  - @backstage/integration@1.7.0-next.2
+  - @backstage/catalog-model@1.4.2-next.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.3
+  - @backstage/errors@1.2.1
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/types@1.1.0
+
+## 0.22.13-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/config@1.1.0-next.0
+  - @backstage/integration@1.7.0-next.1
+  - @backstage/catalog-model@1.4.2-next.0
+  - @backstage/config-loader@1.5.0-next.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.3
+  - @backstage/errors@1.2.1
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.12-next.0
+
+### Patch Changes
+
+- 278d9326eb40: Added the ability to create a plain backend module with the `new` command.
+- 71d4368ae5cc: Added support for the `dev/index` entry point for backend plugins and modules.
+- Updated dependencies
+  - @backstage/integration@1.7.0-next.0
+  - @backstage/config-loader@1.5.0-next.0
+  - @backstage/catalog-model@1.4.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.3
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.10
+
+### Patch Changes
+
+- 3f67cefb4780: Reload the frontend when app config changes
+- cebbf8a27f3c: Enable to print the config schema not merged with the `--no-merge` flag
+- 5c28ebc79fd6: Updated dependency `esbuild` to `^0.19.0`.
+- 971bdd6a4732: Bumped internal `nodemon` dependency.
+- Updated dependencies
+  - @backstage/config-loader@1.4.0
+  - @backstage/cli-node@0.1.3
+  - @backstage/integration@1.6.0
+  - @backstage/catalog-model@1.4.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.10-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/config-loader@1.4.0-next.1
+  - @backstage/cli-node@0.1.3-next.0
+  - @backstage/integration@1.5.1
+  - @backstage/catalog-model@1.4.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.10-next.0
+
+### Patch Changes
+
+- 3f67cefb4780: Reload the frontend when app config changes
+- cebbf8a27f3c: Enable to print the config schema not merged with the `--no-merge` flag
+- Updated dependencies
+  - @backstage/config-loader@1.4.0-next.0
+  - @backstage/catalog-model@1.4.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.2
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/integration@1.5.1
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.9
+
+### Patch Changes
+
+- 6adb6f41711a: Fixed the `--alwaysYarnPack` flag on the`backstage-cli build-workspace` command.
+- 4edd1ef71453: semver upgrade to 7.5.3
+- ff45cb559e49: Updated dependency `esbuild` to `^0.18.0`.
+- 8174cf4c0edf: Fixing MUI / Material UI references
+- Updated dependencies
+  - @backstage/errors@1.2.1
+  - @backstage/cli-node@0.1.2
+  - @backstage/catalog-model@1.4.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.8
+  - @backstage/config-loader@1.3.2
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/integration@1.5.1
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.9-next.1
+
+### Patch Changes
+
+- 4edd1ef71453: semver upgrade to 7.5.3
+- ff45cb559e49: Updated dependency `esbuild` to `^0.18.0`.
+- 8174cf4c0edf: Fixing MUI / Material UI references
+- Updated dependencies
+  - @backstage/cli-node@0.1.2-next.1
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.8
+  - @backstage/config-loader@1.3.2-next.0
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/integration@1.5.1-next.0
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.9-next.0
+
+### Patch Changes
+
+- 6adb6f41711a: Fixed the `--alwaysYarnPack` flag on the`backstage-cli build-workspace` command.
+- Updated dependencies
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.2-next.0
+  - @backstage/config@1.0.8
+  - @backstage/config-loader@1.3.2-next.0
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/integration@1.5.1-next.0
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.8
+
+### Patch Changes
+
+- 314493fa32a0: Introduced the `--alwaysYarnPack` flag on `backstage-cli build-workspace`, which can be passed in cases where accuracy of workspace contents is more important than the
+  speed with which the workspace is built. Useful in rare situations where `yarn pack` and `npm pack` produce different results.
+- 75540599124a: Updated example component for a newly scaffolded app.
+- 5d692f72ebfb: Make sure to include a `fetch` environment for `jsdom` in `jest` tests
+- 6816352500a7: Add discovery feature to the onboard cli command.
+- 20b7da6f1311: Enforcing Material UI v5 specific linting to minimize bundle size.
+- Updated dependencies
+  - @backstage/types@1.1.0
+  - @backstage/config-loader@1.3.1
+  - @backstage/integration@1.5.0
+  - @backstage/catalog-model@1.4.0
+  - @backstage/errors@1.2.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.1
+  - @backstage/config@1.0.8
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+
+## 0.22.8-next.2
+
+### Patch Changes
+
+- 75540599124a: Updated example component for a newly scaffolded app.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.0-next.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.1-next.0
+  - @backstage/config@1.0.7
+  - @backstage/config-loader@1.3.1-next.1
+  - @backstage/errors@1.2.0-next.0
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/integration@1.5.0-next.0
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.0.2
+
+## 0.22.8-next.1
+
+### Patch Changes
+
+- 6816352500a7: Add discovery feature to the onboard cli command.
+- Updated dependencies
+  - @backstage/integration@1.5.0-next.0
+  - @backstage/errors@1.2.0-next.0
+  - @backstage/catalog-model@1.4.0-next.0
+  - @backstage/cli-node@0.1.1-next.0
+  - @backstage/config-loader@1.3.1-next.1
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.7
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.0.2
+
+## 0.22.8-next.0
+
+### Patch Changes
+
+- 20b7da6f1311: Enforcing Material UI v5 specific linting to minimize bundle size.
+- Updated dependencies
+  - @backstage/config-loader@1.3.1-next.0
+  - @backstage/config@1.0.7
+  - @backstage/release-manifests@0.0.9
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.0
+  - @backstage/errors@1.1.5
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/types@1.0.2
+
+## 0.22.7
+
+### Patch Changes
+
+- 473db605a4f: Enable strict config checking during `backstage-cli config:check` with the new `--strict` option which will surface schema errors.
+- d548886872d: Deprecated the use of React 16
+- Updated dependencies
+  - @backstage/config-loader@1.3.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.0
+  - @backstage/config@1.0.7
+  - @backstage/errors@1.1.5
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.0.2
+
+## 0.22.7-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/config-loader@1.3.0-next.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.0
+  - @backstage/config@1.0.7
+  - @backstage/errors@1.1.5
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.0.2
+
+## 0.22.6
+
+### Patch Changes
+
+- 24432ae52fb: Fix the build for packages with multiple entry points to avoid duplicated modules.
+- 8075b67e64c: When building a backend package with dependencies any `--config <path>` options will now be forwarded to any dependent app package builds, unless the build script in the app package already contains a `--config` option.
+- 79e91d4c30a: Support importing `.md` files in build loader
+- 3156b0d85dc: Internal refactor to move many internal utilities to the new `@backstage/cli-node` package.
+- b9839d7135c: Fixed backend start command on Windows by removing the use of platform dependent path joins.
+- 1e4f5e91b8e: Bump `zod` and `zod-to-json-schema` dependencies.
+- 29ba8267d69: Updated dependency `@material-ui/lab` to `4.0.0-alpha.61`.
+- 9bbb00d5b49: Updated dependency `@swc/helpers` to `^0.5.0`.
+- b588ab73972: Ensure that the `package prepack` command and backend bundling uses posix paths in `package.json` on all OSes.
+- c07c3b7364b: Add `onboard` command. While still in development, this command aims to guide users in setting up their Backstage App.
+- e0c6e8b9c3c: Update peer dependencies
+- Updated dependencies
+  - @backstage/cli-node@0.1.0
+  - @backstage/config-loader@1.2.0
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.7
+  - @backstage/errors@1.1.5
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.0.2
+
+## 0.22.6-next.3
+
+### Patch Changes
+
+- 3156b0d85dc: Internal refactor to move many internal utilities to the new `@backstage/cli-node` package.
+- 9bbb00d5b49: Updated dependency `@swc/helpers` to `^0.5.0`.
+- Updated dependencies
+  - @backstage/cli-node@0.1.0-next.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.7
+  - @backstage/config-loader@1.1.9
+  - @backstage/errors@1.1.5
+  - @backstage/eslint-plugin@0.1.3-next.0
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.0.2
+
+## 0.22.6-next.2
+
+### Patch Changes
+
+- 8075b67e64c: When building a backend package with dependencies any `--config <path>` options will now be forwarded to any dependent app package builds, unless the build script in the app package already contains a `--config` option.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.7
+  - @backstage/config-loader@1.1.9
+  - @backstage/errors@1.1.5
+  - @backstage/eslint-plugin@0.1.3-next.0
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.0.2
+
+## 0.22.6-next.1
+
+### Patch Changes
+
+- 24432ae52fb: Fix the build for packages with multiple entry points to avoid duplicated modules.
+- 79e91d4c30a: Support importing `.md` files in build loader
+- 1e4f5e91b8e: Bump `zod` and `zod-to-json-schema` dependencies.
+- 29ba8267d69: Updated dependency `@material-ui/lab` to `4.0.0-alpha.61`.
+- b588ab73972: Ensure that the `package prepack` command and backend bundling uses posix paths in `package.json` on all OSes.
+- e0c6e8b9c3c: Update peer dependencies
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.7
+  - @backstage/config-loader@1.1.9
+  - @backstage/errors@1.1.5
+  - @backstage/eslint-plugin@0.1.3-next.0
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.0.2
+
+## 0.22.6-next.0
+
+### Patch Changes
+
+- b9839d7135c: Fixed backend start command on Windows by removing the use of platform dependent path joins.
+- c07c3b7364b: Add `onboard` command. While still in development, this command aims to guide users in setting up their Backstage App.
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.3-next.0
+  - @backstage/config@1.0.7
+  - @backstage/release-manifests@0.0.9
+  - @backstage/cli-common@0.1.12
+  - @backstage/config-loader@1.1.9
+  - @backstage/errors@1.1.5
+  - @backstage/types@1.0.2
+
+## 0.22.4
+
+### Patch Changes
+
+- 1ad8d885d30: Fixed a bug where additional backend package entry points where not properly marked as internal during local development.
+- 2011b86052c: Added templates for new plugin Web and Node.js libraries.
+- 867f4752ca1: Updated the ESLint plugin configuration that is enabled through `yarn start --check` to only pick up valid source files.
+- b4cd145b574: Added a new `migrate package-exports` command that synchronizes package exports fields in all `package.json`s.
+- 9bf50a36674: Bumped the `msw` version in templates to 1.0.0
+- 8bf24946c66: Adjust express dependencies to be the same as the rest of the project
+- 17271841de8: Updated frontend plugin template to use some more recent features
+- 4b4998466b4: Updated dependency `del` to `^7.0.0`.
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- a11b9a23f5a: Keep custom exports entry points in package.json
+- 482dae5de1c: Updated link to docs.
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.2
+  - @backstage/errors@1.1.5
+  - @backstage/config-loader@1.1.9
+  - @backstage/release-manifests@0.0.9
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.7
+  - @backstage/types@1.0.2
+
+## 0.22.4-next.1
+
+### Patch Changes
+
+- 1ad8d885d30: Fixed a bug where additional backend package entry points where not properly marked as internal during local development.
+- 867f4752ca1: Updated the ESLint plugin configuration that is enabled through `yarn start --check` to only pick up valid source files.
+- 9bf50a36674: Bumped the `msw` version in templates to 1.0.0
+- 4b4998466b4: Updated dependency `del` to `^7.0.0`.
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- a11b9a23f5a: Keep custom exports entry points in package.json
+- 482dae5de1c: Updated link to docs.
+- Updated dependencies
+  - @backstage/errors@1.1.5-next.0
+  - @backstage/config-loader@1.1.9-next.0
+  - @backstage/release-manifests@0.0.9-next.0
+  - @backstage/cli-common@0.1.12-next.0
+  - @backstage/config@1.0.7-next.0
+  - @backstage/eslint-plugin@0.1.2-next.0
+  - @backstage/types@1.0.2
+
+## 0.22.4-next.0
+
+### Patch Changes
+
+- b4cd145b57: Added a new `migrate package-exports` command that synchronizes package exports fields in all `package.json`s.
+- 8bf24946c6: Adjust express dependencies to be the same as the rest of the project
+- 17271841de: Updated frontend plugin template to use some more recent features
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.2-next.0
+  - @backstage/cli-common@0.1.11
+  - @backstage/config@1.0.6
+  - @backstage/config-loader@1.1.8
+  - @backstage/errors@1.1.4
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+
+## 0.22.2
+
+### Patch Changes
+
+- 561df21ea3: The `backstage-cli repo test` command now sets a default Jest `--workerIdleMemoryLimit` of 1GB. If needed to ensure that tests are not run in band, `--maxWorkers=2` is set as well. This is the recommended workaround for dealing with Jest workers leaking memory and eventually hitting the heap limit.
+- 2815981057: Show module name causing error during build
+- dd8a9afe66: Replaced several monorepo lint rules with new rules from `@backstage/eslint-plugin`. See the [README](https://github.com/import-js/eslint-plugin-import/blob/main/packages/eslint-plugin/README.md) for a full list of rules.
+- a9c50af76b: Fixed Webpack loader patterns so that they properly match the file suffix only.
+- 66cf22fdc4: Updated dependency `esbuild` to `^0.17.0`.
+- 6d3abfded1: Switch to inline source maps for test transpilation, simplifying editor setups.
+- 90616df9a8: Added an experimental mode for the `package start` command for backend packages. Enabled by setting `EXPERIMENTAL_BACKEND_START`.
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.0
+  - @backstage/cli-common@0.1.11
+  - @backstage/config@1.0.6
+  - @backstage/config-loader@1.1.8
+  - @backstage/errors@1.1.4
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+
+## 0.22.2-next.1
+
+### Patch Changes
+
+- dd8a9afe66: Replaced several monorepo lint rules with new rules from `@backstage/eslint-plugin`. See the [README](https://github.com/import-js/eslint-plugin-import/blob/main/packages/eslint-plugin/README.md) for a full list of rules.
+- 90616df9a8: Added an experimental mode for the `package start` command for backend packages. Enabled by setting `EXPERIMENTAL_BACKEND_START`.
+- Updated dependencies
+  - @backstage/eslint-plugin@0.1.0-next.0
+  - @backstage/cli-common@0.1.11
+  - @backstage/config@1.0.6
+  - @backstage/config-loader@1.1.8
+  - @backstage/errors@1.1.4
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+
+## 0.22.2-next.0
+
+### Patch Changes
+
+- 561df21ea3: The `backstage-cli repo test` command now sets a default Jest `--workerIdleMemoryLimit` of 1GB. If needed to ensure that tests are not run in band, `--maxWorkers=2` is set as well. This is the recommended workaround for dealing with Jest workers leaking memory and eventually hitting the heap limit.
+- 2815981057: Show module name causing error during build
+- 66cf22fdc4: Updated dependency `esbuild` to `^0.17.0`.
+- 6d3abfded1: Switch to inline source maps for test transpilation, simplifying editor setups.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+  - @backstage/config@1.0.6
+  - @backstage/config-loader@1.1.8
+  - @backstage/errors@1.1.4
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+
+## 0.22.1
+
+### Patch Changes
+
+- db2e137744: Removed unnecessary usage of `ThemeProvider` from the `ExampleComponent` test in the plugin template.
+- 47c10706df: Fixed an issue where the CLI would fail to function when there was a mix of workspace and non-workspace versions of the same package in `yarn.lock` when using Yarn 3.
+- 2b435be4cf: Updated backend plugin ID during creation to match user-entered input.
+- 4b572126f1: Add experimental environment variable to enable caching for production builds.
+- 7b407b303b: Slightly improve readability of "base URL conflict" error handling code
+- a62a1f9dca: The frontend serve task now filters out allowed package duplicates during its package check, just like `versions:bump` and `versions:check`.
+- d06a7890c6: Removed unused package `type-fest`
+- 7c8a974515: The `repo test`, `repo lint`, and `repo build` commands will now analyze `yarn.lock` for dependency changes when searching for changed packages. This allows you to use the `--since <ref>` flag even if you have `yarn.lock` changes.
+- e1b71e142e: Workspace ranges are no longer considered invalid by version commands.
+- Updated dependencies
+  - @backstage/config@1.0.6
+  - @backstage/cli-common@0.1.11
+  - @backstage/config-loader@1.1.8
+  - @backstage/errors@1.1.4
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+
+## 0.22.1-next.2
+
+### Patch Changes
+
+- 7b407b303b: Slightly improve readability of "base URL conflict" error handling code
+- d06a7890c6: Removed unused package `type-fest`
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+  - @backstage/config@1.0.6-next.0
+  - @backstage/config-loader@1.1.8-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+
+## 0.22.1-next.1
+
+### Patch Changes
+
+- db2e137744: Removed unnecessary usage of `ThemeProvider` from the `ExampleComponent` test in the plugin template.
+- 4b572126f1: Add experimental environment variable to enable caching for production builds.
+- Updated dependencies
+  - @backstage/config@1.0.6-next.0
+  - @backstage/cli-common@0.1.11
+  - @backstage/config-loader@1.1.8-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+
+## 0.22.1-next.0
+
+### Patch Changes
+
+- 47c10706df: Fixed an issue where the CLI would fail to function when there was a mix of workspace and non-workspace versions of the same package in `yarn.lock` when using Yarn 3.
+- a62a1f9dca: The frontend serve task now filters out allowed package duplicates during its package check, just like `versions:bump` and `versions:check`.
+- 7c8a974515: The `repo test`, `repo lint`, and `repo build` commands will now analyze `yarn.lock` for dependency changes when searching for changed packages. This allows you to use the `--since <ref>` flag even if you have `yarn.lock` changes.
+- e1b71e142e: Workspace ranges are no longer considered invalid by version commands.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+  - @backstage/config@1.0.5
+  - @backstage/config-loader@1.1.7
+  - @backstage/errors@1.1.4
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+
+## 0.22.0
+
+### Minor Changes
+
+- 736f893f72: The Jest configuration that was previously enabled with `BACKSTAGE_NEXT_TESTS` is now enabled by default. To revert to the old configuration you can now instead set `BACKSTAGE_OLD_TESTS`.
+
+  This new configuration uses the `babel` coverage provider rather than `v8`. It used to be that `v8` worked better when using Sucrase for transpilation, but now that we have switched to SWC, `babel` seems to work better. In addition, the new configuration also enables source maps by default, as they no longer have a negative impact on code coverage accuracy, and it also enables a modified Jest runtime with additional caching of script objects.
+
+### Patch Changes
+
+- 91d050c140: changed tests created by create-plugin to follow eslint-rules best practices particularly testing-library/prefer-screen-queries and testing-library/render-result-naming-convention
+- 43b2b9c791: Removed the unused dependency on `@sucrase/jest-plugin`.
+- dd721148b5: Updated Jest coverage configuration to only apply either in the root project or package configuration, depending on whether repo or package tests are run.
+- 5850ef9b84: Fix webpack dev server issue where it wasn't serving `index.html` from correct endpoint on subsequent requests.
+- b05dcd5530: Move the `zod` dependency to a version that does not collide with other libraries
+- 459a3457e1: Bump `msw` version in default plugin/app templates
+- c27eabef6b: Adds new web-library package option when generating a new plugin
+- 8fffe42708: JSX and React Fast Refresh transforms are no longer enabled when bundling backend code.
+- 309f2daca4: Updated dependency `esbuild` to `^0.16.0`.
+- ee14bab716: Updated dependency `minimatch` to `5.1.1` and switch version range to `^`.
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- ed0cf59c59: Updated dependency `@rollup/plugin-commonjs` to `^23.0.0`.
+- 16b7c2fccd: Updated dependency `@rollup/plugin-yaml` to `^4.0.0`.
+- 086c0bbb45: Updated dependency `@rollup/plugin-json` to `^5.0.0`.
+- 8015ff1258: Tweaked wording to use inclusive terminology
+- d9d9a7a134: Removed all copyright notices from package templates.
+- 8e0358e18d: Added `--skip-install` parameter to `backstage-cli versions:bump`
+- Updated dependencies
+  - @backstage/errors@1.1.4
+  - @backstage/config-loader@1.1.7
+  - @backstage/release-manifests@0.0.8
+  - @backstage/types@1.0.2
+  - @backstage/cli-common@0.1.11
+  - @backstage/config@1.0.5
+
+## 0.22.0-next.4
+
+### Minor Changes
+
+- 736f893f72: The Jest configuration that was previously enabled with `BACKSTAGE_NEXT_TESTS` is now enabled by default. To revert to the old configuration you can now instead set `BACKSTAGE_OLD_TESTS`.
+
+  This new configuration uses the `babel` coverage provider rather than `v8`. It used to be that `v8` worked better when using Sucrase for transpilation, but now that we have switched to SWC, `babel` seems to work better. In addition, the new configuration also enables source maps by default, as they no longer have a negative impact on code coverage accuracy, and it also enables a modified Jest runtime with additional caching of script objects.
+
+### Patch Changes
+
+- dd721148b5: Updated Jest coverage configuration to only apply either in the root project or package configuration, depending on whether repo or package tests are run.
+- b05dcd5530: Move the `zod` dependency to a version that does not collide with other libraries
+- c27eabef6b: Adds new web-library package option when generating a new plugin
+- 309f2daca4: Updated dependency `esbuild` to `^0.16.0`.
+- d9d9a7a134: Removed all copyright notices from package templates.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+  - @backstage/config@1.0.5-next.1
+  - @backstage/config-loader@1.1.7-next.2
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/release-manifests@0.0.8-next.0
+  - @backstage/types@1.0.2-next.1
+
+## 0.21.2-next.3
+
+### Patch Changes
+
+- 43b2b9c791: Removed the unused dependency on `@sucrase/jest-plugin`.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+  - @backstage/config@1.0.5-next.1
+  - @backstage/config-loader@1.1.7-next.2
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/release-manifests@0.0.8-next.0
+  - @backstage/types@1.0.2-next.1
+
+## 0.21.2-next.2
+
+### Patch Changes
+
+- 5850ef9b84: Fix webpack dev server issue where it wasn't serving `index.html` from correct endpoint on subsequent requests.
+- ee14bab716: Updated dependency `minimatch` to `5.1.1` and switch version range to `^`.
+- ed0cf59c59: Updated dependency `@rollup/plugin-commonjs` to `^23.0.0`.
+- 16b7c2fccd: Updated dependency `@rollup/plugin-yaml` to `^4.0.0`.
+- 086c0bbb45: Updated dependency `@rollup/plugin-json` to `^5.0.0`.
+- 8015ff1258: Tweaked wording to use inclusive terminology
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+  - @backstage/config@1.0.5-next.1
+  - @backstage/config-loader@1.1.7-next.2
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/release-manifests@0.0.8-next.0
+  - @backstage/types@1.0.2-next.1
+
+## 0.21.2-next.1
+
+### Patch Changes
+
+- 8fffe42708: JSX and React Fast Refresh transforms are no longer enabled when bundling backend code.
+- Updated dependencies
+  - @backstage/types@1.0.2-next.1
+  - @backstage/config-loader@1.1.7-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/release-manifests@0.0.8-next.0
+  - @backstage/cli-common@0.1.10
+  - @backstage/errors@1.1.4-next.1
+
+## 0.21.2-next.0
+
+### Patch Changes
+
+- 91d050c140: changed tests created by create-plugin to follow eslint-rules best practices particularly testing-library/prefer-screen-queries and testing-library/render-result-naming-convention
+- 459a3457e1: Bump `msw` version in default plugin/app templates
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- Updated dependencies
+  - @backstage/config-loader@1.1.7-next.0
+  - @backstage/release-manifests@0.0.8-next.0
+  - @backstage/types@1.0.2-next.0
+  - @backstage/cli-common@0.1.10
+  - @backstage/config@1.0.5-next.0
+  - @backstage/errors@1.1.4-next.0
+
 ## 0.21.0
 
 ### Minor Changes
@@ -211,9 +2567,7 @@
 - 1fe6823bb5: Updated dependency `eslint-plugin-jest` to `^27.0.0`.
 
   Note that this major update to the Jest plugin contains some breaking changes.
-  This means that some of your tests may start seeing some new lint errors. [Read
-  about them
-  here](https://github.com/jest-community/eslint-plugin-jest/blob/main/CHANGELOG.md#2700-2022-08-28).
+  This means that some of your tests may start seeing some new lint errors. [Read about them here](https://github.com/jest-community/eslint-plugin-jest/blob/main/CHANGELOG.md#2700-2022-08-28).
 
   These are mostly possible to fix automatically. You can try to run `yarn backstage-cli repo lint --fix` in your repo root to have most or all of them
   corrected.
@@ -347,9 +2701,7 @@
 - 1fe6823bb5: Updated dependency `eslint-plugin-jest` to `^27.0.0`.
 
   Note that this major update to the Jest plugin contains some breaking changes.
-  This means that some of your tests may start seeing some new lint errors. [Read
-  about them
-  here](https://github.com/jest-community/eslint-plugin-jest/blob/main/CHANGELOG.md#2700-2022-08-28).
+  This means that some of your tests may start seeing some new lint errors. [Read about them here](https://github.com/jest-community/eslint-plugin-jest/blob/main/CHANGELOG.md#2700-2022-08-28).
 
   These are mostly possible to fix automatically. You can try to run `yarn backstage-cli repo lint --fix` in your repo root to have most or all of them
   corrected.

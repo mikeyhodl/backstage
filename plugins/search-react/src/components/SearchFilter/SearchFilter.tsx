@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ChangeEvent } from 'react';
-import {
-  makeStyles,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  Checkbox,
-  Select,
-  MenuItem,
-  FormLabel,
-} from '@material-ui/core';
+import React, { ReactElement, ChangeEvent, useRef } from 'react';
+import { capitalize } from 'lodash';
+import { v4 as uuid } from 'uuid';
+import FormControl from '@material-ui/core/FormControl';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
+import FormLabel from '@material-ui/core/FormLabel';
+import { makeStyles } from '@material-ui/core/styles';
+import { Select, SelectedItems } from '@backstage/core-components';
 
 import { useSearch } from '../../context';
 import {
@@ -36,6 +34,16 @@ import { useAsyncFilterValues, useDefaultFilterValue } from './hooks';
 const useStyles = makeStyles({
   label: {
     textTransform: 'capitalize',
+  },
+  checkboxWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+  },
+  textWrapper: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
 });
 
@@ -119,10 +127,14 @@ export const CheckboxFilter = (props: SearchFilterComponentProps) => {
       {values.map((value: string) => (
         <FormControlLabel
           key={value}
+          classes={{
+            root: classes.checkboxWrapper,
+            label: classes.textWrapper,
+          }}
+          label={value}
           control={
             <Checkbox
               color="primary"
-              tabIndex={-1}
               inputProps={{ 'aria-labelledby': value }}
               value={value}
               name={value}
@@ -130,7 +142,6 @@ export const CheckboxFilter = (props: SearchFilterComponentProps) => {
               checked={((filters[name] as string[]) ?? []).includes(value)}
             />
           }
-          label={value}
         />
       ))}
     </FormControl>
@@ -149,7 +160,6 @@ export const SelectFilter = (props: SearchFilterComponentProps) => {
     values: givenValues,
     valuesDebounceMs,
   } = props;
-  const classes = useStyles();
   useDefaultFilterValue(name, defaultValue);
   const asyncValues =
     typeof givenValues === 'function' ? givenValues : undefined;
@@ -161,18 +171,20 @@ export const SelectFilter = (props: SearchFilterComponentProps) => {
     defaultValues,
     valuesDebounceMs,
   );
+  const allOptionValue = useRef(uuid());
+  const allOption = { value: allOptionValue.current, label: 'All' };
   const { filters, setFilters } = useSearch();
 
-  const handleChange = (e: ChangeEvent<{ value: unknown }>) => {
-    const {
-      target: { value },
-    } = e;
-
+  const handleChange = (value: SelectedItems) => {
     setFilters(prevFilters => {
       const { [name]: filter, ...others } = prevFilters;
-      return value ? { ...others, [name]: value as string } : others;
+      return value !== allOptionValue.current
+        ? { ...others, [name]: value as string }
+        : others;
     });
   };
+
+  const items = [allOption, ...values.map(value => ({ value, label: value }))];
 
   return (
     <FormControl
@@ -182,25 +194,12 @@ export const SelectFilter = (props: SearchFilterComponentProps) => {
       fullWidth
       data-testid="search-selectfilter-next"
     >
-      {label ? (
-        <InputLabel className={classes.label} margin="dense">
-          {label}
-        </InputLabel>
-      ) : null}
       <Select
-        variant="outlined"
-        value={filters[name] || ''}
+        label={label ?? capitalize(name)}
+        selected={(filters[name] || allOptionValue.current) as string}
         onChange={handleChange}
-      >
-        <MenuItem value="">
-          <em>All</em>
-        </MenuItem>
-        {values.map((value: string) => (
-          <MenuItem key={value} value={value}>
-            {value}
-          </MenuItem>
-        ))}
-      </Select>
+        items={items}
+      />
     </FormControl>
   );
 };
@@ -208,10 +207,10 @@ export const SelectFilter = (props: SearchFilterComponentProps) => {
 /**
  * @public
  */
-const SearchFilter = ({
-  component: Element,
-  ...props
-}: SearchFilterWrapperProps) => <Element {...props} />;
+const SearchFilter = (props: SearchFilterWrapperProps) => {
+  const { component: Element, ...elementProps } = props;
+  return <Element {...elementProps} />;
+};
 
 SearchFilter.Checkbox = (
   props: Omit<SearchFilterWrapperProps, 'component'> &

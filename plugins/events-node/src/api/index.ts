@@ -14,10 +14,17 @@
  * limitations under the License.
  */
 
-export type { EventBroker } from './EventBroker';
 export type { EventParams } from './EventParams';
-export type { EventPublisher } from './EventPublisher';
 export { EventRouter } from './EventRouter';
-export type { EventSubscriber } from './EventSubscriber';
+export { EVENTS_NOTIFY_TIMEOUT_HEADER } from './EventsService';
+export type {
+  EventsService,
+  EventsServiceSubscribeOptions,
+  EventsServiceEventHandler,
+} from './EventsService';
+export {
+  DefaultEventsService,
+  type EventBusMode,
+} from './DefaultEventsService';
 export * from './http';
 export { SubTopicEventRouter } from './SubTopicEventRouter';

@@ -14,36 +14,159 @@
  * limitations under the License.
  */
 
+import { AppConfig } from '@backstage/config';
+import chalk from 'chalk';
 import fs from 'fs-extra';
+import openBrowser from 'react-dev-utils/openBrowser';
 import webpack from 'webpack';
 import WebpackDevServer from 'webpack-dev-server';
-import openBrowser from 'react-dev-utils/openBrowser';
-import { createConfig, resolveBaseUrl } from './config';
+
+import { paths as libPaths } from '../../lib/paths';
+import { loadCliConfig } from '../../modules/config/lib/config';
+import { createConfig, resolveBaseUrl, resolveEndpoint } from './config';
+import { createDetectedModulesEntryPoint } from './packageDetection';
+import { resolveBundlingPaths, resolveOptionalBundlingPaths } from './paths';
 import { ServeOptions } from './types';
-import { resolveBundlingPaths } from './paths';
 
 export async function serveBundle(options: ServeOptions) {
-  const url = resolveBaseUrl(options.frontendConfig);
-
-  const host =
-    options.frontendConfig.getOptionalString('app.listen.host') || url.hostname;
-  const port =
-    options.frontendConfig.getOptionalNumber('app.listen.port') ||
-    Number(url.port) ||
-    (url.protocol === 'https:' ? 443 : 80);
-
   const paths = resolveBundlingPaths(options);
-  const pkgPath = paths.targetPackageJson;
-  const pkg = await fs.readJson(pkgPath);
-  const config = await createConfig(paths, {
-    ...options,
-    isDev: true,
-    baseUrl: url,
+  const targetPkg = await fs.readJson(paths.targetPackageJson);
+
+  if (options.verifyVersions) {
+    if (
+      targetPkg.dependencies?.['react-router']?.includes('beta') ||
+      targetPkg.dependencies?.['react-router-dom']?.includes('beta')
+    ) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        chalk.yellow(`
+DEPRECATION WARNING: React Router Beta is deprecated and support for it will be removed in a future release.
+                     Please migrate to use React Router v6 stable.
+                     See https://backstage.io/docs/tutorials/react-router-stable-migration
+`),
+      );
+    }
+  }
+
+  checkReactVersion();
+
+  const { name } = await fs.readJson(libPaths.resolveTarget('package.json'));
+
+  let webpackServer: WebpackDevServer | undefined = undefined;
+
+  let latestFrontendAppConfigs: AppConfig[] = [];
+
+  /** Triggers a full reload of all clients */
+  const triggerReload = () => {
+    if (webpackServer) {
+      webpackServer.invalidate();
+
+      // For the Rspack server it's not enough to invalidate, we also need to
+      // tell the browser to reload, which we do with a 'static-changed' message
+      if (process.env.EXPERIMENTAL_RSPACK) {
+        webpackServer.sendMessage(
+          webpackServer.webSocketServer?.clients ?? [],
+          'static-changed',
+        );
+      }
+    }
+  };
+
+  const cliConfig = await loadCliConfig({
+    args: options.configPaths,
+    fromPackage: name,
+    withFilteredKeys: true,
+    watch(appConfigs) {
+      latestFrontendAppConfigs = appConfigs;
+
+      triggerReload();
+    },
+  });
+  latestFrontendAppConfigs = cliConfig.frontendAppConfigs;
+
+  const appBaseUrl = cliConfig.frontendConfig.getOptionalString('app.baseUrl');
+  const backendBaseUrl =
+    cliConfig.frontendConfig.getOptionalString('backend.baseUrl');
+  if (appBaseUrl && appBaseUrl === backendBaseUrl) {
+    console.log(
+      chalk.yellow(
+        `⚠️   Conflict between app baseUrl and backend baseUrl:
+
+    app.baseUrl:     ${appBaseUrl}
+    backend.baseUrl: ${backendBaseUrl}
+
+    Must have unique hostname and/or ports.
+
+    This can be resolved by changing app.baseUrl and backend.baseUrl to point to their respective local development ports.
+`,
+      ),
+    );
+  }
+
+  const { frontendConfig, fullConfig } = cliConfig;
+  const url = resolveBaseUrl(frontendConfig, options.moduleFederation);
+  const { host, port } = resolveEndpoint(
+    frontendConfig,
+    options.moduleFederation,
+  );
+
+  const detectedModulesEntryPoint = await createDetectedModulesEntryPoint({
+    config: fullConfig,
+    targetPath: paths.targetPath,
+    watch() {
+      triggerReload();
+    },
   });
 
-  const compiler = webpack(config);
+  const rspack = process.env.EXPERIMENTAL_RSPACK
+    ? (require('@rspack/core') as typeof import('@rspack/core').rspack)
+    : undefined;
 
-  const server = new WebpackDevServer(
+  const commonConfigOptions = {
+    ...options,
+    checksEnabled: options.checksEnabled,
+    isDev: true,
+    baseUrl: url,
+    frontendConfig,
+    rspack,
+    getFrontendAppConfigs: () => {
+      return latestFrontendAppConfigs;
+    },
+  };
+
+  const config = await createConfig(paths, {
+    ...commonConfigOptions,
+    additionalEntryPoints: detectedModulesEntryPoint,
+    moduleFederation: options.moduleFederation,
+  });
+
+  const bundler = (rspack ?? webpack) as typeof webpack;
+  const DevServer: typeof WebpackDevServer = rspack
+    ? require('@rspack/dev-server').RspackDevServer
+    : WebpackDevServer;
+
+  if (rspack) {
+    console.log(
+      chalk.yellow(`⚠️  WARNING: Using experimental RSPack dev server.`),
+    );
+  }
+
+  const publicPaths = await resolveOptionalBundlingPaths({
+    entry: 'src/index-public-experimental',
+    dist: 'dist/public',
+  });
+  if (publicPaths) {
+    console.log(
+      chalk.yellow(
+        `⚠️  WARNING: The app /public entry point is an experimental feature that may receive immediate breaking changes.`,
+      ),
+    );
+  }
+  const compiler = publicPaths
+    ? bundler([config, await createConfig(publicPaths, commonConfigOptions)])
+    : bundler(config);
+
+  webpackServer = new DevServer(
     {
       hot: !process.env.CI,
       devMiddleware: {
@@ -56,46 +179,67 @@ export async function serveBundle(options: ServeOptions) {
             directory: paths.targetPublic,
           }
         : undefined,
-      historyApiFallback: {
-        // Paths with dots should still use the history fallback.
-        // See https://github.com/facebookincubator/create-react-app/issues/387.
-        disableDotRule: true,
-      },
-      https:
+      historyApiFallback:
+        options.moduleFederation?.mode === 'remote'
+          ? false
+          : {
+              // Paths with dots should still use the history fallback.
+              // See https://github.com/facebookincubator/create-react-app/issues/387.
+              disableDotRule: true,
+
+              // The index needs to be rewritten relative to the new public path, including subroutes.
+              index: `${config.output?.publicPath}index.html`,
+            },
+      server:
         url.protocol === 'https:'
           ? {
-              cert: options.fullConfig.getString('app.https.certificate.cert'),
-              key: options.fullConfig.getString('app.https.certificate.key'),
+              type: 'https',
+              options: {
+                cert: fullConfig.getString('app.https.certificate.cert'),
+                key: fullConfig.getString('app.https.certificate.key'),
+              },
             }
-          : false,
+          : {},
       host,
       port,
-      proxy: pkg.proxy,
+      proxy: targetPkg.proxy,
       // When the dev server is behind a proxy, the host and public hostname differ
       allowedHosts: [url.hostname],
       client: {
-        webSocketURL: 'auto://0.0.0.0:0/ws',
+        webSocketURL: { hostname: host, port },
       },
-    } as any,
-    compiler as any,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers':
+          'X-Requested-With, content-type, Authorization',
+      },
+    },
+    compiler,
   );
 
-  await new Promise<void>((resolve, reject) => {
-    server.startCallback((err?: Error) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      openBrowser(url.href);
+  await new Promise<void>(async (resolve, reject) => {
+    if (webpackServer) {
+      webpackServer.startCallback((err?: Error) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve();
+      });
+    } else {
       resolve();
-    });
+    }
   });
+
+  if (!options.skipOpenBrowser) {
+    openBrowser(url.href);
+  }
 
   const waitForExit = async () => {
     for (const signal of ['SIGINT', 'SIGTERM'] as const) {
       process.on(signal, () => {
-        server.close();
+        webpackServer?.stop();
         // exit instead of resolve. The process is shutting down and resolving a promise here logs an error
         process.exit();
       });
@@ -106,4 +250,28 @@ export async function serveBundle(options: ServeOptions) {
   };
 
   return waitForExit;
+}
+
+function checkReactVersion() {
+  try {
+    // Make sure we're looking at the root of the target repo
+    const reactPkgPath = require.resolve('react/package.json', {
+      paths: [libPaths.targetRoot],
+    });
+    const reactPkg = require(reactPkgPath);
+    if (reactPkg.version.startsWith('16.')) {
+      console.log(
+        chalk.yellow(
+          `
+⚠️                                                                           ⚠️
+⚠️ You are using React version 16, which is deprecated for use in Backstage. ⚠️
+⚠️ Please upgrade to React 17 by updating your packages/app dependencies.    ⚠️
+⚠️                                                                           ⚠️
+`,
+        ),
+      );
+    }
+  } catch {
+    /* ignored */
+  }
 }

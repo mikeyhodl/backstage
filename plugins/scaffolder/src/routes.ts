@@ -22,21 +22,26 @@ import {
 export const registerComponentRouteRef = createExternalRouteRef({
   id: 'register-component',
   optional: true,
+  defaultTarget: 'catalog-import.importPage',
 });
 
 export const viewTechDocRouteRef = createExternalRouteRef({
   id: 'view-techdoc',
   optional: true,
   params: ['namespace', 'kind', 'name'],
+  defaultTarget: 'techdocs.docRoot',
 });
 
-/** @public */
+/**
+ * @public
+ */
 export const rootRouteRef = createRouteRef({
   id: 'scaffolder',
 });
 
 /**
  * @deprecated This is the old template route, can be deleted before next major release
+ * @public
  */
 export const legacySelectedTemplateRouteRef = createSubRouteRef({
   id: 'scaffolder/legacy/selected-template',
@@ -44,34 +49,15 @@ export const legacySelectedTemplateRouteRef = createSubRouteRef({
   path: '/templates/:templateName',
 });
 
-/** @alpha */
-export const nextRouteRef = createRouteRef({
-  id: 'scaffolder/next',
-});
-
-/** @public */
 export const selectedTemplateRouteRef = createSubRouteRef({
   id: 'scaffolder/selected-template',
   parent: rootRouteRef,
   path: '/templates/:namespace/:templateName',
 });
 
-/** @alpha */
-export const nextSelectedTemplateRouteRef = createSubRouteRef({
-  id: 'scaffolder/next/selected-template',
-  parent: nextRouteRef,
-  path: '/templates/:namespace/:templateName',
-});
-
 export const scaffolderTaskRouteRef = createSubRouteRef({
   id: 'scaffolder/task',
   parent: rootRouteRef,
-  path: '/tasks/:taskId',
-});
-
-export const nextScaffolderTaskRouteRef = createSubRouteRef({
-  id: 'scaffolder/next/task',
-  parent: nextRouteRef,
   path: '/tasks/:taskId',
 });
 
@@ -91,4 +77,22 @@ export const editRouteRef = createSubRouteRef({
   id: 'scaffolder/edit',
   parent: rootRouteRef,
   path: '/edit',
+});
+
+export const editorRouteRef = createSubRouteRef({
+  id: 'scaffolder/editor',
+  parent: rootRouteRef,
+  path: '/template',
+});
+
+export const customFieldsRouteRef = createSubRouteRef({
+  id: 'scaffolder/customFields',
+  parent: rootRouteRef,
+  path: '/custom-fields',
+});
+
+export const templateFormRouteRef = createSubRouteRef({
+  id: 'scaffolder/editorForm',
+  parent: rootRouteRef,
+  path: '/template-form',
 });

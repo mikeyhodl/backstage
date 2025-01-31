@@ -21,6 +21,7 @@ import tar, { CreateOptions } from 'tar';
 import { createDistWorkspace } from '../../lib/packager';
 import { getEnvironmentParallelism } from '../../lib/parallel';
 import { buildPackage, Output } from '../../lib/builder';
+import { PackageGraph } from '@backstage/cli-node';
 
 const BUNDLE_FILE = 'bundle.tar.gz';
 const SKELETON_FILE = 'skeleton.tar.gz';
@@ -28,26 +29,33 @@ const SKELETON_FILE = 'skeleton.tar.gz';
 interface BuildBackendOptions {
   targetDir: string;
   skipBuildDependencies: boolean;
+  configPaths?: string[];
+  minify?: boolean;
 }
 
 export async function buildBackend(options: BuildBackendOptions) {
-  const { targetDir, skipBuildDependencies } = options;
+  const { targetDir, skipBuildDependencies, configPaths, minify } = options;
   const pkg = await fs.readJson(resolvePath(targetDir, 'package.json'));
 
   // We build the target package without generating type declarations.
   await buildPackage({
-    targetDir: options.targetDir,
+    targetDir,
+    packageJson: pkg,
     outputs: new Set([Output.cjs]),
+    minify,
+    workspacePackages: await PackageGraph.listTargetPackages(),
   });
 
   const tmpDir = await fs.mkdtemp(resolvePath(os.tmpdir(), 'backstage-bundle'));
   try {
     await createDistWorkspace([pkg.name], {
       targetDir: tmpDir,
+      configPaths,
       buildDependencies: !skipBuildDependencies,
       buildExcludes: [pkg.name],
       parallelism: getEnvironmentParallelism(),
       skeleton: SKELETON_FILE,
+      minify,
     });
 
     // We built the target backend package using the regular build process, but the result of

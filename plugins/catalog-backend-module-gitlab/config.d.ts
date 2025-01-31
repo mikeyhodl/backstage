@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { TaskScheduleDefinitionConfig } from '@backstage/backend-tasks';
+import { SchedulerServiceTaskScheduleDefinitionConfig } from '@backstage/backend-plugin-api';
 
 export interface Config {
   catalog?: {
@@ -22,16 +22,15 @@ export interface Config {
       /**
        * GitlabDiscoveryEntityProvider configuration
        */
-      gitlab?: Record<
-        string,
-        {
+      gitlab?: {
+        [name: string]: {
           /**
            * (Required) Gitlab's host name.
            */
           host: string;
           /**
            * (Optional) Gitlab's group[/subgroup] where the discovery is done.
-           * If not defined the whole project will be scanned.
+           * If not defined the whole instance will be scanned.
            */
           group?: string;
           /**
@@ -47,9 +46,34 @@ export interface Config {
           /**
            * (Optional) TaskScheduleDefinition for the refresh.
            */
-          schedule?: TaskScheduleDefinitionConfig;
-        }
-      >;
+          schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
+          /**
+           * (Optional) RegExp for the Project Name Pattern
+           */
+          projectPattern?: string;
+          /**
+           * (Optional) RegExp for the User Name Pattern
+           */
+          userPattern?: string;
+          /**
+           * (Optional) RegExp for the Group Name Pattern
+           */
+          groupPattern?: string;
+          /**
+           * (Optional) Skip forked repository
+           */
+          skipForkedRepos?: boolean;
+          /**
+           * (Optional) Include archived repository
+           */
+          includeArchivedRepos?: boolean;
+          /**
+           * (Optional) A list of strings containing the paths of the repositories to skip
+           * Should be in the format group/subgroup/repo, with no leading or trailing slashes.
+           */
+          excludeRepos?: string[];
+        };
+      };
     };
   };
 }

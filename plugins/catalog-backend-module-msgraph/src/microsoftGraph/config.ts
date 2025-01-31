@@ -15,9 +15,9 @@
  */
 
 import {
-  readTaskScheduleDefinitionFromConfig,
-  TaskScheduleDefinition,
-} from '@backstage/backend-tasks';
+  SchedulerServiceTaskScheduleDefinition,
+  readSchedulerServiceTaskScheduleDefinitionFromConfig,
+} from '@backstage/backend-plugin-api';
 import { Config } from '@backstage/config';
 import { trimEnd } from 'lodash';
 
@@ -117,6 +117,12 @@ export type MicrosoftGraphProviderConfig = {
   groupSelect?: string[];
 
   /**
+   * Whether to ingest groups that are members of the found/filtered/searched groups.
+   * Default value is `false`.
+   */
+  groupIncludeSubGroups?: boolean;
+
+  /**
    * By default, the Microsoft Graph API only provides the basic feature set
    * for querying. Certain features are limited to advanced query capabilities
    * (see https://docs.microsoft.com/en-us/graph/aad-advanced-queries)
@@ -127,9 +133,15 @@ export type MicrosoftGraphProviderConfig = {
   queryMode?: 'basic' | 'advanced';
 
   /**
+   * Set to false to not load user photos.
+   * This can be useful for huge organizations.
+   */
+  loadUserPhotos?: boolean;
+
+  /**
    * Schedule configuration for refresh tasks.
    */
-  schedule?: TaskScheduleDefinition;
+  schedule?: SchedulerServiceTaskScheduleDefinition;
 };
 
 /**
@@ -226,6 +238,13 @@ export function readMicrosoftGraphConfig(
   return providers;
 }
 
+/**
+ * Parses all configured providers.
+ *
+ * @param config - The root of the msgraph config hierarchy
+ *
+ * @public
+ */
 export function readProviderConfigs(
   config: Config,
 ): MicrosoftGraphProviderConfig[] {
@@ -248,6 +267,14 @@ export function readProviderConfigs(
   });
 }
 
+/**
+ * Parses a single configured provider by id.
+ *
+ * @param id - the id of the provider to parse
+ * @param config - The root of the msgraph config hierarchy
+ *
+ * @public
+ */
 export function readProviderConfig(
   id: string,
   config: Config,
@@ -264,11 +291,16 @@ export function readProviderConfig(
 
   const userExpand = config.getOptionalString('user.expand');
   const userFilter = config.getOptionalString('user.filter');
+  const userSelect = config.getOptionalStringArray('user.select');
+  const loadUserPhotos = config.getOptionalBoolean('user.loadPhotos');
 
   const groupExpand = config.getOptionalString('group.expand');
   const groupFilter = config.getOptionalString('group.filter');
   const groupSearch = config.getOptionalString('group.search');
   const groupSelect = config.getOptionalStringArray('group.select');
+  const groupIncludeSubGroups = config.getOptionalBoolean(
+    'group.includeSubGroups',
+  );
 
   const queryMode = config.getOptionalString('queryMode');
   if (
@@ -306,7 +338,9 @@ export function readProviderConfig(
   }
 
   const schedule = config.has('schedule')
-    ? readTaskScheduleDefinitionFromConfig(config.getConfig('schedule'))
+    ? readSchedulerServiceTaskScheduleDefinitionFromConfig(
+        config.getConfig('schedule'),
+      )
     : undefined;
 
   return {
@@ -318,10 +352,13 @@ export function readProviderConfig(
     tenantId,
     userExpand,
     userFilter,
+    userSelect,
+    loadUserPhotos,
     groupExpand,
     groupFilter,
     groupSearch,
     groupSelect,
+    groupIncludeSubGroups,
     queryMode,
     userGroupMemberFilter,
     userGroupMemberSearch,

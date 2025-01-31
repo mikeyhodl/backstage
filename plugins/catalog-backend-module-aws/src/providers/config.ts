@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { readTaskScheduleDefinitionFromConfig } from '@backstage/backend-tasks';
 import { Config } from '@backstage/config';
 import { AwsS3Config } from './types';
+import { readSchedulerServiceTaskScheduleDefinitionFromConfig } from '@backstage/backend-plugin-api';
 
 const DEFAULT_PROVIDER_ID = 'default';
 
@@ -46,9 +46,12 @@ function readAwsS3Config(id: string, config: Config): AwsS3Config {
   const bucketName = config.getString('bucketName');
   const region = config.getOptionalString('region');
   const prefix = config.getOptionalString('prefix');
+  const accountId = config.getOptionalString('accountId');
 
   const schedule = config.has('schedule')
-    ? readTaskScheduleDefinitionFromConfig(config.getConfig('schedule'))
+    ? readSchedulerServiceTaskScheduleDefinitionFromConfig(
+        config.getConfig('schedule'),
+      )
     : undefined;
 
   return {
@@ -57,5 +60,6 @@ function readAwsS3Config(id: string, config: Config): AwsS3Config {
     region,
     prefix,
     schedule,
+    accountId,
   };
 }

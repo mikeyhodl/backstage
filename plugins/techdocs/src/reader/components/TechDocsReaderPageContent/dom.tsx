@@ -15,13 +15,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-import { useTheme, useMediaQuery } from '@material-ui/core';
+import useMediaQuery from '@material-ui/core/useMediaQuery';
+import { useTheme } from '@material-ui/core/styles';
 
-import { BackstageTheme } from '@backstage/theme';
 import { CompoundEntityRef } from '@backstage/catalog-model';
-import { useAnalytics, useApi } from '@backstage/core-plugin-api';
+import { configApiRef, useAnalytics, useApi } from '@backstage/core-plugin-api';
 import { scmIntegrationsApiRef } from '@backstage/integration-react';
 
 import {
@@ -40,13 +39,15 @@ import {
   removeMkdocsHeader,
   rewriteDocLinks,
   simplifyMkdocsFooter,
-  scrollIntoAnchor,
   scrollIntoNavigation,
   transform as transformer,
   copyToClipboard,
   useSanitizerTransformer,
   useStylesTransformer,
+  handleMetaRedirects,
 } from '../../transformers';
+import { useNavigateUrl } from './useNavigateUrl';
+import { useParams } from 'react-router-dom';
 
 const MOBILE_MEDIA_QUERY = 'screen and (max-width: 76.1875em)';
 
@@ -58,8 +59,8 @@ const MOBILE_MEDIA_QUERY = 'screen and (max-width: 76.1875em)';
 export const useTechDocsReaderDom = (
   entityRef: CompoundEntityRef,
 ): Element | null => {
-  const navigate = useNavigate();
-  const theme = useTheme<BackstageTheme>();
+  const navigate = useNavigateUrl();
+  const theme = useTheme();
   const isMobileMedia = useMediaQuery(MOBILE_MEDIA_QUERY);
   const sanitizerTransformer = useSanitizerTransformer();
   const stylesTransformer = useStylesTransformer();
@@ -67,13 +68,15 @@ export const useTechDocsReaderDom = (
 
   const techdocsStorageApi = useApi(techdocsStorageApiRef);
   const scmIntegrationsApi = useApi(scmIntegrationsApiRef);
+  const configApi = useApi(configApiRef);
 
   const { state, path, content: rawPage } = useTechDocsReader();
+  const { '*': currPath = '' } = useParams();
 
   const [dom, setDom] = useState<HTMLElement | null>(null);
   const isStyleLoading = useShadowDomStylesLoading(dom);
 
-  const updateSidebarPosition = useCallback(() => {
+  const updateSidebarPositionAndHeight = useCallback(() => {
     if (!dom) return;
 
     const sidebars = dom.querySelectorAll<HTMLElement>('.md-sidebar');
@@ -94,7 +97,18 @@ export const useTechDocsReaderDom = (
         if (domTop < pageTop) {
           domTop = pageTop;
         }
-        element.style.top = `${Math.max(domTop, 0) + tabsHeight}px`;
+
+        const scrollbarTopPx = Math.max(domTop, 0) + tabsHeight;
+
+        element.style.top = `${scrollbarTopPx}px`;
+
+        // set scrollbar height to ensure all links can be seen when content is small
+        const footer = dom.querySelector('.md-container > .md-footer');
+        // if no footer, fallback to using the bottom of the window
+        const scrollbarEndPx =
+          footer?.getBoundingClientRect().top ?? window.innerHeight;
+
+        element.style.height = `${scrollbarEndPx - scrollbarTopPx}px`;
       }
 
       // show the sidebar only after updating its position
@@ -103,13 +117,17 @@ export const useTechDocsReaderDom = (
   }, [dom, isMobileMedia]);
 
   useEffect(() => {
-    window.addEventListener('resize', updateSidebarPosition);
-    window.addEventListener('scroll', updateSidebarPosition, true);
+    window.addEventListener('resize', updateSidebarPositionAndHeight);
+    window.addEventListener('scroll', updateSidebarPositionAndHeight, true);
     return () => {
-      window.removeEventListener('resize', updateSidebarPosition);
-      window.removeEventListener('scroll', updateSidebarPosition, true);
+      window.removeEventListener('resize', updateSidebarPositionAndHeight);
+      window.removeEventListener(
+        'scroll',
+        updateSidebarPositionAndHeight,
+        true,
+      );
     };
-  }, [dom, updateSidebarPosition]);
+  }, [dom, updateSidebarPositionAndHeight]);
 
   // dynamically set width of footer to accommodate for pinning of the sidebar
   const updateFooterWidth = useCallback(() => {
@@ -131,10 +149,15 @@ export const useTechDocsReaderDom = (
   useEffect(() => {
     if (!isStyleLoading) {
       updateFooterWidth();
-      updateSidebarPosition();
+      updateSidebarPositionAndHeight();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, isStyleLoading, updateFooterWidth, updateSidebarPosition]);
+  }, [
+    state,
+    isStyleLoading,
+    updateFooterWidth,
+    updateSidebarPositionAndHeight,
+  ]);
 
   // a function that performs transformations that are executed prior to adding it to the DOM
   const preRender = useCallback(
@@ -167,16 +190,17 @@ export const useTechDocsReaderDom = (
   const postRender = useCallback(
     async (transformedElement: Element) =>
       transformer(transformedElement, [
-        scrollIntoAnchor(),
+        handleMetaRedirects(navigate, entityRef.name),
         scrollIntoNavigation(),
         copyToClipboard(theme),
         addLinkClickListener({
-          baseUrl: window.location.origin,
+          baseUrl:
+            configApi.getOptionalString('app.baseUrl') ||
+            window.location.origin,
           onClick: (event: MouseEvent, url: string) => {
             // detect if CTRL or META keys are pressed so that links can be opened in a new tab with `window.open`
             const modifierActive = event.ctrlKey || event.metaKey;
             const parsedUrl = new URL(url);
-            const fullPath = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
 
             // capture link clicks within documentation
             const linkText =
@@ -187,9 +211,20 @@ export const useTechDocsReaderDom = (
             // hash exists when anchor is clicked on secondary sidebar
             if (parsedUrl.hash) {
               if (modifierActive) {
-                window.open(fullPath, '_blank');
+                window.open(url, '_blank');
               } else {
-                navigate(fullPath);
+                // If it's in a different page, we navigate to it
+                if (window.location.pathname !== parsedUrl.pathname) {
+                  navigate(url);
+                } else {
+                  // If it's in the same page we avoid using navigate that causes
+                  // the page to rerender.
+                  window.history.pushState(
+                    null,
+                    document.title,
+                    parsedUrl.hash,
+                  );
+                }
                 // Scroll to hash if it's on the current page
                 transformedElement
                   ?.querySelector(`[id="${parsedUrl.hash.slice(1)}"]`)
@@ -197,9 +232,9 @@ export const useTechDocsReaderDom = (
               }
             } else {
               if (modifierActive) {
-                window.open(fullPath, '_blank');
+                window.open(url, '_blank');
               } else {
-                navigate(fullPath);
+                navigate(url);
               }
             }
           },
@@ -226,7 +261,7 @@ export const useTechDocsReaderDom = (
           onLoaded: () => {},
         }),
       ]),
-    [theme, navigate, analytics],
+    [theme, navigate, analytics, entityRef.name, configApi],
   );
 
   useEffect(() => {
@@ -246,6 +281,12 @@ export const useTechDocsReaderDom = (
         return;
       }
 
+      // Skip this update if the location's path has changed but the state
+      // contains a page that isn't loaded yet.
+      if (currPath !== path) {
+        return;
+      }
+
       // Scroll to top after render
       window.scroll({ top: 0 });
 
@@ -253,6 +294,7 @@ export const useTechDocsReaderDom = (
       const postTransformedDomElement = await postRender(
         preTransformedDomElement,
       );
+
       setDom(postTransformedDomElement as HTMLElement);
     });
 
@@ -260,7 +302,7 @@ export const useTechDocsReaderDom = (
     return () => {
       shouldReplaceContent = false;
     };
-  }, [rawPage, path, preRender, postRender]);
+  }, [rawPage, currPath, path, preRender, postRender]);
 
   return dom;
 };

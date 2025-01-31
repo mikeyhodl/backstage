@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { PluginTaskScheduler, TaskRunner } from '@backstage/backend-tasks';
 import { Entity } from '@backstage/catalog-model';
 import { Config } from '@backstage/config';
 import { InputError } from '@backstage/errors';
@@ -25,8 +24,7 @@ import {
 import {
   EntityProvider,
   EntityProviderConnection,
-} from '@backstage/plugin-catalog-backend';
-import { Logger } from 'winston';
+} from '@backstage/plugin-catalog-node';
 import * as uuid from 'uuid';
 import { BitbucketServerClient, paginated } from '../lib';
 import {
@@ -37,6 +35,11 @@ import {
   BitbucketServerLocationParser,
   defaultBitbucketServerLocationParser,
 } from './BitbucketServerLocationParser';
+import {
+  LoggerService,
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+} from '@backstage/backend-plugin-api';
 
 /**
  * Discovers catalog files located in Bitbucket Server.
@@ -50,17 +53,17 @@ export class BitbucketServerEntityProvider implements EntityProvider {
   private readonly integration: BitbucketServerIntegration;
   private readonly config: BitbucketServerEntityProviderConfig;
   private readonly parser: BitbucketServerLocationParser;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
   private readonly scheduleFn: () => Promise<void>;
   private connection?: EntityProviderConnection;
 
   static fromConfig(
     config: Config,
     options: {
-      logger: Logger;
+      logger: LoggerService;
       parser?: BitbucketServerLocationParser;
-      schedule?: TaskRunner;
-      scheduler?: PluginTaskScheduler;
+      schedule?: SchedulerServiceTaskRunner;
+      scheduler?: SchedulerService;
     },
   ): BitbucketServerEntityProvider[] {
     const integrations = ScmIntegrations.fromConfig(config);
@@ -102,8 +105,8 @@ export class BitbucketServerEntityProvider implements EntityProvider {
   private constructor(
     config: BitbucketServerEntityProviderConfig,
     integration: BitbucketServerIntegration,
-    logger: Logger,
-    taskRunner: TaskRunner,
+    logger: LoggerService,
+    taskRunner: SchedulerServiceTaskRunner,
     parser?: BitbucketServerLocationParser,
   ) {
     this.integration = integration;
@@ -115,7 +118,9 @@ export class BitbucketServerEntityProvider implements EntityProvider {
     this.scheduleFn = this.createScheduleFn(taskRunner);
   }
 
-  private createScheduleFn(taskRunner: TaskRunner): () => Promise<void> {
+  private createScheduleFn(
+    taskRunner: SchedulerServiceTaskRunner,
+  ): () => Promise<void> {
     return async () => {
       const taskId = `${this.getProviderName()}:refresh`;
       return taskRunner.run({
@@ -130,7 +135,10 @@ export class BitbucketServerEntityProvider implements EntityProvider {
           try {
             await this.refresh(logger);
           } catch (error) {
-            logger.error(error);
+            logger.error(
+              `${this.getProviderName()} refresh failed, ${error}`,
+              error,
+            );
           }
         },
       });
@@ -148,7 +156,7 @@ export class BitbucketServerEntityProvider implements EntityProvider {
     await this.scheduleFn();
   }
 
-  async refresh(logger: Logger) {
+  async refresh(logger: LoggerService) {
     if (!this.connection) {
       throw new Error('Not initialized');
     }
@@ -196,6 +204,9 @@ export class BitbucketServerEntityProvider implements EntityProvider {
           this.config?.filters?.repoSlug &&
           !this.config.filters.repoSlug.test(repository.slug)
         ) {
+          continue;
+        }
+        if (this.config?.filters?.skipArchivedRepos && repository.archived) {
           continue;
         }
         for await (const entity of this.parser({

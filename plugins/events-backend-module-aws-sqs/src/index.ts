@@ -23,5 +23,5 @@
  * @packageDocumentation
  */
 
+export { eventsModuleAwsSqsConsumingEventPublisher as default } from './service/eventsModuleAwsSqsConsumingEventPublisher';
 export { AwsSqsConsumingEventPublisher } from './publisher/AwsSqsConsumingEventPublisher';
-export { awsSqsConsumingEventPublisherEventsModule } from './service/AwsSqsConsumingEventPublisherEventsModule';

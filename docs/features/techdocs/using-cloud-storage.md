@@ -120,6 +120,36 @@ techdocs:
 Your Backstage app is now ready to use Google Cloud Storage for TechDocs, to
 store and read the static generated documentation files.
 
+### Extending default Storage configuration
+
+If you need a non-standard configuration of Google Cloud Storage client,
+`TechdocsPublisherExtensionPoint` is something you should look at.
+You can register custom `StorageOptions` that will be used to configure the client. To do so, you
+need to register publisher settings inside your module init, like in the following example:
+
+```typescript
+export const gcsPublisherCustomizer = createBackendModule({
+  pluginId: 'techdocs',
+  moduleId: 'gcs-publisher-customizer',
+  register(reg) {
+    reg.registerInit({
+      deps: {
+        techdocsExtensionPoint: techdocsPublisherExtensionPoint,
+      },
+      async init({ techdocsExtensionPoint }) {
+        const customOptions: StorageOptions = {
+          userAgent: 'my-custom-user-agent',
+        };
+        techdocsExtensionPoint.registerPublisherSettings(
+          'googleGcs',
+          customOptions,
+        );
+      },
+    });
+  },
+});
+```
+
 ## Configuring AWS S3 Bucket with TechDocs
 
 **1. Set `techdocs.publisher.type` config in your `app-config.yaml`**
@@ -169,17 +199,21 @@ permissions to:
 - `s3:ListBucket` - To retrieve bucket metadata
 - `s3:GetObject` - To retrieve files from the bucket
 
-> Note: If you need to migrate documentation objects from an older-style path
-> format including case-sensitive entity metadata, you will need to add some
-> additional permissions to be able to perform the migration, including:
->
-> - `s3:PutBucketAcl` (for copying files,
->   [more info here](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObjectAcl.html))
-> - `s3:DeleteObject` and `s3:DeleteObjectVersion` (for deleting migrated files,
->   [more info here](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html))
->
-> ...And you will need to ensure the permissions apply to the bucket itself, as
-> well as all resources under the bucket. See the example policy below.
+:::note Note
+
+If you need to migrate documentation objects from an older-style path
+format including case-sensitive entity metadata, you will need to add some
+additional permissions to be able to perform the migration, including:
+
+- `s3:PutBucketAcl` (for copying files,
+  [more info here](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObjectAcl.html))
+- `s3:DeleteObject` and `s3:DeleteObjectVersion` (for deleting migrated files,
+  [more info here](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html))
+
+...And you will need to ensure the permissions apply to the bucket itself, as
+well as all resources under the bucket. See the example policy below.
+
+:::
 
 ```json
 {
@@ -219,21 +253,18 @@ If the environment variables
 - `AWS_REGION`
 
 are set and can be used to access the bucket you created in step 2, they will be
-used by the AWS SDK V2 Node.js client for authentication.
-[Refer to the official documentation for loading credentials in Node.js from environment variables](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/loading-node-credentials-environment.html).
+used by the AWS SDK V3 Node.js client for authentication.
+[Refer to the official documentation for loading credentials in Node.js from environment variables](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/loading-node-credentials-environment.html).
 
 If the environment variables are missing, the AWS SDK tries to read the
 `~/.aws/credentials` file for credentials.
-[Refer to the official documentation.](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/loading-node-credentials-shared.html)
+[Refer to the official documentation.](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/loading-node-credentials-shared.html)
 
-If you are using Amazon EC2 instance to deploy Backstage, you do not need to
-obtain the access keys separately. They can be made available in the environment
-automatically by defining appropriate IAM role with access to the bucket. Read
-more in
-[official AWS documentation for using IAM roles.](https://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html#use-roles).
-
-The AWS Region of the bucket is optional since TechDocs uses AWS SDK V2 and not
-V3.
+If you are deploying Backstage to Amazon EC2, Amazon ECS, or Amazon EKS, you do
+not need to obtain the access keys separately. They can be made available in the
+environment automatically by defining appropriate IAM role with access to the
+bucket. Read more in the
+[official AWS documentation for using IAM roles](https://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html#use-roles).
 
 **4b. Authentication using app-config.yaml**
 
@@ -247,14 +278,17 @@ techdocs:
     type: 'awsS3'
     awsS3:
       bucketName: 'name-of-techdocs-storage-bucket'
+      accountId: '123456789012'
       region: ${AWS_REGION}
-      credentials:
-        accessKeyId: ${AWS_ACCESS_KEY_ID}
-        secretAccessKey: ${AWS_SECRET_ACCESS_KEY}
+aws:
+  accounts:
+    - accountId: '123456789012'
+      accessKeyId: ${AWS_ACCESS_KEY_ID}
+      secretAccessKey: ${AWS_SECRET_ACCESS_KEY}
 ```
 
 Refer to the
-[official AWS documentation for obtaining the credentials](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/getting-your-credentials.html).
+[official AWS documentation for obtaining the credentials](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-credentials-node.html).
 
 **4c. Authentication using an assumed role** Users with multiple AWS accounts
 may want to use a role for S3 storage that is in a different AWS account. Using

@@ -33,9 +33,12 @@ Options:
   --no-docker
   --techdocs-ref <HOST_TYPE:URL>
   --etag <ETAG>
+  --site-name
   -v --verbose
   --omitTechdocsCoreMkdocsPlugin
   --legacyCopyReadmeMdToIndexMd
+  --defaultPlugin [defaultPlugins...]
+  --runAsDefaultUser
   -h, --help
 ```
 
@@ -52,7 +55,6 @@ Options:
   --awsRoleArn <AWS ROLE ARN>
   --awsEndpoint <AWS ENDPOINT>
   --awsS3ForcePathStyle
-  --awsBucketRootPath
   --osCredentialId <OPENSTACK SWIFT APPLICATION CREDENTIAL ID>
   --osSecret <OPENSTACK SWIFT APPLICATION CREDENTIAL SECRET>
   --osAuthUrl <OPENSTACK SWIFT AUTHURL>
@@ -77,13 +79,16 @@ Options:
   --azureAccountKey <AZURE ACCOUNT KEY>
   --awsRoleArn <AWS ROLE ARN>
   --awsEndpoint <AWS ENDPOINT>
+  --awsProxy <HTTPS Proxy>
   --awsS3sse <AWS SSE>
   --awsS3ForcePathStyle
+  --awsBucketRootPath <AWS BUCKET ROOT PATH>
+  --awsMaxAttempts <AWS MAX ATTEMPTS>
   --osCredentialId <OPENSTACK SWIFT APPLICATION CREDENTIAL ID>
   --osSecret <OPENSTACK SWIFT APPLICATION CREDENTIAL SECRET>
   --osAuthUrl <OPENSTACK SWIFT AUTHURL>
   --osSwiftUrl <OPENSTACK SWIFT SWIFTURL>
-  --gcsBucketRootPath
+  --gcsBucketRootPath <GCS BUCKET ROOT PATH>
   --directory <PATH>
   -h, --help
 ```
@@ -98,8 +103,15 @@ Options:
   --docker-entrypoint <DOCKER_ENTRYPOINT>
   --docker-option <DOCKER_OPTION...>
   --no-docker
+  --site-name
   --mkdocs-port <PORT>
   -v --verbose
+  --preview-app-bundle-path <PATH_TO_BUNDLE>
+  --preview-app-port <PORT>
+  -c, --mkdocs-config-file-name <FILENAME>
+  --mkdocs-parameter-clean
+  --mkdocs-parameter-dirtyreload
+  --mkdocs-parameter-strict
   -h, --help
 ```
 
@@ -113,6 +125,7 @@ Options:
   --docker-entrypoint <DOCKER_ENTRYPOINT>
   --docker-option <DOCKER_OPTION...>
   --no-docker
+  --site-name
   -p, --port <PORT>
   -v --verbose
   -h, --help

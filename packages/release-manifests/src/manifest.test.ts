@@ -16,7 +16,7 @@
 
 import { setupServer } from 'msw/node';
 import { rest } from 'msw';
-import { setupRequestMockHandlers } from '@backstage/test-utils';
+import { registerMswTestHooks } from '@backstage/test-utils';
 import {
   getManifestByReleaseLine,
   getManifestByVersion,
@@ -25,7 +25,7 @@ import {
 
 describe('Release Manifests', () => {
   const worker = setupServer();
-  setupRequestMockHandlers(worker);
+  registerMswTestHooks(worker);
 
   describe('getManifestByVersion', () => {
     it('should return a list of packages in a release', async () => {
@@ -54,6 +54,37 @@ describe('Release Manifests', () => {
       await expect(
         getManifestByVersion({ version: '999.0.1' }),
       ).rejects.toThrow('No release found for 999.0.1 version');
+    });
+
+    it('should allow overriding the fetch implementation', async () => {
+      const mockFetch = jest.fn().mockImplementation(async url => ({
+        status: 200,
+        url,
+        json: () => ({
+          packages: [{ name: '@backstage/core', version: '2.3.4' }],
+        }),
+      }));
+
+      const pkgs = await getManifestByVersion({
+        version: '0.0.0',
+        fetch: mockFetch,
+      });
+
+      expect(pkgs.packages).toEqual([
+        {
+          name: '@backstage/core',
+          version: '2.3.4',
+        },
+      ]);
+
+      mockFetch.mockImplementation(async url => ({
+        status: 404,
+        url,
+      }));
+
+      await expect(
+        getManifestByVersion({ version: '0.0.0', fetch: mockFetch }),
+      ).rejects.toThrow('No release found for 0.0.0 version');
     });
   });
 

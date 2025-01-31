@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import { FormHelperText, TextField } from '@material-ui/core';
+import FormHelperText from '@material-ui/core/FormHelperText';
+import TextField from '@material-ui/core/TextField';
+import Button from '@material-ui/core/Button';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -31,7 +33,7 @@ describe('<PreparePullRequestForm />', () => {
         render={({ register }) => (
           <>
             <TextField {...asInputRef(register('main'))} />
-            <button type="submit">Submit</button>{' '}
+            <Button type="submit">Submit</Button>{' '}
           </>
         )}
         onSubmit={onSubmitFn}
@@ -59,7 +61,7 @@ describe('<PreparePullRequestForm />', () => {
               id="main"
               label="Main Field"
             />
-            <button type="submit">Submit</button>
+            <Button type="submit">Submit</Button>
           </>
         )}
         onSubmit={onSubmitFn}
@@ -93,7 +95,7 @@ describe('<PreparePullRequestForm />', () => {
                 Error in required main field
               </FormHelperText>
             )}
-            <button type="submit">Submit</button>{' '}
+            <Button type="submit">Submit</Button>{' '}
           </>
         )}
         onSubmit={onSubmitFn}
@@ -110,7 +112,7 @@ describe('<PreparePullRequestForm />', () => {
 
     expect(onSubmitFn).not.toHaveBeenCalled();
     expect(
-      screen.queryByText('Error in required main field'),
+      screen.getByText('Error in required main field'),
     ).toBeInTheDocument();
   });
 });

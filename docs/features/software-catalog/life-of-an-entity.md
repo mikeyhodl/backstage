@@ -162,9 +162,13 @@ steps and merging them into the final object which is what is visible from the
 catalog API. As the final entity itself gets updated, the stitcher makes sure
 that the search table gets refreshed accordingly as well.
 
-> Note: The search table mentioned here is not related to the core Search
-> feature of Backstage. It's rather the table that backs the ability to filter
-> catalog API query results.
+:::note Note
+
+The search table mentioned here is not related to the core Search
+feature of Backstage. It's rather the table that backs the ability to filter
+catalog API query results.
+
+:::
 
 ![Stitching overview](../../assets/features/catalog/life-of-an-entity_stitching.svg)
 
@@ -193,12 +197,14 @@ cannot be parsed successfully, etc.
 
 There are two main ways that these errors are surfaced.
 
-First, the catalog backend will produce detailed logs that should contain
-sufficient information for a reader to find the causes for errors. Since these
-logs are typically not easily found by end users, this can mainly be a useful
+First, the catalog backend will emit events using the [events backend plugin](https://github.com/backstage/backstage/tree/master/plugins/events-node). You can subscribe to the events. The events should contain
+sufficient information for a reader to find the causes for errors. See the [configuration documentation](./configuration.md#subscribing-to-catalog-errors) for how to subscribe and log these error events.
+Since these events are typically not easily found by end users, this can mainly be a useful
 tool for Backstage operators who want to debug problems either with statically
 registered entities that are under their control, or to help end users find
 problems.
+
+> Prior to Backstage version v1.26.0 and `@backstage/plugin-catalog-backend` v1.21.9 catalog errors were logged by default.
 
 Second, for most classes of errors, the entity itself will contain a status
 field that describes the problem. The contents of this field is shown at the top
@@ -222,7 +228,8 @@ either, it becomes _orphaned_. The end result is as follows:
 - The stitching process injects a `backstage.io/orphan: 'true'` annotation on
   the child entity.
 - The child entity is _not_ removed from the catalog, but stays around until
-  explicitly deleted via the catalog API, or "reclaimed" by the original parent
+  explicitly deleted via the catalog API, implicitly if `orphanStrategy: delete`
+  configuration is set, or until it is "reclaimed" by the original parent
   or another parent starting to reference it.
 - The catalog page in Backstage for the child entity detects the new annotation
   and informs users about the orphan status.
@@ -259,9 +266,13 @@ entities without explicit owner consent. The catalog therefore takes the stance
 that entities that often were added by direct user action should also be deleted
 only by direct user action.
 
-It is possible to use the catalog API to build automated "reaper" systems that
-finally delete entities that are orphaned. This is however not something that's
-provided out of the box.
+However, if you want to delete orphaned entities automatically anyway, you can
+enable the automated clean up with the following app-config option.
+
+```
+catalog:
+  orphanStrategy: delete
+```
 
 ## Implicit Deletion
 
@@ -336,7 +347,7 @@ the three-dots menu option of entity views does offer this option, and the
 orphaned status can be seen in an info box at the top of the entity's overview
 page.
 
-However, if you were to try to do an explicit depletion on an entity that's
+However, if you were to try to do an explicit deletion on an entity that's
 being kept actively updated by a parent entity, it would just reappear again
 shortly thereafter when the processing loops reconsider the parent entity that's
 still in there.

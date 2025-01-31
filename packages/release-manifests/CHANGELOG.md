@@ -1,5 +1,73 @@
 # @backstage/release-manifests
 
+## 0.0.12
+
+### Patch Changes
+
+- 2e140dc: Switch to native fetch for loading release manifests
+- b29eaea: Allow overriding the fetch function used inside getManifestByVersion
+
+## 0.0.12-next.1
+
+### Patch Changes
+
+- b29eaea: Allow overriding the fetch function used inside getManifestByVersion
+
+## 0.0.12-next.0
+
+### Patch Changes
+
+- 2e140dc: Switch to native fetch for loading release manifests
+
+## 0.0.11
+
+### Patch Changes
+
+- 4aa43f62aa: Updated dependency `cross-fetch` to `^4.0.0`.
+
+## 0.0.10
+
+### Patch Changes
+
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- 8cec7664e146: Removed `@types/node` dependency
+
+## 0.0.10-next.1
+
+### Patch Changes
+
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+
+## 0.0.10-next.0
+
+### Patch Changes
+
+- 8cec7664e146: Removed `@types/node` dependency
+
+## 0.0.9
+
+### Patch Changes
+
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+
+## 0.0.9-next.0
+
+### Patch Changes
+
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+
+## 0.0.8
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+
+## 0.0.8-next.0
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+
 ## 0.0.7
 
 ### Patch Changes

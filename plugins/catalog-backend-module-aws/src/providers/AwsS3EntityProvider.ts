@@ -14,22 +14,32 @@
  * limitations under the License.
  */
 
-import { PluginTaskScheduler, TaskRunner } from '@backstage/backend-tasks';
 import { Config } from '@backstage/config';
 import { AwsS3Integration, ScmIntegrations } from '@backstage/integration';
 import {
   EntityProvider,
   EntityProviderConnection,
-  LocationSpec,
   locationSpecToLocationEntity,
-} from '@backstage/plugin-catalog-backend';
-import { AwsCredentials } from '../credentials/AwsCredentials';
+} from '@backstage/plugin-catalog-node';
+import { LocationSpec } from '@backstage/plugin-catalog-common';
 import { readAwsS3Configs } from './config';
 import { AwsS3Config } from './types';
-import { S3 } from 'aws-sdk';
-import { ListObjectsV2Output } from 'aws-sdk/clients/s3';
+import {
+  ListObjectsV2Command,
+  ListObjectsV2Output,
+  S3,
+} from '@aws-sdk/client-s3';
 import * as uuid from 'uuid';
-import { Logger } from 'winston';
+import { getEndpointFromInstructions } from '@aws-sdk/middleware-endpoint';
+import {
+  AwsCredentialsManager,
+  DefaultAwsCredentialsManager,
+} from '@backstage/integration-aws-node';
+import {
+  LoggerService,
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+} from '@backstage/backend-plugin-api';
 
 // TODO: event-based updates using S3 events (+ queue like SQS)?
 /**
@@ -40,17 +50,18 @@ import { Logger } from 'winston';
  * @public
  */
 export class AwsS3EntityProvider implements EntityProvider {
-  private readonly logger: Logger;
-  private readonly s3: S3;
+  private readonly logger: LoggerService;
+  private s3?: S3;
   private readonly scheduleFn: () => Promise<void>;
   private connection?: EntityProviderConnection;
+  private endpoint?: string;
 
   static fromConfig(
     configRoot: Config,
     options: {
-      logger: Logger;
-      schedule?: TaskRunner;
-      scheduler?: PluginTaskScheduler;
+      logger: LoggerService;
+      schedule?: SchedulerServiceTaskRunner;
+      scheduler?: SchedulerService;
     },
   ): AwsS3EntityProvider[] {
     const providerConfigs = readAwsS3Configs(configRoot);
@@ -78,7 +89,8 @@ export class AwsS3EntityProvider implements EntityProvider {
           `No schedule provided neither via code nor config for awsS3-provider:${providerConfig.id}.`,
         );
       }
-
+      const awsCredentialsManager =
+        DefaultAwsCredentialsManager.fromConfig(configRoot);
       const taskRunner =
         options.schedule ??
         options.scheduler!.createScheduledTaskRunner(providerConfig.schedule!);
@@ -86,6 +98,7 @@ export class AwsS3EntityProvider implements EntityProvider {
       return new AwsS3EntityProvider(
         providerConfig,
         integration,
+        awsCredentialsManager,
         options.logger,
         taskRunner,
       );
@@ -94,29 +107,21 @@ export class AwsS3EntityProvider implements EntityProvider {
 
   private constructor(
     private readonly config: AwsS3Config,
-    integration: AwsS3Integration,
-    logger: Logger,
-    taskRunner: TaskRunner,
+    private readonly integration: AwsS3Integration,
+    private readonly awsCredentialsManager: AwsCredentialsManager,
+    logger: LoggerService,
+    taskRunner: SchedulerServiceTaskRunner,
   ) {
     this.logger = logger.child({
       target: this.getProviderName(),
     });
 
-    this.s3 = new S3({
-      apiVersion: '2006-03-01',
-      credentials: AwsCredentials.create(
-        integration.config,
-        'backstage-aws-s3-provider',
-      ),
-      endpoint: integration.config.endpoint,
-      region: this.config.region,
-      s3ForcePathStyle: integration.config.s3ForcePathStyle,
-    });
-
     this.scheduleFn = this.createScheduleFn(taskRunner);
   }
 
-  private createScheduleFn(taskRunner: TaskRunner): () => Promise<void> {
+  private createScheduleFn(
+    taskRunner: SchedulerServiceTaskRunner,
+  ): () => Promise<void> {
     return async () => {
       const taskId = `${this.getProviderName()}:refresh`;
       return taskRunner.run({
@@ -131,7 +136,10 @@ export class AwsS3EntityProvider implements EntityProvider {
           try {
             await this.refresh(logger);
           } catch (error) {
-            logger.error(error);
+            logger.error(
+              `${this.getProviderName()} refresh failed, ${error}`,
+              error,
+            );
           }
         },
       });
@@ -146,10 +154,35 @@ export class AwsS3EntityProvider implements EntityProvider {
   /** {@inheritdoc @backstage/plugin-catalog-backend#EntityProvider.connect} */
   async connect(connection: EntityProviderConnection): Promise<void> {
     this.connection = connection;
+    const { accountId, region, bucketName } = this.config;
+    const credProvider = await this.awsCredentialsManager.getCredentialProvider(
+      accountId ? { accountId } : undefined,
+    );
+    this.s3 = new S3({
+      customUserAgent: 'backstage-aws-catalog-s3-entity-provider',
+      apiVersion: '2006-03-01',
+      credentialDefaultProvider: () => credProvider.sdkCredentialProvider,
+      endpoint: this.integration.config.endpoint,
+      region,
+      forcePathStyle: this.integration.config.s3ForcePathStyle,
+    });
+
+    // https://github.com/aws/aws-sdk-js-v3/issues/4122#issuecomment-1298968804
+    const endpoint = await getEndpointFromInstructions(
+      {
+        Bucket: bucketName,
+      },
+      ListObjectsV2Command,
+      this.s3.config as unknown as Record<string, unknown>,
+    );
+    if (endpoint?.url)
+      this.endpoint = endpoint.url.href.endsWith('/')
+        ? endpoint.url.href
+        : `${endpoint.url.href}/`;
     await this.scheduleFn();
   }
 
-  async refresh(logger: Logger) {
+  async refresh(logger: LoggerService) {
     if (!this.connection) {
       throw new Error('Not initialized');
     }
@@ -175,18 +208,21 @@ export class AwsS3EntityProvider implements EntityProvider {
   }
 
   private async listAllObjectKeys(): Promise<string[]> {
+    if (!this.s3) {
+      throw new Error('Not initialized');
+    }
+
     const keys: string[] = [];
 
     let continuationToken: string | undefined = undefined;
     let output: ListObjectsV2Output;
     do {
-      const request = this.s3.listObjectsV2({
+      output = await this.s3.listObjectsV2({
         Bucket: this.config.bucketName,
         ContinuationToken: continuationToken,
         Prefix: this.config.prefix,
       });
 
-      output = await request.promise();
       if (output.Contents) {
         output.Contents.forEach(item => {
           if (item.Key && !item.Key.endsWith('/')) {
@@ -209,9 +245,6 @@ export class AwsS3EntityProvider implements EntityProvider {
   }
 
   private createObjectUrl(key: string): string {
-    const bucketName = this.config.bucketName;
-    const endpoint = this.s3.endpoint.href;
-
-    return encodeURI(`${endpoint}${bucketName}/${key}`);
+    return new URL(key, this.endpoint).href;
   }
 }

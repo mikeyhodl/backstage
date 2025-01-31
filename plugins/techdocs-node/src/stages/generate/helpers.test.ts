@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import { ConfigReader } from '@backstage/config';
 import { ScmIntegrations } from '@backstage/integration';
+import {
+  createMockDirectory,
+  mockServices,
+} from '@backstage/backend-test-utils';
 import fs from 'fs-extra';
-import mockFs from 'mock-fs';
-import os from 'os';
 import path, { resolve as resolvePath } from 'path';
 import { ParsedLocationAnnotation } from '../../helpers';
 import {
@@ -33,8 +34,8 @@ import {
 } from './helpers';
 import {
   patchMkdocsYmlPreBuild,
-  pathMkdocsYmlWithTechdocsPlugin,
-} from './mkDocsPatchers';
+  patchMkdocsYmlWithPlugins,
+} from './mkdocsPatchers';
 import yaml from 'js-yaml';
 
 const mockEntity = {
@@ -42,11 +43,15 @@ const mockEntity = {
   kind: 'TestKind',
   metadata: {
     name: 'testName',
+    title: 'Test site name',
   },
 };
 
 const mkdocsYml = fs.readFileSync(
   resolvePath(__filename, '../__fixtures__/mkdocs.yml'),
+);
+const mkdocsDefaultYml = fs.readFileSync(
+  resolvePath(__filename, '../__fixtures__/mkdocs_default.yml'),
 );
 const mkdocsYmlWithExtensions = fs.readFileSync(
   resolvePath(__filename, '../__fixtures__/mkdocs_with_extensions.yml'),
@@ -78,17 +83,25 @@ const mkdocsYmlWithoutPlugins = fs.readFileSync(
 const mkdocsYmlWithAdditionalPlugins = fs.readFileSync(
   resolvePath(__filename, '../__fixtures__/mkdocs_with_additional_plugins.yml'),
 );
+const mkdocsYmlWithAdditionalPluginsWithConfig = fs.readFileSync(
+  resolvePath(
+    __filename,
+    '../__fixtures__/mkdocs_with_additional_plugins_with_config.yml',
+  ),
+);
 const mkdocsYmlWithEnvTag = fs.readFileSync(
   resolvePath(__filename, '../__fixtures__/mkdocs_with_env_tag.yml'),
 );
-const mockLogger = getVoidLogger();
+const mockLogger = mockServices.logger.mock();
 const warn = jest.spyOn(mockLogger, 'warn');
-
-const rootDir = os.platform() === 'win32' ? 'C:\\rootDir' : '/rootDir';
 
 const scmIntegrations = ScmIntegrations.fromConfig(new ConfigReader({}));
 
 describe('helpers', () => {
+  const mockDir = createMockDirectory();
+
+  afterEach(mockDir.clear);
+
   describe('getGeneratorKey', () => {
     it('should return techdocs as the only generator key', () => {
       const key = getGeneratorKey(mockEntity);
@@ -101,6 +114,7 @@ describe('helpers', () => {
       url                                                                        | repo_url                                                                   | edit_uri
       ${'https://github.com/backstage/backstage'}                                | ${'https://github.com/backstage/backstage'}                                | ${undefined}
       ${'https://github.com/backstage/backstage/tree/main/examples/techdocs/'}   | ${'https://github.com/backstage/backstage/tree/main/examples/techdocs/'}   | ${'https://github.com/backstage/backstage/edit/main/examples/techdocs/docs'}
+      ${'https://github.com/backstage/backstage/tree/main/examples/techdocs'}    | ${'https://github.com/backstage/backstage/tree/main/examples/techdocs'}    | ${'https://github.com/backstage/backstage/edit/main/examples/techdocs/docs'}
       ${'https://github.com/backstage/backstage/tree/main/'}                     | ${'https://github.com/backstage/backstage/tree/main/'}                     | ${'https://github.com/backstage/backstage/edit/main/docs'}
       ${'https://gitlab.com/backstage/backstage'}                                | ${'https://gitlab.com/backstage/backstage'}                                | ${undefined}
       ${'https://gitlab.com/backstage/backstage/-/blob/main/examples/techdocs/'} | ${'https://gitlab.com/backstage/backstage/-/blob/main/examples/techdocs/'} | ${'https://gitlab.com/backstage/backstage/-/edit/main/examples/techdocs/docs'}
@@ -180,17 +194,14 @@ describe('helpers', () => {
 
   describe('patchMkdocsYmlPreBuild', () => {
     beforeEach(() => {
-      mockFs({
-        '/mkdocs.yml': mkdocsYml,
-        '/mkdocs_with_repo_url.yml': mkdocsYmlWithRepoUrl,
-        '/mkdocs_with_edit_uri.yml': mkdocsYmlWithEditUri,
-        '/mkdocs_with_extensions.yml': mkdocsYmlWithExtensions,
-        '/mkdocs_with_comments.yml': mkdocsYmlWithComments,
+      mockDir.setContent({
+        'mkdocs.yml': mkdocsYml,
+        'mkdocs_default.yml': mkdocsDefaultYml,
+        'mkdocs_with_repo_url.yml': mkdocsYmlWithRepoUrl,
+        'mkdocs_with_edit_uri.yml': mkdocsYmlWithEditUri,
+        'mkdocs_with_extensions.yml': mkdocsYmlWithExtensions,
+        'mkdocs_with_comments.yml': mkdocsYmlWithComments,
       });
-    });
-
-    afterEach(() => {
-      mockFs.restore();
     });
 
     it('should add edit_uri to mkdocs.yml', async () => {
@@ -200,13 +211,13 @@ describe('helpers', () => {
       };
 
       await patchMkdocsYmlPreBuild(
-        '/mkdocs.yml',
+        mockDir.resolve('mkdocs.yml'),
         mockLogger,
         parsedLocationAnnotation,
         scmIntegrations,
       );
 
-      const updatedMkdocsYml = await fs.readFile('/mkdocs.yml');
+      const updatedMkdocsYml = await fs.readFile(mockDir.resolve('mkdocs.yml'));
 
       expect(updatedMkdocsYml.toString()).toContain(
         'repo_url: https://github.com/backstage/backstage',
@@ -220,13 +231,15 @@ describe('helpers', () => {
       };
 
       await patchMkdocsYmlPreBuild(
-        '/mkdocs_with_extensions.yml',
+        mockDir.resolve('mkdocs_with_extensions.yml'),
         mockLogger,
         parsedLocationAnnotation,
         scmIntegrations,
       );
 
-      const updatedMkdocsYml = await fs.readFile('/mkdocs_with_extensions.yml');
+      const updatedMkdocsYml = await fs.readFile(
+        mockDir.resolve('mkdocs_with_extensions.yml'),
+      );
 
       expect(updatedMkdocsYml.toString()).toContain(
         'repo_url: https://github.com/backstage/backstage',
@@ -234,6 +247,10 @@ describe('helpers', () => {
       expect(updatedMkdocsYml.toString()).toContain(
         "emoji_index: !!python/name:materialx.emoji.twemoji ''",
       );
+      expect(updatedMkdocsYml.toString()).toContain(
+        'slugify: !!python/object/apply:pymdownx.slugs.slugify',
+      );
+      expect(updatedMkdocsYml.toString()).toContain('case: lower');
     });
 
     it('should not override existing repo_url in mkdocs.yml', async () => {
@@ -243,13 +260,15 @@ describe('helpers', () => {
       };
 
       await patchMkdocsYmlPreBuild(
-        '/mkdocs_with_repo_url.yml',
+        mockDir.resolve('mkdocs_with_repo_url.yml'),
         mockLogger,
         parsedLocationAnnotation,
         scmIntegrations,
       );
 
-      const updatedMkdocsYml = await fs.readFile('/mkdocs_with_repo_url.yml');
+      const updatedMkdocsYml = await fs.readFile(
+        mockDir.resolve('mkdocs_with_repo_url.yml'),
+      );
 
       expect(updatedMkdocsYml.toString()).toContain(
         'repo_url: https://github.com/backstage/backstage',
@@ -266,19 +285,46 @@ describe('helpers', () => {
       };
 
       await patchMkdocsYmlPreBuild(
-        '/mkdocs_with_edit_uri.yml',
+        mockDir.resolve('mkdocs_with_edit_uri.yml'),
         mockLogger,
         parsedLocationAnnotation,
         scmIntegrations,
       );
 
-      const updatedMkdocsYml = await fs.readFile('/mkdocs_with_edit_uri.yml');
+      const updatedMkdocsYml = await fs.readFile(
+        mockDir.resolve('mkdocs_with_edit_uri.yml'),
+      );
 
       expect(updatedMkdocsYml.toString()).toContain(
         'edit_uri: https://github.com/backstage/backstage/edit/main/docs',
       );
       expect(updatedMkdocsYml.toString()).not.toContain(
-        'https://github.com/neworg/newrepo',
+        'edit_uri: https://github.com/neworg/newrepo',
+      );
+    });
+
+    it('should add edit_uri to mkdocs.yml with existing repo_url', async () => {
+      const parsedLocationAnnotation: ParsedLocationAnnotation = {
+        type: 'url',
+        target: 'https://github.com/neworg/newrepo/tree/main/',
+      };
+
+      await patchMkdocsYmlPreBuild(
+        mockDir.resolve('mkdocs_with_repo_url.yml'),
+        mockLogger,
+        parsedLocationAnnotation,
+        scmIntegrations,
+      );
+
+      const updatedMkdocsYml = await fs.readFile(
+        mockDir.resolve('mkdocs_with_repo_url.yml'),
+      );
+
+      expect(updatedMkdocsYml.toString()).toContain(
+        'edit_uri: https://github.com/neworg/newrepo/edit/main/docs',
+      );
+      expect(updatedMkdocsYml.toString()).toContain(
+        'repo_url: https://github.com/backstage/backstage',
       );
     });
 
@@ -289,13 +335,15 @@ describe('helpers', () => {
       };
 
       await patchMkdocsYmlPreBuild(
-        '/mkdocs_with_comments.yml',
+        mockDir.resolve('mkdocs_with_comments.yml'),
         mockLogger,
         parsedLocationAnnotation,
         scmIntegrations,
       );
 
-      const updatedMkdocsYml = await fs.readFile('/mkdocs_with_comments.yml');
+      const updatedMkdocsYml = await fs.readFile(
+        mockDir.resolve('mkdocs_with_comments.yml'),
+      );
 
       expect(updatedMkdocsYml.toString()).toContain(
         '# This is a comment that is removed after editing',
@@ -305,22 +353,24 @@ describe('helpers', () => {
     });
   });
 
-  describe('pathMkdocsYmlWithTechdocsPlugin', () => {
+  describe('patchMkdocsYmlWithPlugins', () => {
     beforeEach(() => {
-      mockFs({
-        '/mkdocs_with_techdocs_plugin.yml': mkdocsYmlWithTechdocsPlugins,
-        '/mkdocs_without_plugins.yml': mkdocsYmlWithoutPlugins,
-        '/mkdocs_with_additional_plugins.yml': mkdocsYmlWithAdditionalPlugins,
+      mockDir.setContent({
+        'mkdocs_with_techdocs_plugin.yml': mkdocsYmlWithTechdocsPlugins,
+        'mkdocs_without_plugins.yml': mkdocsYmlWithoutPlugins,
+        'mkdocs_with_additional_plugins.yml': mkdocsYmlWithAdditionalPlugins,
+        'mkdocs_with_additional_plugins_with_config.yml':
+          mkdocsYmlWithAdditionalPluginsWithConfig,
       });
     });
     it('should not add additional plugins if techdocs exists already in mkdocs file', async () => {
-      await pathMkdocsYmlWithTechdocsPlugin(
-        '/mkdocs_with_techdocs_plugin.yml',
+      await patchMkdocsYmlWithPlugins(
+        mockDir.resolve('mkdocs_with_techdocs_plugin.yml'),
         mockLogger,
       );
 
       const updatedMkdocsYml = await fs.readFile(
-        '/mkdocs_with_techdocs_plugin.yml',
+        mockDir.resolve('mkdocs_with_techdocs_plugin.yml'),
       );
       const parsedYml = yaml.load(updatedMkdocsYml.toString()) as {
         plugins: string[];
@@ -329,12 +379,14 @@ describe('helpers', () => {
       expect(parsedYml.plugins).toContain('techdocs-core');
     });
     it("should add the needed plugin if it doesn't exist in mkdocs file", async () => {
-      await pathMkdocsYmlWithTechdocsPlugin(
-        '/mkdocs_without_plugins.yml',
+      await patchMkdocsYmlWithPlugins(
+        mockDir.resolve('mkdocs_without_plugins.yml'),
         mockLogger,
       );
 
-      const updatedMkdocsYml = await fs.readFile('/mkdocs_without_plugins.yml');
+      const updatedMkdocsYml = await fs.readFile(
+        mockDir.resolve('mkdocs_without_plugins.yml'),
+      );
       const parsedYml = yaml.load(updatedMkdocsYml.toString()) as {
         plugins: string[];
       };
@@ -342,12 +394,12 @@ describe('helpers', () => {
       expect(parsedYml.plugins).toContain('techdocs-core');
     });
     it('should not override existing plugins', async () => {
-      await pathMkdocsYmlWithTechdocsPlugin(
-        '/mkdocs_with_additional_plugins.yml',
+      await patchMkdocsYmlWithPlugins(
+        mockDir.resolve('mkdocs_with_additional_plugins.yml'),
         mockLogger,
       );
       const updatedMkdocsYml = await fs.readFile(
-        '/mkdocs_with_additional_plugins.yml',
+        mockDir.resolve('mkdocs_with_additional_plugins.yml'),
       );
       const parsedYml = yaml.load(updatedMkdocsYml.toString()) as {
         plugins: string[];
@@ -357,6 +409,45 @@ describe('helpers', () => {
       expect(parsedYml.plugins).toContain('not-techdocs-core');
       expect(parsedYml.plugins).toContain('also-not-techdocs-core');
     });
+    it('should add all provided default plugins', async () => {
+      await patchMkdocsYmlWithPlugins(
+        mockDir.resolve('mkdocs_with_additional_plugins.yml'),
+        mockLogger,
+        ['techdocs-core', 'custom-plugin'],
+      );
+
+      const updatedMkdocsYml = await fs.readFile(
+        mockDir.resolve('mkdocs_with_additional_plugins.yml'),
+      );
+      const parsedYml = yaml.load(updatedMkdocsYml.toString()) as {
+        plugins: string[];
+      };
+      expect(parsedYml.plugins).toHaveLength(4);
+      expect(parsedYml.plugins).toContain('techdocs-core');
+      expect(parsedYml.plugins).toContain('custom-plugin');
+    });
+    it('should not overwrite config when defaults are added', async () => {
+      await patchMkdocsYmlWithPlugins(
+        mockDir.resolve('mkdocs_with_additional_plugins_with_config.yml'),
+        mockLogger,
+        ['techdocs-core', 'custom-plugin'],
+      );
+
+      const updatedMkdocsYml = await fs.readFile(
+        mockDir.resolve('mkdocs_with_additional_plugins_with_config.yml'),
+      );
+      const parsedYml = yaml.load(updatedMkdocsYml.toString()) as {
+        plugins: object[];
+      };
+      expect(parsedYml.plugins).toHaveLength(4);
+      expect(parsedYml.plugins).toContain('techdocs-core');
+      // we want our original object with its properties to be preserved, and for the basic string form of the plugin
+      // to NOT be added as well.
+      expect(parsedYml.plugins).not.toContain('custom-plugin');
+      expect(parsedYml.plugins).toContainEqual({
+        'custom-plugin': { with: { configuration: 1 } },
+      });
+    });
   });
 
   describe('patchIndexPreBuild', () => {
@@ -364,61 +455,60 @@ describe('helpers', () => {
       warn.mockClear();
     });
     it('should have no effect if docs/index.md exists', async () => {
-      mockFs({
-        '/docs/index.md': 'index.md content',
-        '/docs/README.md': 'docs/README.md content',
+      mockDir.setContent({
+        'docs/index.md': 'index.md content',
+        'docs/README.md': 'docs/README.md content',
       });
 
-      await patchIndexPreBuild({ inputDir: '/', logger: mockLogger });
+      await patchIndexPreBuild({ inputDir: mockDir.path, logger: mockLogger });
 
-      expect(fs.readFileSync('/docs/index.md', 'utf-8')).toEqual(
-        'index.md content',
-      );
+      await expect(
+        fs.readFile(mockDir.resolve('docs/index.md'), 'utf-8'),
+      ).resolves.toEqual('index.md content');
       expect(warn).not.toHaveBeenCalledWith();
-      mockFs.restore();
     });
 
     it("should use docs/README.md if docs/index.md doesn't exists", async () => {
-      mockFs({
-        '/docs/README.md': 'docs/README.md content',
-        '/README.md': 'main README.md content',
+      mockDir.setContent({
+        'docs/README.md': 'docs/README.md content',
+        'README.md': 'main README.md content',
       });
 
-      await patchIndexPreBuild({ inputDir: '/', logger: mockLogger });
+      await patchIndexPreBuild({ inputDir: mockDir.path, logger: mockLogger });
 
-      expect(fs.readFileSync('/docs/index.md', 'utf-8')).toEqual(
-        'docs/README.md content',
-      );
+      await expect(
+        fs.readFile(mockDir.resolve('docs/index.md'), 'utf-8'),
+      ).resolves.toEqual('docs/README.md content');
       expect(warn.mock.calls).toEqual([
         [`${path.normalize('docs/index.md')} not found.`],
       ]);
-      mockFs.restore();
     });
 
     it('should use README.md if neither docs/index.md or docs/README.md exist', async () => {
-      mockFs({
-        '/README.md': 'main README.md content',
+      mockDir.setContent({
+        'README.md': 'main README.md content',
       });
 
-      await patchIndexPreBuild({ inputDir: '/', logger: mockLogger });
+      await patchIndexPreBuild({ inputDir: mockDir.path, logger: mockLogger });
 
-      expect(fs.readFileSync('/docs/index.md', 'utf-8')).toEqual(
-        'main README.md content',
-      );
+      await expect(
+        fs.readFile(mockDir.resolve('docs/index.md'), 'utf-8'),
+      ).resolves.toEqual('main README.md content');
       expect(warn.mock.calls).toEqual([
         [`${path.normalize('docs/index.md')} not found.`],
         [`${path.normalize('docs/README.md')} not found.`],
         [`${path.normalize('docs/readme.md')} not found.`],
       ]);
-      mockFs.restore();
     });
 
     it('should not use any file as index.md if no one matches the requirements', async () => {
-      mockFs({});
+      mockDir.setContent({});
 
-      await patchIndexPreBuild({ inputDir: '/', logger: mockLogger });
+      await patchIndexPreBuild({ inputDir: mockDir.path, logger: mockLogger });
 
-      expect(() => fs.readFileSync('/docs/index.md', 'utf-8')).toThrow();
+      await expect(
+        fs.readFile(mockDir.resolve('docs/index.md'), 'utf-8'),
+      ).rejects.toThrow();
       const paths = [
         path.normalize('docs/index.md'),
         path.normalize('docs/README.md'),
@@ -430,11 +520,10 @@ describe('helpers', () => {
         ...paths.map(p => [`${p} not found.`]),
         [
           `Could not find any techdocs' index file. Please make sure at least one of ${paths
-            .map(p => path.sep + p)
+            .map(p => mockDir.resolve(p))
             .join(' ')} exists.`,
         ],
       ]);
-      mockFs.restore();
     });
   });
 
@@ -445,18 +534,11 @@ describe('helpers', () => {
     };
 
     beforeEach(() => {
-      mockFs.restore();
-      mockFs({
-        [rootDir]: mockFiles,
-      });
-    });
-
-    afterEach(() => {
-      mockFs.restore();
+      mockDir.setContent(mockFiles);
     });
 
     it('should create the file if it does not exist', async () => {
-      const filePath = path.join(rootDir, 'wrong_techdocs_metadata.json');
+      const filePath = mockDir.resolve('wrong_techdocs_metadata.json');
       await createOrUpdateMetadata(filePath, mockLogger);
 
       // Check if the file exists
@@ -466,15 +548,15 @@ describe('helpers', () => {
     });
 
     it('should throw error when the JSON is invalid', async () => {
-      const filePath = path.join(rootDir, 'invalid_techdocs_metadata.json');
+      const filePath = mockDir.resolve('invalid_techdocs_metadata.json');
 
       await expect(
         createOrUpdateMetadata(filePath, mockLogger),
-      ).rejects.toThrow('Unexpected token d in JSON at position 0');
+      ).rejects.toThrow('Unexpected token');
     });
 
     it('should add build timestamp to the metadata json', async () => {
-      const filePath = path.join(rootDir, 'techdocs_metadata.json');
+      const filePath = mockDir.resolve('techdocs_metadata.json');
 
       await createOrUpdateMetadata(filePath, mockLogger);
 
@@ -483,41 +565,35 @@ describe('helpers', () => {
     });
 
     it('should add list of files to the metadata json', async () => {
-      const filePath = path.join(rootDir, 'techdocs_metadata.json');
+      const filePath = mockDir.resolve('techdocs_metadata.json');
 
       await createOrUpdateMetadata(filePath, mockLogger);
 
       const json = await fs.readJson(filePath);
-      expect(json.files[0]).toEqual(Object.keys(mockFiles)[0]);
-      expect(json.files[1]).toEqual(Object.keys(mockFiles)[1]);
+      expect(json.files).toEqual(
+        expect.arrayContaining(Object.keys(mockFiles)),
+      );
     });
   });
 
   describe('storeEtagMetadata', () => {
     beforeEach(() => {
-      mockFs.restore();
-      mockFs({
-        [rootDir]: {
-          'invalid_techdocs_metadata.json': 'dsds',
-          'techdocs_metadata.json': '{"site_name": "Tech Docs"}',
-        },
+      mockDir.setContent({
+        'invalid_techdocs_metadata.json': 'dsds',
+        'techdocs_metadata.json': '{"site_name": "Tech Docs"}',
       });
     });
 
-    afterEach(() => {
-      mockFs.restore();
-    });
-
     it('should throw error when the JSON is invalid', async () => {
-      const filePath = path.join(rootDir, 'invalid_techdocs_metadata.json');
+      const filePath = mockDir.resolve('invalid_techdocs_metadata.json');
 
       await expect(storeEtagMetadata(filePath, 'etag123abc')).rejects.toThrow(
-        'Unexpected token d in JSON at position 0',
+        'Unexpected token',
       );
     });
 
     it('should add etag to the metadata json', async () => {
-      const filePath = path.join(rootDir, 'techdocs_metadata.json');
+      const filePath = mockDir.resolve('techdocs_metadata.json');
 
       await storeEtagMetadata(filePath, 'etag123abc');
 
@@ -527,33 +603,87 @@ describe('helpers', () => {
   });
 
   describe('getMkdocsYml', () => {
-    afterEach(() => {
-      mockFs.restore();
-    });
-
-    const inputDir = resolvePath(__filename, '../__fixtures__/');
+    const defaultOptions = {
+      name: mockEntity.metadata.title,
+    };
 
     it('returns expected contents when .yml file is present', async () => {
-      const key = path.join(inputDir, 'mkdocs.yml');
-      mockFs({ [key]: mkdocsYml });
-      const { path: mkdocsPath, content } = await getMkdocsYml(inputDir);
+      mockDir.setContent({ 'mkdocs.yml': mkdocsYml });
+      const {
+        path: mkdocsPath,
+        content,
+        configIsTemporary,
+      } = await getMkdocsYml(mockDir.path, defaultOptions);
 
-      expect(mkdocsPath).toBe(key);
+      expect(mkdocsPath).toBe(mockDir.resolve('mkdocs.yml'));
       expect(content).toBe(mkdocsYml.toString());
+      expect(configIsTemporary).toBe(false);
     });
 
     it('returns expected contents when .yaml file is present', async () => {
-      const key = path.join(inputDir, 'mkdocs.yaml');
-      mockFs({ [key]: mkdocsYml });
-      const { path: mkdocsPath, content } = await getMkdocsYml(inputDir);
-      expect(mkdocsPath).toBe(key);
+      mockDir.setContent({ 'mkdocs.yaml': mkdocsYml });
+      const {
+        path: mkdocsPath,
+        content,
+        configIsTemporary,
+      } = await getMkdocsYml(mockDir.path, defaultOptions);
+      expect(mkdocsPath).toBe(mockDir.resolve('mkdocs.yaml'));
       expect(content).toBe(mkdocsYml.toString());
+      expect(configIsTemporary).toBe(false);
     });
 
-    it('throws when neither .yml nor .yaml file is present', async () => {
+    it('returns expected contents when default file is present', async () => {
+      const options = {
+        name: 'Default Test site name',
+      };
+      const mockPathExists = jest.spyOn(fs, 'pathExists');
+      mockPathExists.mockImplementation(() => Promise.resolve(false));
+      mockDir.setContent({ 'mkdocs.yml': mkdocsDefaultYml });
+      const {
+        path: mkdocsPath,
+        content,
+        configIsTemporary,
+      } = await getMkdocsYml(mockDir.path, options);
+
+      expect(mkdocsPath).toBe(mockDir.resolve('mkdocs.yml'));
+      expect(content.split(/[\r\n]+/g)).toEqual(
+        mkdocsDefaultYml.toString().split(/[\r\n]+/g),
+      );
+      expect(configIsTemporary).toBe(true);
+      mockPathExists.mockRestore();
+    });
+
+    it('throws when neither .yml nor .yaml nor default file is present', async () => {
       const invalidInputDir = resolvePath(__filename);
-      await expect(getMkdocsYml(invalidInputDir)).rejects.toThrow(
-        /Could not read MkDocs YAML config file mkdocs.yml or mkdocs.yaml for validation/,
+      await expect(
+        getMkdocsYml(invalidInputDir, defaultOptions),
+      ).rejects.toThrow(
+        /Could not read MkDocs YAML config file mkdocs.yml or mkdocs.yaml or default for validation/,
+      );
+    });
+
+    it('returns expected content when custom file is specified', async () => {
+      const options = { mkdocsConfigFileName: 'another-name.yaml' };
+      mockDir.setContent({ 'another-name.yaml': mkdocsYml });
+
+      const {
+        path: mkdocsPath,
+        content,
+        configIsTemporary,
+      } = await getMkdocsYml(mockDir.path, options);
+
+      expect(mkdocsPath).toBe(mockDir.resolve('another-name.yaml'));
+
+      expect(content).toBe(mkdocsYml.toString());
+      expect(configIsTemporary).toBe(false);
+    });
+
+    it('throws when specifying a specific mkdocs config file that does not exist', async () => {
+      const options = { mkdocsConfigFileName: 'another-name.yaml' };
+      mockDir.setContent({ 'mkdocs.yml': mkdocsDefaultYml });
+
+      await expect(getMkdocsYml(mockDir.path, options)).rejects.toThrow(
+        /The specified file .* does not exist/,
       );
     });
   });

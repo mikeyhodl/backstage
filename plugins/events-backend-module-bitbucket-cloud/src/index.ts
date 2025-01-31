@@ -21,5 +21,5 @@
  * @packageDocumentation
  */
 
+export { eventsModuleBitbucketCloudEventRouter as default } from './service/eventsModuleBitbucketCloudEventRouter';
 export { BitbucketCloudEventRouter } from './router/BitbucketCloudEventRouter';
-export { bitbucketCloudEventRouterEventsModule } from './service/BitbucketCloudEventRouterEventsModule';

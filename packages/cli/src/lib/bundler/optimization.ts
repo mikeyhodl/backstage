@@ -17,20 +17,32 @@
 import { WebpackOptionsNormalized } from 'webpack';
 import { BundlingOptions } from './types';
 
-const { ESBuildMinifyPlugin } = require('esbuild-loader');
+const { EsbuildPlugin } = require('esbuild-loader');
 
 export const optimization = (
   options: BundlingOptions,
 ): WebpackOptionsNormalized['optimization'] => {
-  const { isDev } = options;
+  const { isDev, rspack } = options;
+
+  const MinifyPlugin = rspack
+    ? rspack.SwcJsMinimizerRspackPlugin
+    : EsbuildPlugin;
 
   return {
     minimize: !isDev,
     minimizer: [
-      new ESBuildMinifyPlugin({
-        target: 'es2019',
+      new MinifyPlugin({
+        target: 'ES2022',
         format: 'iife',
+        exclude: 'remoteEntry.js',
       }),
+      // Avoid iife wrapping of module federation remote entry as it breaks the variable assignment
+      new MinifyPlugin({
+        target: 'ES2022',
+        format: undefined,
+        include: 'remoteEntry.js',
+      }),
+      rspack && new rspack.LightningCssMinimizerRspackPlugin(),
     ],
     runtimeChunk: 'single',
     splitChunks: {
@@ -62,9 +74,11 @@ export const optimization = (
           priority: 10,
           minSize: 100000,
           minChunks: 1,
-          maxAsyncRequests: Infinity,
-          maxInitialRequests: Infinity,
-        } as any, // filename is not included in type, but we need it
+          ...(!rspack && {
+            maxAsyncRequests: Infinity,
+            maxInitialRequests: Infinity,
+          }),
+        }, // filename is not included in type, but we need it
         // Group together the smallest modules
         vendor: {
           chunks: 'initial',

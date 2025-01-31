@@ -14,49 +14,54 @@
  * limitations under the License.
  */
 
-import {
-  Backend,
-  cacheFactory,
-  configFactory,
-  createSpecializedBackend,
-  databaseFactory,
-  discoveryFactory,
-  httpRouterFactory,
-  loggerFactory,
-  permissionsFactory,
-  rootLoggerFactory,
-  schedulerFactory,
-  tokenManagerFactory,
-  urlReaderFactory,
-} from '@backstage/backend-app-api';
-import { ServiceFactory } from '@backstage/backend-plugin-api';
+import { Backend, createSpecializedBackend } from '@backstage/backend-app-api';
+import { auditorServiceFactory } from '@backstage/backend-defaults/auditor';
+import { authServiceFactory } from '@backstage/backend-defaults/auth';
+import { cacheServiceFactory } from '@backstage/backend-defaults/cache';
+import { databaseServiceFactory } from '@backstage/backend-defaults/database';
+import { discoveryServiceFactory } from '@backstage/backend-defaults/discovery';
+import { httpAuthServiceFactory } from '@backstage/backend-defaults/httpAuth';
+import { httpRouterServiceFactory } from '@backstage/backend-defaults/httpRouter';
+import { lifecycleServiceFactory } from '@backstage/backend-defaults/lifecycle';
+import { loggerServiceFactory } from '@backstage/backend-defaults/logger';
+import { permissionsServiceFactory } from '@backstage/backend-defaults/permissions';
+import { permissionsRegistryServiceFactory } from '@backstage/backend-defaults/permissionsRegistry';
+import { rootConfigServiceFactory } from '@backstage/backend-defaults/rootConfig';
+import { rootHealthServiceFactory } from '@backstage/backend-defaults/rootHealth';
+import { rootHttpRouterServiceFactory } from '@backstage/backend-defaults/rootHttpRouter';
+import { rootLifecycleServiceFactory } from '@backstage/backend-defaults/rootLifecycle';
+import { rootLoggerServiceFactory } from '@backstage/backend-defaults/rootLogger';
+import { schedulerServiceFactory } from '@backstage/backend-defaults/scheduler';
+import { urlReaderServiceFactory } from '@backstage/backend-defaults/urlReader';
+import { userInfoServiceFactory } from '@backstage/backend-defaults/userInfo';
+import { eventsServiceFactory } from '@backstage/plugin-events-node';
 
 export const defaultServiceFactories = [
-  cacheFactory,
-  configFactory,
-  databaseFactory,
-  discoveryFactory,
-  loggerFactory,
-  rootLoggerFactory,
-  permissionsFactory,
-  schedulerFactory,
-  tokenManagerFactory,
-  urlReaderFactory,
-  httpRouterFactory,
+  auditorServiceFactory,
+  authServiceFactory,
+  cacheServiceFactory,
+  rootConfigServiceFactory,
+  databaseServiceFactory,
+  discoveryServiceFactory,
+  httpAuthServiceFactory,
+  httpRouterServiceFactory,
+  lifecycleServiceFactory,
+  loggerServiceFactory,
+  permissionsServiceFactory,
+  permissionsRegistryServiceFactory,
+  rootHealthServiceFactory,
+  rootHttpRouterServiceFactory,
+  rootLifecycleServiceFactory,
+  rootLoggerServiceFactory,
+  schedulerServiceFactory,
+  userInfoServiceFactory,
+  urlReaderServiceFactory,
+  eventsServiceFactory,
 ];
 
 /**
  * @public
  */
-export interface CreateBackendOptions {
-  services?: (ServiceFactory | (() => ServiceFactory))[];
-}
-
-/**
- * @public
- */
-export function createBackend(options?: CreateBackendOptions): Backend {
-  return createSpecializedBackend({
-    services: [...defaultServiceFactories, ...(options?.services ?? [])],
-  });
+export function createBackend(): Backend {
+  return createSpecializedBackend({ defaultServiceFactories });
 }

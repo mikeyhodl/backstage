@@ -20,6 +20,6 @@
  * @packageDocumentation
  */
 
-export { EventsBackend } from './service/EventsBackend';
-export { eventsPlugin } from './service/EventsPlugin';
+export { eventsPlugin as default } from './service/EventsPlugin';
+export * from './deprecated';
 export { HttpPostIngressEventPublisher } from './service/http';

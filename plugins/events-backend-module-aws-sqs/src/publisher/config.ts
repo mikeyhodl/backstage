@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Config } from '@backstage/config';
-import { HumanDuration, JsonObject } from '@backstage/types';
+import { Config, readDurationFromConfig } from '@backstage/config';
+import { HumanDuration } from '@backstage/types';
 import { Duration } from 'luxon';
 
 const CONFIG_PREFIX_MODULE = 'events.modules.awsSqs.';
@@ -31,14 +31,15 @@ export interface AwsSqsEventSourceConfig {
   topic: string;
   visibilityTimeout?: Duration;
   waitTimeAfterEmptyReceive: Duration;
+  endpoint?: string;
 }
 
-// TODO(pjungermann): validation could be improved similar to `convertToHumanDuration` at @backstage/backend-tasks
+// TODO(pjungermann): validation could be improved similar to `convertToHumanDuration` at @backstage/backend-plugin-api
 function readOptionalHumanDuration(
   config: Config,
   key: string,
 ): HumanDuration | undefined {
-  return config.getOptional<JsonObject>(key) as HumanDuration;
+  return config.has(key) ? readDurationFromConfig(config, { key }) : undefined;
 }
 
 function readOptionalDuration(
@@ -74,6 +75,7 @@ export function readConfig(config: Config): AwsSqsEventSourceConfig[] {
       }
       const queueUrl = topicConfig.getString('queue.url');
       const region = topicConfig.getString('queue.region');
+      const endpoint = topicConfig.getOptionalString('queue.endpoint');
       const visibilityTimeout = readOptionalDuration(
         topicConfig,
         'queue.visibilityTimeout',
@@ -106,6 +108,7 @@ export function readConfig(config: Config): AwsSqsEventSourceConfig[] {
       return {
         pollingWaitTime,
         queueUrl,
+        endpoint,
         region,
         timeout,
         topic,

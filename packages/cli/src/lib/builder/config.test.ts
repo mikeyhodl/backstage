@@ -24,6 +24,12 @@ describe('makeRollupConfigs', () => {
 
     const [config] = await makeRollupConfigs({
       outputs: new Set([Output.cjs]),
+      packageJson: {
+        name: 'test',
+        version: '0.0.0',
+        main: './src/index.ts',
+      },
+      workspacePackages: [],
     });
     const external = config.external as Exclude<
       ExternalOption,

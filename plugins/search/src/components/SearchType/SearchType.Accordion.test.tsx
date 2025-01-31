@@ -15,14 +15,15 @@
  */
 
 import React from 'react';
-import { TestApiProvider } from '@backstage/test-utils';
-import { act, render } from '@testing-library/react';
+import { mockApis, TestApiProvider } from '@backstage/test-utils';
+import { act, render, waitFor } from '@testing-library/react';
 import user from '@testing-library/user-event';
 import {
   searchApiRef,
   SearchContextProvider,
 } from '@backstage/plugin-search-react';
 import { SearchType } from './SearchType';
+import { configApiRef } from '@backstage/core-plugin-api';
 
 const setTypesMock = jest.fn();
 const setPageCursorMock = jest.fn();
@@ -34,11 +35,23 @@ jest.mock('@backstage/plugin-search-react', () => ({
     setTypes: (types: any) => setTypesMock(types),
     pageCursor: '',
     setPageCursor: (pageCursor: any) => setPageCursorMock(pageCursor),
+    term: 'abc',
+    filters: { foo: 'bar' },
   }),
 }));
 
 describe('SearchType.Accordion', () => {
-  const query = jest.fn();
+  const configApiMock = mockApis.config({
+    data: {
+      search: {
+        query: {
+          pagelimit: 10,
+        },
+      },
+    },
+  });
+
+  const searchApiMock = { query: jest.fn() };
 
   const expectedLabel = 'Expected Label';
   const expectedType = {
@@ -48,12 +61,20 @@ describe('SearchType.Accordion', () => {
   };
 
   beforeEach(() => {
-    query.mockResolvedValue({ results: [] });
+    searchApiMock.query.mockResolvedValue({
+      results: [],
+      numberOfResults: 1234,
+    });
   });
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => {
     return (
-      <TestApiProvider apis={[[searchApiRef, { query }]]}>
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [configApiRef, configApiMock],
+        ]}
+      >
         <SearchContextProvider>{children}</SearchContextProvider>
       </TestApiProvider>
     );
@@ -121,15 +142,33 @@ describe('SearchType.Accordion', () => {
     expect(setPageCursorMock).toHaveBeenCalledWith(undefined);
   });
 
-  it('should collapse when a new type is selected', async () => {
-    const { getByText, queryByText } = render(
+  it('should show result counts if enabled', async () => {
+    const { getAllByText } = render(
       <Wrapper>
-        <SearchType.Accordion name={expectedLabel} types={[expectedType]} />
+        <SearchType.Accordion
+          name={expectedLabel}
+          showCounts
+          types={[expectedType]}
+        />
       </Wrapper>,
     );
 
-    await user.click(getByText(expectedType.name));
-
-    expect(queryByText('Collapse')).not.toBeInTheDocument();
+    expect(searchApiMock.query).toHaveBeenCalledWith({
+      term: 'abc',
+      types: [],
+      filters: { foo: 'bar' },
+      pageLimit: 0,
+    });
+    expect(searchApiMock.query).toHaveBeenCalledWith({
+      term: 'abc',
+      types: [expectedType.value],
+      filters: {},
+      pageLimit: 0,
+    });
+    await waitFor(() => {
+      const countLabels = getAllByText('1234 results');
+      expect(countLabels.length).toEqual(2);
+      expect(countLabels[0]).toBeInTheDocument();
+    });
   });
 });

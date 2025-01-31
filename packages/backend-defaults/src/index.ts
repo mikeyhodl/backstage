@@ -20,5 +20,5 @@
  * @packageDocumentation
  */
 
-export type { CreateBackendOptions } from './CreateBackend';
 export { createBackend } from './CreateBackend';
+export { discoveryFeatureLoader } from './discoveryFeatureLoader';

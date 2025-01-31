@@ -95,7 +95,12 @@ export function TabbedCard(props: PropsWithChildren<Props>) {
     });
   } else {
     React.Children.map(children, child => {
-      if (React.isValidElement(child) && child?.props.value === value) {
+      if (
+        React.isValidElement<{ children?: ReactNode; value?: unknown }>(
+          child,
+        ) &&
+        child?.props.value === value
+      ) {
         selectedTabContent = child?.props.children;
       }
     });
@@ -109,7 +114,6 @@ export function TabbedCard(props: PropsWithChildren<Props>) {
       <ErrorBoundary {...errProps}>
         {title && <BoldHeader title={title} />}
         <Tabs
-          selectionFollowsFocus
           classes={tabsClasses}
           value={value || selectedIndex}
           onChange={handleChange}
@@ -142,7 +146,7 @@ const useCardTabStyles = makeStyles(
       },
     },
     selected: {
-      fontWeight: 'bold',
+      fontWeight: theme.typography.fontWeightBold,
     },
   }),
   { name: 'BackstageCardTab' },

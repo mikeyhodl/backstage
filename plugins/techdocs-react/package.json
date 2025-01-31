@@ -1,37 +1,48 @@
 {
   "name": "@backstage/plugin-techdocs-react",
+  "version": "1.2.14-next.0",
   "description": "Shared frontend utilities for TechDocs and Addons",
-  "version": "1.0.6",
+  "backstage": {
+    "role": "web-library",
+    "pluginId": "techdocs",
+    "pluginPackages": [
+      "@backstage/plugin-techdocs",
+      "@backstage/plugin-techdocs-backend",
+      "@backstage/plugin-techdocs-common",
+      "@backstage/plugin-techdocs-node",
+      "@backstage/plugin-techdocs-react"
+    ]
+  },
   "publishConfig": {
     "access": "public",
-    "alphaTypes": "dist/index.alpha.d.ts",
     "main": "dist/index.esm.js",
     "types": "dist/index.d.ts"
   },
-  "backstage": {
-    "role": "web-library"
-  },
+  "keywords": [
+    "backstage",
+    "techdocs"
+  ],
   "homepage": "https://backstage.io",
   "repository": {
     "type": "git",
     "url": "https://github.com/backstage/backstage",
     "directory": "plugins/techdocs-react"
   },
-  "keywords": [
-    "backstage",
-    "techdocs"
-  ],
   "license": "Apache-2.0",
+  "sideEffects": false,
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "backstage-cli package build --experimental-type-build",
+    "build": "backstage-cli package build",
+    "clean": "backstage-cli package clean",
     "lint": "backstage-cli package lint",
-    "test": "backstage-cli package test",
     "prepack": "backstage-cli package prepack",
     "postpack": "backstage-cli package postpack",
-    "clean": "backstage-cli package clean",
-    "start": "backstage-cli package start"
+    "start": "backstage-cli package start",
+    "test": "backstage-cli package test"
   },
   "dependencies": {
     "@backstage/catalog-model": "workspace:^",
@@ -40,28 +51,32 @@
     "@backstage/core-plugin-api": "workspace:^",
     "@backstage/version-bridge": "workspace:^",
     "@material-ui/core": "^4.12.2",
-    "@material-ui/lab": "4.0.0-alpha.57",
     "@material-ui/styles": "^4.11.0",
-    "jss": "~10.8.2",
+    "jss": "~10.10.0",
     "lodash": "^4.17.21",
     "react-helmet": "6.1.0",
     "react-use": "^17.2.4"
-  },
-  "peerDependencies": {
-    "@types/react": "^16.13.1 || ^17.0.0",
-    "react": "^16.13.1 || ^17.0.0",
-    "react-router-dom": "6.0.0-beta.0 || ^6.3.0"
   },
   "devDependencies": {
     "@backstage/cli": "workspace:^",
     "@backstage/test-utils": "workspace:^",
     "@backstage/theme": "workspace:^",
-    "@testing-library/jest-dom": "^5.10.1",
-    "@testing-library/react": "^12.1.3",
-    "@testing-library/react-hooks": "^8.0.0"
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/react": "^18.0.0",
+    "react": "^18.0.2",
+    "react-dom": "^18.0.2",
+    "react-router-dom": "^6.3.0"
   },
-  "files": [
-    "alpha",
-    "dist"
-  ]
+  "peerDependencies": {
+    "@types/react": "^17.0.0 || ^18.0.0",
+    "react": "^17.0.0 || ^18.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0",
+    "react-router-dom": "^6.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    }
+  }
 }

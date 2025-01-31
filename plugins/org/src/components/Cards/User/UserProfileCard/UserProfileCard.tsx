@@ -15,38 +15,37 @@
  */
 
 import {
+  ANNOTATION_EDIT_URL,
   RELATION_MEMBER_OF,
   UserEntity,
-  ANNOTATION_EDIT_URL,
 } from '@backstage/catalog-model';
-import {
-  EntityRefLinks,
-  getEntityRelations,
-  useEntity,
-} from '@backstage/plugin-catalog-react';
-import {
-  Box,
-  Grid,
-  IconButton,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Tooltip,
-} from '@material-ui/core';
-import EditIcon from '@material-ui/icons/Edit';
-import EmailIcon from '@material-ui/icons/Email';
-import GroupIcon from '@material-ui/icons/Group';
-import PersonIcon from '@material-ui/icons/Person';
-import Alert from '@material-ui/lab/Alert';
-import React from 'react';
 import {
   Avatar,
   InfoCard,
   InfoCardVariants,
   Link,
 } from '@backstage/core-components';
+import Box from '@material-ui/core/Box';
+import Grid from '@material-ui/core/Grid';
+import IconButton from '@material-ui/core/IconButton';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
+import Tooltip from '@material-ui/core/Tooltip';
+import {
+  EntityRefLinks,
+  getEntityRelations,
+  useEntity,
+} from '@backstage/plugin-catalog-react';
+
+import Alert from '@material-ui/lab/Alert';
+import EditIcon from '@material-ui/icons/Edit';
+import EmailIcon from '@material-ui/icons/Email';
+import GroupIcon from '@material-ui/icons/Group';
 import { LinksGroup } from '../../Meta';
+import PersonIcon from '@material-ui/icons/Person';
+import React from 'react';
 
 const CardTitle = (props: { title?: string }) =>
   props.title ? (
@@ -57,7 +56,10 @@ const CardTitle = (props: { title?: string }) =>
   ) : null;
 
 /** @public */
-export const UserProfileCard = (props: { variant?: InfoCardVariants }) => {
+export const UserProfileCard = (props: {
+  variant?: InfoCardVariants;
+  showLinks?: boolean;
+}) => {
   const { entity: user } = useEntity<UserEntity>();
   if (!user) {
     return <Alert severity="error">User not found</Alert>;
@@ -130,7 +132,7 @@ export const UserProfileCard = (props: { variant?: InfoCardVariants }) => {
               </ListItemText>
             </ListItem>
 
-            <LinksGroup links={links} />
+            {props?.showLinks && <LinksGroup links={links} />}
           </List>
         </Grid>
       </Grid>

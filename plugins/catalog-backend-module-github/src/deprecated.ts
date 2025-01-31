@@ -14,18 +14,21 @@
  * limitations under the License.
  */
 
-import { PluginTaskScheduler, TaskRunner } from '@backstage/backend-tasks';
 import { Config } from '@backstage/config';
 import {
   EntityProvider,
   EntityProviderConnection,
-} from '@backstage/plugin-catalog-backend';
-import { Logger } from 'winston';
+} from '@backstage/plugin-catalog-node';
 import { GithubEntityProvider } from './providers/GithubEntityProvider';
 import {
   GithubOrgEntityProvider,
   GithubOrgEntityProviderOptions,
 } from './providers/GithubOrgEntityProvider';
+import {
+  LoggerService,
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+} from '@backstage/backend-plugin-api';
 
 /**
  * @public
@@ -57,9 +60,9 @@ export class GitHubEntityProvider implements EntityProvider {
   static fromConfig(
     config: Config,
     options: {
-      logger: Logger;
-      schedule?: TaskRunner;
-      scheduler?: PluginTaskScheduler;
+      logger: LoggerService;
+      schedule?: SchedulerServiceTaskRunner;
+      scheduler?: SchedulerService;
     },
   ): GitHubEntityProvider[] {
     options.logger.warn(
@@ -80,7 +83,7 @@ export class GitHubEntityProvider implements EntityProvider {
     return this.delegate.getProviderName();
   }
 
-  refresh(logger: Logger): Promise<void> {
+  refresh(logger: LoggerService): Promise<void> {
     return this.delegate.refresh(logger);
   }
 }

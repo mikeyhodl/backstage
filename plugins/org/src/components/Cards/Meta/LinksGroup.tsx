@@ -16,13 +16,12 @@
 import { EntityLink } from '@backstage/catalog-model';
 import { IconComponent, useApp } from '@backstage/core-plugin-api';
 import LanguageIcon from '@material-ui/icons/Language';
-import {
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-} from '@material-ui/core';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
+import Divider from '@material-ui/core/Divider';
 import React from 'react';
+import { Link } from '@backstage/core-components';
 
 const WebLink = ({
   href,
@@ -33,9 +32,11 @@ const WebLink = ({
   text?: string;
   Icon?: IconComponent;
 }) => (
-  <ListItem button component="a" key={href} href={href}>
+  <ListItem key={href}>
     <ListItemIcon>{Icon ? <Icon /> : <LanguageIcon />}</ListItemIcon>
-    <ListItemText>{text}</ListItemText>
+    <ListItemText>
+      <Link to={href}>{text}</Link>
+    </ListItemText>
   </ListItem>
 );
 

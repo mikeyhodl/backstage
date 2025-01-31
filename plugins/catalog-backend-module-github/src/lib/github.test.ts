@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-import { setupRequestMockHandlers } from '@backstage/backend-test-utils';
+import {
+  mockServices,
+  registerMswTestHooks,
+} from '@backstage/backend-test-utils';
 import { GroupEntity, UserEntity } from '@backstage/catalog-model';
-import { graphql } from '@octokit/graphql';
-import { graphql as graphqlMsw } from 'msw';
+import { graphql as graphqlOctokit } from '@octokit/graphql';
+import { graphql as graphqlMsw, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { TeamTransformer, UserTransformer } from './defaultTransformers';
-
 import {
+  getOrganizationsFromUser,
   getOrganizationTeams,
   getOrganizationUsers,
   getTeamMembers,
@@ -29,16 +32,26 @@ import {
   QueryResponse,
   GithubUser,
   GithubTeam,
+  createAddEntitiesOperation,
+  createRemoveEntitiesOperation,
+  createReplaceEntitiesOperation,
+  createGraphqlClient,
 } from './github';
-import fetch from 'node-fetch';
+import { Octokit } from '@octokit/core';
+import { throttling } from '@octokit/plugin-throttling';
 
-// Workaround for Node.js 18, where native fetch is available, but not yet picked up by msw
-// TODO(Rugvip): remove once https://github.com/mswjs/msw/issues/1388 is resolved
-(global as any).fetch = fetch;
+jest.mock('@octokit/core', () => ({
+  ...jest.requireActual('@octokit/core'),
+  Octokit: {
+    plugin: jest.fn().mockReturnValue({ defaults: jest.fn() }),
+  },
+}));
 
 describe('github', () => {
   const server = setupServer();
-  setupRequestMockHandlers(server);
+  registerMswTestHooks(server);
+
+  const graphql = graphqlOctokit.defaults({});
 
   describe('getOrganizationUsers using defaultUserMapper', () => {
     it('reads members', async () => {
@@ -72,7 +85,7 @@ describe('github', () => {
       };
 
       server.use(
-        graphqlMsw.query('users', (_req, res, ctx) => res(ctx.data(input))),
+        graphqlMsw.query('users', () => HttpResponse.json({ data: input })),
       );
 
       await expect(
@@ -135,7 +148,7 @@ describe('github', () => {
       };
 
       server.use(
-        graphqlMsw.query('users', (_req, res, ctx) => res(ctx.data(input))),
+        graphqlMsw.query('users', () => HttpResponse.json({ data: input })),
       );
 
       await expect(
@@ -179,7 +192,7 @@ describe('github', () => {
       };
 
       server.use(
-        graphqlMsw.query('users', (_req, res, ctx) => res(ctx.data(input))),
+        graphqlMsw.query('users', () => HttpResponse.json({ data: input })),
       );
 
       const users = await getOrganizationUsers(
@@ -228,7 +241,7 @@ describe('github', () => {
 
     it('reads teams', async () => {
       const output = {
-        groups: [
+        teams: [
           expect.objectContaining({
             metadata: expect.objectContaining({
               name: 'team',
@@ -254,7 +267,7 @@ describe('github', () => {
       };
 
       server.use(
-        graphqlMsw.query('teams', (_req, res, ctx) => res(ctx.data(input))),
+        graphqlMsw.query('teams', () => HttpResponse.json({ data: input })),
       );
 
       await expect(getOrganizationTeams(graphql, 'a')).resolves.toEqual(output);
@@ -328,7 +341,7 @@ describe('github', () => {
 
     it('reads teams', async () => {
       const output = {
-        groups: [
+        teams: [
           expect.objectContaining({
             metadata: expect.objectContaining({
               name: 'Team-custom',
@@ -354,7 +367,7 @@ describe('github', () => {
       };
 
       server.use(
-        graphqlMsw.query('teams', (_req, res, ctx) => res(ctx.data(input))),
+        graphqlMsw.query('teams', () => HttpResponse.json({ data: input })),
       );
 
       await expect(
@@ -408,7 +421,7 @@ describe('github', () => {
       };
 
       const output = {
-        groups: [
+        teams: [
           expect.objectContaining({
             metadata: expect.objectContaining({
               name: 'Team-custom',
@@ -434,7 +447,7 @@ describe('github', () => {
       };
 
       server.use(
-        graphqlMsw.query('teams', (_req, res, ctx) => res(ctx.data(input))),
+        graphqlMsw.query('teams', () => HttpResponse.json({ data: input })),
       );
 
       const teams = await getOrganizationTeams(
@@ -443,8 +456,39 @@ describe('github', () => {
         customTeamTransformer,
       );
 
-      expect(teams.groups).toHaveLength(1);
+      expect(teams.teams).toHaveLength(1);
       expect(teams).toEqual(output);
+    });
+  });
+
+  describe('getOrganizationsFromUser', () => {
+    it('reads orgs from user', async () => {
+      const input: QueryResponse = {
+        user: {
+          organizations: {
+            pageInfo: { hasNextPage: false },
+            nodes: [
+              {
+                login: 'a',
+              },
+              {
+                login: 'b',
+              },
+              {
+                login: 'c',
+              },
+            ],
+          },
+        },
+      };
+
+      server.use(
+        graphqlMsw.query('orgs', () => HttpResponse.json({ data: input })),
+      );
+
+      await expect(getOrganizationsFromUser(graphql, 'foo')).resolves.toEqual({
+        orgs: ['a', 'b', 'c'],
+      });
     });
   });
 
@@ -468,7 +512,7 @@ describe('github', () => {
       };
 
       server.use(
-        graphqlMsw.query('members', (_req, res, ctx) => res(ctx.data(input))),
+        graphqlMsw.query('members', () => HttpResponse.json({ data: input })),
       );
 
       await expect(getTeamMembers(graphql, 'a', 'b')).resolves.toEqual(output);
@@ -485,6 +529,7 @@ describe('github', () => {
                 name: 'backstage',
                 url: 'https://github.com/backstage/backstage',
                 isArchived: false,
+                isFork: false,
                 repositoryTopics: {
                   nodes: [{ topic: { name: 'blah' } }],
                 },
@@ -492,11 +537,13 @@ describe('github', () => {
                   name: 'main',
                 },
                 catalogInfoFile: null,
+                visibility: 'public',
               },
               {
                 name: 'demo',
                 url: 'https://github.com/backstage/demo',
                 isArchived: true,
+                isFork: true,
                 repositoryTopics: { nodes: [] },
                 defaultBranchRef: {
                   name: 'main',
@@ -506,6 +553,7 @@ describe('github', () => {
                   id: 'acb123',
                   text: 'some yaml',
                 },
+                visibility: 'private',
               },
             ],
             pageInfo: {
@@ -521,6 +569,7 @@ describe('github', () => {
             name: 'backstage',
             url: 'https://github.com/backstage/backstage',
             isArchived: false,
+            isFork: false,
             repositoryTopics: {
               nodes: [{ topic: { name: 'blah' } }],
             },
@@ -528,11 +577,13 @@ describe('github', () => {
               name: 'main',
             },
             catalogInfoFile: null,
+            visibility: 'public',
           },
           {
             name: 'demo',
             url: 'https://github.com/backstage/demo',
             isArchived: true,
+            isFork: true,
             repositoryTopics: { nodes: [] },
             defaultBranchRef: {
               name: 'main',
@@ -542,19 +593,200 @@ describe('github', () => {
               id: 'acb123',
               text: 'some yaml',
             },
+            visibility: 'private',
           },
         ],
       };
 
       server.use(
-        graphqlMsw.query('repositories', (_req, res, ctx) =>
-          res(ctx.data(input)),
+        graphqlMsw.query('repositories', () =>
+          HttpResponse.json({ data: input }),
         ),
       );
 
       await expect(
         getOrganizationRepositories(graphql, 'a', 'catalog-info.yaml'),
       ).resolves.toEqual(output);
+    });
+  });
+
+  describe('createAddEntitiesOperation', () => {
+    it('create a function to add deferred entities to a delta operation', () => {
+      const operation = createAddEntitiesOperation('my-id', 'host');
+
+      const userEntity: UserEntity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'User',
+        metadata: {
+          name: 'githubuser',
+          annotations: {
+            'backstage.io/managed-by-location':
+              'url:https://github.com/githubuser',
+            'backstage.io/managed-by-origin-location':
+              'url:https://github.com/githubuser',
+            'github.com/user-login': 'githubuser',
+          },
+        },
+        spec: {
+          memberOf: ['new-team'],
+        },
+      };
+      expect(operation('org', [userEntity])).toEqual({
+        added: [
+          {
+            locationKey: 'github-org-provider:my-id',
+            entity: userEntity,
+          },
+        ],
+        removed: [],
+      });
+    });
+  });
+
+  describe('createRemoveEntitiesOperation', () => {
+    it('create a function to remove deferred entities to a delta operation', () => {
+      const operation = createRemoveEntitiesOperation('my-id', 'host');
+
+      const userEntity: UserEntity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'User',
+        metadata: {
+          name: 'githubuser',
+          annotations: {
+            'backstage.io/managed-by-location':
+              'url:https://github.com/githubuser',
+            'backstage.io/managed-by-origin-location':
+              'url:https://github.com/githubuser',
+            'github.com/user-login': 'githubuser',
+          },
+        },
+        spec: {
+          memberOf: ['new-team'],
+        },
+      };
+      expect(operation('org', [userEntity])).toEqual({
+        removed: [
+          {
+            locationKey: 'github-org-provider:my-id',
+            entity: userEntity,
+          },
+        ],
+        added: [],
+      });
+    });
+  });
+  describe('createReplaceEntitiesOperation', () => {
+    it('create a function to replace deferred entities to a delta operation', () => {
+      const operation = createReplaceEntitiesOperation('my-id', 'host');
+
+      const userEntity: UserEntity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'User',
+        metadata: {
+          name: 'githubuser',
+          annotations: {
+            'backstage.io/managed-by-location':
+              'url:https://github.com/githubuser',
+            'backstage.io/managed-by-origin-location':
+              'url:https://github.com/githubuser',
+            'github.com/user-login': 'githubuser',
+          },
+        },
+        spec: {
+          memberOf: ['new-team'],
+        },
+      };
+      expect(operation('org', [userEntity])).toEqual({
+        removed: [
+          {
+            locationKey: 'github-org-provider:my-id',
+            entity: userEntity,
+          },
+        ],
+        added: [
+          {
+            locationKey: 'github-org-provider:my-id',
+            entity: userEntity,
+          },
+        ],
+      });
+    });
+  });
+
+  describe('createGraphqlClient', () => {
+    const headers = {};
+
+    const baseUrl = 'https://api.github.com';
+
+    const logger = mockServices.rootLogger();
+
+    const mockClient = jest.fn().mockImplementation();
+
+    const graphqlDefaults = jest.fn().mockReturnValue(mockClient);
+    const mockedOctokit = jest.fn().mockImplementation(() => ({
+      graphql: {
+        defaults: graphqlDefaults,
+      },
+    }));
+    (Octokit.plugin as jest.Mock).mockReturnValue(mockedOctokit);
+
+    const rateLimitOptions = {
+      method: 'POST',
+      url: '/graphql',
+    };
+    const client = createGraphqlClient({
+      headers,
+      baseUrl,
+      logger,
+    });
+    it('should return a graphql client with throttling', async () => {
+      expect(client).toBeDefined();
+      expect(Octokit.plugin).toHaveBeenCalledWith(throttling);
+    });
+
+    it('should return a graphql client with the correct options', async () => {
+      expect(graphqlDefaults).toHaveBeenCalledWith({
+        baseUrl,
+        headers,
+      });
+    });
+
+    describe('onRateLimit', () => {
+      it.each([
+        { retryCount: 0, expectedResult: true },
+        { retryCount: 1, expectedResult: true },
+        { retryCount: 2, expectedResult: false },
+      ])('should return %s', async ({ retryCount, expectedResult }) => {
+        const throttleOptions = mockedOctokit.mock.calls[0][0].throttle;
+
+        const result = throttleOptions.onRateLimit(
+          60,
+          rateLimitOptions,
+          undefined,
+          retryCount,
+        );
+
+        expect(result).toBe(expectedResult);
+      });
+    });
+
+    describe('onSecondaryRateLimit', () => {
+      it.each([
+        { retryCount: 0, expectedResult: true },
+        { retryCount: 1, expectedResult: true },
+        { retryCount: 2, expectedResult: false },
+      ])('should return %s', async ({ retryCount, expectedResult }) => {
+        const throttleOptions = mockedOctokit.mock.calls[0][0].throttle;
+
+        const result = throttleOptions.onSecondaryRateLimit(
+          60,
+          rateLimitOptions,
+          undefined,
+          retryCount,
+        );
+
+        expect(result).toBe(expectedResult);
+      });
     });
   });
 });

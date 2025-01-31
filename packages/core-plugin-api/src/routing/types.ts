@@ -21,21 +21,33 @@ import { getOrCreateGlobalSingleton } from '@backstage/version-bridge';
  *
  * @public
  */
-export type AnyParams = { [param in string]: string } | undefined;
+export type AnyRouteRefParams = { [param in string]: string } | undefined;
+
+/**
+ * @deprecated use {@link AnyRouteRefParams} instead
+ * @public
+ */
+export type AnyParams = AnyRouteRefParams;
 
 /**
  * Type describing the key type of a route parameter mapping.
  *
  * @public
+ * @deprecated this type is deprecated and will be removed in the future
  */
-export type ParamKeys<Params extends AnyParams> = keyof Params extends never
+export type ParamKeys<Params extends AnyParams> = [AnyRouteRefParams] extends [
+  Params,
+]
+  ? string[]
+  : keyof Params extends never
   ? []
-  : (keyof Params)[];
+  : Array<keyof Params>;
 
 /**
  * Optional route params.
  *
  * @public
+ * @deprecated this type is deprecated and will be removed in the future
  */
 export type OptionalParams<Params extends { [param in string]: string }> =
   Params[keyof Params] extends never ? undefined : Params;
@@ -81,8 +93,10 @@ export const routeRefType: unique symbol = getOrCreateGlobalSingleton<any>(
  * @public
  */
 export type RouteRef<Params extends AnyParams = any> = {
+  /** @deprecated access to this property will be removed in the future */
   $$routeRefType: 'absolute'; // See routeRefType above
 
+  /** @deprecated access to this property will be removed in the future */
   params: ParamKeys<Params>;
 };
 
@@ -96,12 +110,15 @@ export type RouteRef<Params extends AnyParams = any> = {
  * @public
  */
 export type SubRouteRef<Params extends AnyParams = any> = {
+  /** @deprecated access to this property will be removed in the future */
   $$routeRefType: 'sub'; // See routeRefType above
 
+  /** @deprecated access to this property will be removed in the future */
   parent: RouteRef;
 
   path: string;
 
+  /** @deprecated access to this property will be removed in the future */
   params: ParamKeys<Params>;
 };
 
@@ -118,8 +135,10 @@ export type ExternalRouteRef<
   Params extends AnyParams = any,
   Optional extends boolean = any,
 > = {
+  /** @deprecated access to this property will be removed in the future */
   $$routeRefType: 'external'; // See routeRefType above
 
+  /** @deprecated access to this property will be removed in the future */
   params: ParamKeys<Params>;
 
   optional?: Optional;

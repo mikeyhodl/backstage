@@ -14,94 +14,131 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import {
-  PluginTaskScheduler,
-  TaskInvocationDefinition,
-  TaskRunner,
-} from '@backstage/backend-tasks';
-import { ConfigReader } from '@backstage/config';
-import { EntityProviderConnection } from '@backstage/plugin-catalog-backend';
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+  SchedulerServiceTaskInvocationDefinition,
+} from '@backstage/backend-plugin-api';
+import { Config, ConfigReader } from '@backstage/config';
+import {
+  DeferredEntity,
+  EntityProviderConnection,
+  locationSpecToMetadataName,
+} from '@backstage/plugin-catalog-node';
 import { GithubEntityProvider } from './GithubEntityProvider';
 import * as helpers from '../lib/github';
+import { EventParams } from '@backstage/plugin-events-node';
+import { mockServices } from '@backstage/backend-test-utils';
+import {
+  Commit,
+  PushEvent,
+  RepositoryEvent,
+  RepositoryRenamedEvent,
+} from '@octokit/webhooks-types';
 
 jest.mock('../lib/github', () => {
   return {
     getOrganizationRepositories: jest.fn(),
   };
 });
-class PersistingTaskRunner implements TaskRunner {
-  private tasks: TaskInvocationDefinition[] = [];
+class PersistingTaskRunner implements SchedulerServiceTaskRunner {
+  private tasks: SchedulerServiceTaskInvocationDefinition[] = [];
 
   getTasks() {
     return this.tasks;
   }
 
-  run(task: TaskInvocationDefinition): Promise<void> {
+  run(task: SchedulerServiceTaskInvocationDefinition): Promise<void> {
     this.tasks.push(task);
     return Promise.resolve(undefined);
   }
 }
 
-const logger = getVoidLogger();
+const logger = mockServices.logger.mock();
 
 describe('GithubEntityProvider', () => {
-  afterEach(() => jest.resetAllMocks());
+  const createSingleProviderConfig = (options?: {
+    providerConfig?: object;
+    unwrapped?: boolean;
+  }): Config => {
+    const providerConfig = {
+      organization: 'test-org',
+      ...options?.providerConfig,
+    };
 
-  it('no provider config', () => {
+    return new ConfigReader({
+      catalog: {
+        providers: {
+          github: options?.unwrapped
+            ? providerConfig
+            : { myProvider: providerConfig },
+        },
+      },
+    });
+  };
+
+  const createProviders = (config: Config) => {
     const schedule = new PersistingTaskRunner();
-    const config = new ConfigReader({});
-    const providers = GithubEntityProvider.fromConfig(config, {
+    return GithubEntityProvider.fromConfig(config, {
       logger,
       schedule,
     });
+  };
+
+  const createExpectedEntitiesForUrl = (url: string): DeferredEntity[] => {
+    return [
+      {
+        entity: {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Location',
+          metadata: {
+            annotations: {
+              'backstage.io/managed-by-location': `url:${url}`,
+              'backstage.io/managed-by-origin-location': `url:${url}`,
+            },
+            name: locationSpecToMetadataName({ type: 'url', target: url }),
+          },
+          spec: {
+            presence: 'optional',
+            target: url,
+            type: 'url',
+          },
+        },
+        locationKey: 'github-provider:myProvider',
+      },
+    ];
+  };
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('no provider config', () => {
+    const config = new ConfigReader({});
+    const providers = createProviders(config);
 
     expect(providers).toHaveLength(0);
   });
 
   it('single simple provider config', () => {
-    const schedule = new PersistingTaskRunner();
-    const config = new ConfigReader({
-      catalog: {
-        providers: {
-          github: {
-            organization: 'test-org',
-          },
-        },
-      },
-    });
-    const providers = GithubEntityProvider.fromConfig(config, {
-      logger,
-      schedule,
-    });
+    const config = createSingleProviderConfig({ unwrapped: true });
+    const providers = createProviders(config);
 
     expect(providers).toHaveLength(1);
     expect(providers[0].getProviderName()).toEqual('github-provider:default');
   });
 
   it('throws when the integration config does not exist', () => {
-    const schedule = new PersistingTaskRunner();
-    const config = new ConfigReader({
-      catalog: {
-        providers: {
-          github: {
-            organization: 'test-org',
-            host: 'ghe.internal.com',
-          },
-        },
+    const config = createSingleProviderConfig({
+      providerConfig: {
+        host: 'ghe.internal.com',
       },
     });
 
-    expect(() =>
-      GithubEntityProvider.fromConfig(config, {
-        logger,
-        schedule,
-      }),
-    ).toThrow(/There is no GitHub config that matches host ghe.internal.com/);
+    expect(() => createProviders(config)).toThrow(
+      /There is no GitHub config that matches host ghe.internal.com/,
+    );
   });
 
   it('multiple provider configs', () => {
-    const schedule = new PersistingTaskRunner();
     const config = new ConfigReader({
       catalog: {
         providers: {
@@ -116,10 +153,7 @@ describe('GithubEntityProvider', () => {
         },
       },
     });
-    const providers = GithubEntityProvider.fromConfig(config, {
-      logger,
-      schedule,
-    });
+    const providers = createProviders(config);
 
     expect(providers).toHaveLength(2);
     expect(providers[0].getProviderName()).toEqual(
@@ -131,19 +165,12 @@ describe('GithubEntityProvider', () => {
   });
 
   it('apply full update on scheduled execution with basic filters', async () => {
-    const config = new ConfigReader({
-      catalog: {
-        providers: {
-          github: {
-            myProvider: {
-              organization: 'test-org',
-              catalogPath: 'custom/path/catalog-custom.yaml',
-              filters: {
-                branch: 'main',
-                repository: 'test-.*',
-              },
-            },
-          },
+    const config = createSingleProviderConfig({
+      providerConfig: {
+        catalogPath: 'custom/path/catalog-custom.yaml',
+        filters: {
+          branch: 'main',
+          repository: 'test-.*',
         },
       },
     });
@@ -171,6 +198,7 @@ describe('GithubEntityProvider', () => {
             url: 'https://github.com/test-org/test-repo',
             repositoryTopics: { nodes: [] },
             isArchived: false,
+            isFork: false,
             defaultBranchRef: {
               name: 'main',
             },
@@ -179,6 +207,7 @@ describe('GithubEntityProvider', () => {
               id: 'abc123',
               text: 'some yaml',
             },
+            visibility: 'public',
           },
         ],
       }),
@@ -191,27 +220,7 @@ describe('GithubEntityProvider', () => {
     await (taskDef.fn as () => Promise<void>)();
 
     const url = `https://github.com/test-org/test-repo/blob/main/custom/path/catalog-custom.yaml`;
-    const expectedEntities = [
-      {
-        entity: {
-          apiVersion: 'backstage.io/v1alpha1',
-          kind: 'Location',
-          metadata: {
-            annotations: {
-              'backstage.io/managed-by-location': `url:${url}`,
-              'backstage.io/managed-by-origin-location': `url:${url}`,
-            },
-            name: 'generated-5e4b9498097f15434e88c477cfba6c079aa8ca7f',
-          },
-          spec: {
-            presence: 'optional',
-            target: `${url}`,
-            type: 'url',
-          },
-        },
-        locationKey: 'github-provider:myProvider',
-      },
-    ];
+    const expectedEntities = createExpectedEntitiesForUrl(url);
 
     expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(1);
     expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
@@ -273,6 +282,7 @@ describe('GithubEntityProvider', () => {
               ],
             },
             isArchived: false,
+            isFork: false,
             defaultBranchRef: {
               name: 'main',
             },
@@ -281,6 +291,7 @@ describe('GithubEntityProvider', () => {
               id: 'abc123',
               text: 'some yaml',
             },
+            visibility: 'public',
           },
         ],
       }),
@@ -352,6 +363,7 @@ describe('GithubEntityProvider', () => {
               ],
             },
             isArchived: false,
+            isFork: false,
             defaultBranchRef: {
               name: 'main',
             },
@@ -360,6 +372,7 @@ describe('GithubEntityProvider', () => {
               id: 'abc123',
               text: 'some yaml',
             },
+            visibility: 'public',
           },
         ],
       }),
@@ -372,27 +385,7 @@ describe('GithubEntityProvider', () => {
     await (taskDef.fn as () => Promise<void>)();
 
     const url = `https://github.com/test-org/test-repo/blob/main/custom/path/catalog-custom.yaml`;
-    const expectedEntities = [
-      {
-        entity: {
-          apiVersion: 'backstage.io/v1alpha1',
-          kind: 'Location',
-          metadata: {
-            annotations: {
-              'backstage.io/managed-by-location': `url:${url}`,
-              'backstage.io/managed-by-origin-location': `url:${url}`,
-            },
-            name: 'generated-5e4b9498097f15434e88c477cfba6c079aa8ca7f',
-          },
-          spec: {
-            presence: 'optional',
-            target: `${url}`,
-            type: 'url',
-          },
-        },
-        locationKey: 'github-provider:myProvider',
-      },
-    ];
+    const expectedEntities = createExpectedEntitiesForUrl(url);
 
     expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(1);
     expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
@@ -444,10 +437,12 @@ describe('GithubEntityProvider', () => {
               nodes: [],
             },
             isArchived: false,
+            isFork: false,
             defaultBranchRef: {
               name: 'main',
             },
             catalogInfoFile: null,
+            visibility: 'public',
           },
           {
             name: 'another-repo',
@@ -456,6 +451,7 @@ describe('GithubEntityProvider', () => {
               nodes: [],
             },
             isArchived: false,
+            isFork: false,
             defaultBranchRef: {
               name: 'main',
             },
@@ -464,6 +460,7 @@ describe('GithubEntityProvider', () => {
               id: 'abc123',
               text: 'some yaml',
             },
+            visibility: 'public',
           },
         ],
       }),
@@ -476,27 +473,7 @@ describe('GithubEntityProvider', () => {
     await (taskDef.fn as () => Promise<void>)();
 
     const url = `https://github.com/test-org/another-repo/blob/main/catalog-custom.yaml`;
-    const expectedEntities = [
-      {
-        entity: {
-          apiVersion: 'backstage.io/v1alpha1',
-          kind: 'Location',
-          metadata: {
-            annotations: {
-              'backstage.io/managed-by-location': `url:${url}`,
-              'backstage.io/managed-by-origin-location': `url:${url}`,
-            },
-            name: 'generated-934f500db2ba2e8ea3524567926f45a73bb0b532',
-          },
-          spec: {
-            presence: 'optional',
-            target: `${url}`,
-            type: 'url',
-          },
-        },
-        locationKey: 'github-provider:myProvider',
-      },
-    ];
+    const expectedEntities = createExpectedEntitiesForUrl(url);
 
     expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(1);
     expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
@@ -556,6 +533,7 @@ describe('GithubEntityProvider', () => {
               ],
             },
             isArchived: false,
+            isFork: false,
             defaultBranchRef: {
               name: 'main',
             },
@@ -564,6 +542,7 @@ describe('GithubEntityProvider', () => {
               id: 'abc123',
               text: 'some yaml',
             },
+            visibility: 'public',
           },
           {
             name: 'test-repo-2',
@@ -579,6 +558,7 @@ describe('GithubEntityProvider', () => {
               ],
             },
             isArchived: false,
+            isFork: false,
             defaultBranchRef: {
               name: 'main',
             },
@@ -587,6 +567,7 @@ describe('GithubEntityProvider', () => {
               id: 'abc123',
               text: 'some yaml',
             },
+            visibility: 'public',
           },
           {
             name: 'test-repo-3',
@@ -599,6 +580,7 @@ describe('GithubEntityProvider', () => {
               ],
             },
             isArchived: false,
+            isFork: false,
             defaultBranchRef: {
               name: 'main',
             },
@@ -607,6 +589,7 @@ describe('GithubEntityProvider', () => {
               id: 'abc123',
               text: 'some yaml',
             },
+            visibility: 'public',
           },
         ],
       }),
@@ -619,27 +602,7 @@ describe('GithubEntityProvider', () => {
     await (taskDef.fn as () => Promise<void>)();
 
     const url = `https://github.com/test-org/test-repo/blob/main/custom/path/catalog-custom.yaml`;
-    const expectedEntities = [
-      {
-        entity: {
-          apiVersion: 'backstage.io/v1alpha1',
-          kind: 'Location',
-          metadata: {
-            annotations: {
-              'backstage.io/managed-by-location': `url:${url}`,
-              'backstage.io/managed-by-origin-location': `url:${url}`,
-            },
-            name: 'generated-5e4b9498097f15434e88c477cfba6c079aa8ca7f',
-          },
-          spec: {
-            presence: 'optional',
-            target: `${url}`,
-            type: 'url',
-          },
-        },
-        locationKey: 'github-provider:myProvider',
-      },
-    ];
+    const expectedEntities = createExpectedEntitiesForUrl(url);
 
     expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(1);
     expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
@@ -649,15 +612,7 @@ describe('GithubEntityProvider', () => {
   });
 
   it('fail without schedule and scheduler', () => {
-    const config = new ConfigReader({
-      catalog: {
-        providers: {
-          github: {
-            organization: 'test-org',
-          },
-        },
-      },
-    });
+    const config = createSingleProviderConfig();
 
     expect(() =>
       GithubEntityProvider.fromConfig(config, {
@@ -666,47 +621,19 @@ describe('GithubEntityProvider', () => {
     ).toThrow('Either schedule or scheduler must be provided');
   });
 
-  it('fail with scheduler but no schedule config', () => {
-    const scheduler = {
-      createScheduledTaskRunner: (_: any) => jest.fn(),
-    } as unknown as PluginTaskScheduler;
-    const config = new ConfigReader({
-      catalog: {
-        providers: {
-          github: {
-            organization: 'test-org',
-          },
-        },
-      },
-    });
-
-    expect(() =>
-      GithubEntityProvider.fromConfig(config, {
-        logger,
-        scheduler,
-      }),
-    ).toThrow(
-      'No schedule provided neither via code nor config for github-provider:default',
-    );
-  });
-
   it('single simple provider config with schedule in config', async () => {
     const schedule = new PersistingTaskRunner();
     const scheduler = {
       createScheduledTaskRunner: (_: any) => schedule,
-    } as unknown as PluginTaskScheduler;
-    const config = new ConfigReader({
-      catalog: {
-        providers: {
-          github: {
-            organization: 'test-org',
-            schedule: {
-              frequency: 'P1M',
-              timeout: 'PT3M',
-            },
-          },
+    } as unknown as SchedulerService;
+    const config = createSingleProviderConfig({
+      providerConfig: {
+        schedule: {
+          frequency: 'P1M',
+          timeout: 'PT3M',
         },
       },
+      unwrapped: true,
     });
     const providers = GithubEntityProvider.fromConfig(config, {
       logger,
@@ -715,5 +642,845 @@ describe('GithubEntityProvider', () => {
 
     expect(providers).toHaveLength(1);
     expect(providers[0].getProviderName()).toEqual('github-provider:default');
+  });
+
+  describe('on event', () => {
+    const createExpectedEntitiesForEvent = (
+      event: EventParams<PushEvent | RepositoryEvent>,
+      options?: { branch?: string; catalogFilePath?: string },
+    ): DeferredEntity[] => {
+      const url = `${event.eventPayload.repository.html_url}/blob/${
+        options?.branch ?? 'main'
+      }/${options?.catalogFilePath ?? 'catalog-info.yaml'}`;
+      return createExpectedEntitiesForUrl(url);
+    };
+
+    describe('on push event', () => {
+      const createPushEvent = (options?: {
+        catalogFile?: {
+          action?: 'added' | 'removed' | 'modified';
+          path?: string;
+        };
+        org?: string;
+        ref?: string;
+      }): EventParams<PushEvent> => {
+        const organization = options?.org ?? 'test-org';
+        const repo = {
+          default_branch: 'main',
+          master_branch: 'main',
+          name: 'test-repo',
+          organization,
+          topics: [],
+          html_url: `https://github.com/${organization}/test-repo`,
+          url: `https://github.com/${organization}/test-repo`,
+        } as Partial<PushEvent['repository']>;
+
+        const catalogCommit = {
+          added: [] as string[],
+          modified: [] as string[],
+          removed: [] as string[],
+        };
+        catalogCommit[options?.catalogFile?.action ?? 'modified'] = [
+          options?.catalogFile?.path ?? 'catalog-info.yaml',
+        ];
+
+        const event = {
+          ref: options?.ref ?? 'refs/heads/main',
+          repository: repo as PushEvent['repository'],
+          organization: {
+            login: organization,
+          },
+          created: true,
+          deleted: false,
+          forced: false,
+          commits: [
+            {
+              added: ['new-file.yaml'],
+              removed: [],
+              modified: [],
+            },
+            catalogCommit,
+          ] as Partial<Commit>[],
+        } as PushEvent;
+
+        return {
+          topic: 'github.push',
+          metadata: {
+            'x-github-event': 'push',
+          },
+          eventPayload: event,
+        };
+      };
+
+      it('apply delta update on added files with glob catalog path', async () => {
+        const config = createSingleProviderConfig({
+          providerConfig: {
+            catalogPath: '**/catalog-info.yaml',
+          },
+        });
+        const provider = createProviders(config)[0];
+
+        const entityProviderConnection: EntityProviderConnection = {
+          applyMutation: jest.fn(),
+          refresh: jest.fn(),
+        };
+        await provider.connect(entityProviderConnection);
+
+        const event = createPushEvent({
+          catalogFile: {
+            action: 'added',
+            path: 'folder1/folder2/folder3/catalog-info.yaml',
+          },
+        });
+        const expectedEntities = createExpectedEntitiesForEvent(event, {
+          catalogFilePath: 'folder1/folder2/folder3/catalog-info.yaml',
+        });
+
+        await provider.onEvent(event);
+
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(1);
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+          type: 'delta',
+          added: expectedEntities,
+          removed: [],
+        });
+      });
+
+      it('apply delta update on added files', async () => {
+        const config = createSingleProviderConfig();
+        const provider = createProviders(config)[0];
+
+        const entityProviderConnection: EntityProviderConnection = {
+          applyMutation: jest.fn(),
+          refresh: jest.fn(),
+        };
+        await provider.connect(entityProviderConnection);
+
+        const event = createPushEvent({
+          catalogFile: {
+            action: 'added',
+          },
+        });
+        const expectedEntities = createExpectedEntitiesForEvent(event);
+
+        await provider.onEvent(event);
+
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(1);
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+          type: 'delta',
+          added: expectedEntities,
+          removed: [],
+        });
+      });
+
+      it('apply delta update on removed files', async () => {
+        const config = createSingleProviderConfig();
+        const provider = createProviders(config)[0];
+
+        const entityProviderConnection: EntityProviderConnection = {
+          applyMutation: jest.fn(),
+          refresh: jest.fn(),
+        };
+        await provider.connect(entityProviderConnection);
+
+        const event = createPushEvent({
+          catalogFile: {
+            action: 'removed',
+          },
+        });
+        const expectedEntities = createExpectedEntitiesForEvent(event);
+
+        await provider.onEvent(event);
+
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(1);
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+          type: 'delta',
+          added: [],
+          removed: expectedEntities,
+        });
+      });
+
+      it('apply refresh call on modified files', async () => {
+        const config = createSingleProviderConfig();
+        const provider = createProviders(config)[0];
+
+        const entityProviderConnection: EntityProviderConnection = {
+          applyMutation: jest.fn(),
+          refresh: jest.fn(),
+        };
+        await provider.connect(entityProviderConnection);
+
+        const event = createPushEvent();
+
+        await provider.onEvent(event);
+
+        expect(entityProviderConnection.refresh).toHaveBeenCalledTimes(1);
+        expect(entityProviderConnection.refresh).toHaveBeenCalledWith({
+          keys: [
+            'url:https://github.com/test-org/test-repo/tree/main/catalog-info.yaml',
+            'url:https://github.com/test-org/test-repo/blob/main/catalog-info.yaml',
+          ],
+        });
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(0);
+      });
+
+      it('apply refresh call on modified files with glob catalog path', async () => {
+        const config = new ConfigReader({
+          catalog: {
+            providers: {
+              github: {
+                organization: 'test-org',
+                catalogPath: '**/catalog-info.yaml',
+              },
+            },
+          },
+        });
+        const provider = createProviders(config)[0];
+
+        const entityProviderConnection: EntityProviderConnection = {
+          applyMutation: jest.fn(),
+          refresh: jest.fn(),
+        };
+        await provider.connect(entityProviderConnection);
+
+        const event = createPushEvent();
+
+        await provider.onEvent(event);
+
+        expect(entityProviderConnection.refresh).toHaveBeenCalledTimes(1);
+        expect(entityProviderConnection.refresh).toHaveBeenCalledWith({
+          keys: [
+            'url:https://github.com/test-org/test-repo/tree/main/catalog-info.yaml',
+            'url:https://github.com/test-org/test-repo/blob/main/catalog-info.yaml',
+            'url:https://github.com/test-org/test-repo/tree/main/**/catalog-info.yaml',
+          ],
+        });
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(0);
+      });
+
+      it('should process repository when match filters', async () => {
+        const config = createSingleProviderConfig({
+          providerConfig: {
+            filters: {
+              branch: 'my-special-branch',
+              repository: 'test-repo',
+            },
+          },
+        });
+        const provider = createProviders(config)[0];
+
+        const entityProviderConnection: EntityProviderConnection = {
+          applyMutation: jest.fn(),
+          refresh: jest.fn(),
+        };
+        await provider.connect(entityProviderConnection);
+
+        const event = createPushEvent({ ref: 'refs/heads/my-special-branch' });
+
+        await provider.onEvent(event);
+
+        expect(entityProviderConnection.refresh).toHaveBeenCalledTimes(1);
+        expect(entityProviderConnection.refresh).toHaveBeenCalledWith({
+          keys: [
+            'url:https://github.com/test-org/test-repo/tree/my-special-branch/catalog-info.yaml',
+            'url:https://github.com/test-org/test-repo/blob/my-special-branch/catalog-info.yaml',
+          ],
+        });
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(0);
+      });
+
+      it("should skip process when didn't match filters", async () => {
+        const config = createSingleProviderConfig({
+          providerConfig: {
+            filters: {
+              repository: 'only-special-repository',
+            },
+          },
+        });
+        const provider = createProviders(config)[0];
+
+        const entityProviderConnection: EntityProviderConnection = {
+          applyMutation: jest.fn(),
+          refresh: jest.fn(),
+        };
+        await provider.connect(entityProviderConnection);
+
+        const event = createPushEvent();
+
+        await provider.onEvent(event);
+
+        expect(entityProviderConnection.refresh).toHaveBeenCalledTimes(0);
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(0);
+      });
+
+      it("should skip process when didn't match org", async () => {
+        const config = createSingleProviderConfig({
+          providerConfig: {
+            filters: {
+              branch: 'my-special-branch',
+              repository: 'test-repo',
+            },
+          },
+        });
+        const provider = createProviders(config)[0];
+
+        const entityProviderConnection: EntityProviderConnection = {
+          applyMutation: jest.fn(),
+          refresh: jest.fn(),
+        };
+        await provider.connect(entityProviderConnection);
+
+        const event = createPushEvent({
+          ref: 'refs/heads/my-special-branch',
+          org: 'other-org',
+        });
+
+        await provider.onEvent(event);
+
+        expect(entityProviderConnection.refresh).toHaveBeenCalledTimes(0);
+        expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    describe('on repository event', () => {
+      const createRepoEvent = (
+        action: RepositoryEvent['action'],
+      ): EventParams<RepositoryEvent> => {
+        const repo = {
+          name: 'test-repo',
+          html_url: 'https://github.com/test-org/test-repo',
+          url: 'https://api.github.com/repos/test-org/test-repo',
+          default_branch: 'main',
+          master_branch: 'main',
+          topics: [],
+          archived: action === 'archived',
+          private: action !== 'publicized',
+        } as Partial<RepositoryEvent['repository']>;
+
+        const event = {
+          action,
+          repository: repo as RepositoryEvent['repository'],
+          organization: {
+            login: 'test-org',
+          },
+        } as RepositoryEvent;
+
+        if (action === 'renamed') {
+          (event as RepositoryRenamedEvent).changes = {
+            repository: {
+              name: {
+                from: `old-${event.repository.name}`,
+              },
+            },
+          };
+        }
+
+        return {
+          topic: 'github.repository',
+          metadata: {
+            'x-github-event': 'repository',
+          },
+          eventPayload: event,
+        };
+      };
+
+      describe('on repository archived event', () => {
+        it('skip on non-matching org', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              organization: 'other-org',
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('archived');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+
+        it('apply delta update removing entities', async () => {
+          const config = createSingleProviderConfig();
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('archived');
+          const expectedEntities = createExpectedEntitiesForEvent(event);
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            1,
+          );
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+            type: 'delta',
+            added: [],
+            removed: expectedEntities,
+          });
+        });
+      });
+
+      describe('on repository created event', () => {
+        it('skip', async () => {
+          const config = createSingleProviderConfig();
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('created');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+      });
+
+      describe('on repository deleted event', () => {
+        it('skip on non-matching org', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              organization: 'other-org',
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('deleted');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+
+        it('apply delta update removing entities', async () => {
+          const config = createSingleProviderConfig();
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('deleted');
+          const expectedEntities = createExpectedEntitiesForEvent(event);
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            1,
+          );
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+            type: 'delta',
+            added: [],
+            removed: expectedEntities,
+          });
+        });
+      });
+
+      describe('on repository edited event', () => {
+        it('skip on non-matching org', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              organization: 'other-org',
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('edited');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+
+        it('apply delta update removing entities with non-matching filters', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              filters: {
+                topic: {
+                  include: ['backstage-include'],
+                },
+              },
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('edited');
+          const expectedEntities = createExpectedEntitiesForEvent(event);
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            1,
+          );
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+            type: 'delta',
+            added: [],
+            removed: expectedEntities,
+          });
+        });
+
+        it('apply no delta update with matching filters', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              filters: {
+                topic: {
+                  include: ['backstage-include'],
+                },
+              },
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('edited');
+          event.eventPayload.repository.topics = ['backstage-include'];
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+      });
+
+      describe('on repository privatized event', () => {
+        it('skip', async () => {
+          const config = createSingleProviderConfig();
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('privatized');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+      });
+
+      describe('on repository publicized event', () => {
+        it('skip', async () => {
+          const config = createSingleProviderConfig();
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('publicized');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+      });
+
+      describe('on repository renamed event', () => {
+        it('skip on non-matching org', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              organization: 'other-org',
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('renamed');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+
+        it('apply delta update removing entities with non-matching filters', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              filters: {
+                repository: 'other-.*',
+              },
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent(
+            'renamed',
+          ) as EventParams<RepositoryRenamedEvent>;
+          const urlOldRepo = `https://github.com/${event.eventPayload.organization?.login}/${event.eventPayload.changes.repository.name.from}/blob/main/catalog-info.yaml`;
+          const expectedEntitiesRemoved =
+            createExpectedEntitiesForUrl(urlOldRepo);
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            1,
+          );
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+            type: 'delta',
+            added: [],
+            removed: expectedEntitiesRemoved,
+          });
+        });
+
+        it('apply delta update removing and adding entities with matching filters', async () => {
+          const config = createSingleProviderConfig();
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent(
+            'renamed',
+          ) as EventParams<RepositoryRenamedEvent>;
+          const urlOldRepo = `https://github.com/${event.eventPayload.organization?.login}/${event.eventPayload.changes.repository.name.from}/blob/main/catalog-info.yaml`;
+          const expectedEntitiesRemoved =
+            createExpectedEntitiesForUrl(urlOldRepo);
+          const expectedEntitiesAdded = createExpectedEntitiesForEvent(event);
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            2,
+          );
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+            type: 'delta',
+            added: [],
+            removed: expectedEntitiesRemoved,
+          });
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+            type: 'delta',
+            added: expectedEntitiesAdded,
+            removed: [],
+          });
+        });
+      });
+
+      describe('on repository transferred event', () => {
+        it('skip on non-matching org', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              organization: 'other-org',
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('transferred');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+
+        it('apply no delta update with non-matching filters', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              filters: {
+                topic: {
+                  include: ['backstage-include'],
+                },
+              },
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('transferred');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+
+        it('apply delta update adding entities with matching filters', async () => {
+          const config = createSingleProviderConfig();
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('transferred');
+          const expectedEntitiesAdded = createExpectedEntitiesForEvent(event);
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            1,
+          );
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+            type: 'delta',
+            added: expectedEntitiesAdded,
+            removed: [],
+          });
+        });
+      });
+
+      describe('on repository unarchived event', () => {
+        it('skip on non-matching org', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              organization: 'other-org',
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('unarchived');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+
+        it('apply no delta update with non-matching filters', async () => {
+          const config = createSingleProviderConfig({
+            providerConfig: {
+              filters: {
+                topic: {
+                  include: ['backstage-include'],
+                },
+              },
+            },
+          });
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('unarchived');
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            0,
+          );
+        });
+
+        it('apply delta update adding entities with matching filters', async () => {
+          const config = createSingleProviderConfig();
+          const provider = createProviders(config)[0];
+
+          const entityProviderConnection: EntityProviderConnection = {
+            applyMutation: jest.fn(),
+            refresh: jest.fn(),
+          };
+          await provider.connect(entityProviderConnection);
+
+          const event = createRepoEvent('unarchived');
+          const expectedEntitiesAdded = createExpectedEntitiesForEvent(event);
+
+          await provider.onEvent(event);
+
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledTimes(
+            1,
+          );
+          expect(entityProviderConnection.applyMutation).toHaveBeenCalledWith({
+            type: 'delta',
+            added: expectedEntitiesAdded,
+            removed: [],
+          });
+        });
+      });
+    });
   });
 });

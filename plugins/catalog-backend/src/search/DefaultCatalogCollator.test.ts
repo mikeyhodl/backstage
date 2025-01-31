@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
+import { TokenManager } from '@backstage/backend-common';
 import {
-  PluginEndpointDiscovery,
-  TokenManager,
-} from '@backstage/backend-common';
-import { setupRequestMockHandlers } from '@backstage/backend-test-utils';
+  mockServices,
+  registerMswTestHooks,
+} from '@backstage/backend-test-utils';
 import { Entity } from '@backstage/catalog-model';
 import { DefaultCatalogCollator } from './DefaultCatalogCollator';
 import { setupServer } from 'msw/node';
@@ -58,22 +58,20 @@ const expectedEntities: Entity[] = [
 ];
 
 describe('DefaultCatalogCollator', () => {
-  let mockDiscoveryApi: jest.Mocked<PluginEndpointDiscovery>;
+  const mockDiscovery = mockServices.discovery.mock({
+    getBaseUrl: async () => 'http://localhost:7007',
+  });
   let mockTokenManager: jest.Mocked<TokenManager>;
   let collator: DefaultCatalogCollator;
 
-  setupRequestMockHandlers(server);
+  registerMswTestHooks(server);
   beforeAll(() => {
-    mockDiscoveryApi = {
-      getBaseUrl: jest.fn().mockResolvedValue('http://localhost:7007'),
-      getExternalBaseUrl: jest.fn(),
-    };
     mockTokenManager = {
       getToken: jest.fn().mockResolvedValue({ token: '' }),
       authenticate: jest.fn(),
     };
     collator = new DefaultCatalogCollator({
-      discovery: mockDiscoveryApi,
+      discovery: mockDiscovery,
       tokenManager: mockTokenManager,
     });
   });
@@ -98,7 +96,7 @@ describe('DefaultCatalogCollator', () => {
 
   it('fetches from the configured catalog service', async () => {
     const documents = await collator.execute();
-    expect(mockDiscoveryApi.getBaseUrl).toHaveBeenCalledWith('catalog');
+    expect(mockDiscovery.getBaseUrl).toHaveBeenCalledWith('catalog');
     expect(documents).toHaveLength(expectedEntities.length);
   });
 
@@ -117,7 +115,7 @@ describe('DefaultCatalogCollator', () => {
       },
     });
     expect(documents[1]).toMatchObject({
-      title: expectedEntities[1].metadata.title,
+      title: `${expectedEntities[1].metadata.title} (${expectedEntities[1].metadata.name})`,
       location: '/catalog/default/component/test-entity-2',
       text: expectedEntities[1].metadata.description,
       namespace: 'default',
@@ -133,7 +131,7 @@ describe('DefaultCatalogCollator', () => {
   it('maps a returned entity with a custom locationTemplate', async () => {
     // Provide an alternate location template.
     collator = new DefaultCatalogCollator({
-      discovery: mockDiscoveryApi,
+      discovery: mockDiscovery,
       tokenManager: mockTokenManager,
       locationTemplate: '/software/:name',
     });
@@ -147,7 +145,7 @@ describe('DefaultCatalogCollator', () => {
   it('allows filtering of the retrieved catalog entities', async () => {
     // Provide an alternate location template.
     collator = DefaultCatalogCollator.fromConfig(new ConfigReader({}), {
-      discovery: mockDiscoveryApi,
+      discovery: mockDiscovery,
       tokenManager: mockTokenManager,
       filter: {
         kind: ['Foo', 'Bar'],

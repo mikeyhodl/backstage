@@ -21,19 +21,9 @@ import {
   SearchContextProvider,
   useSearch,
 } from '@backstage/plugin-search-react';
-import { makeStyles, Paper } from '@material-ui/core';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { TechDocsSearchResultListItem } from './TechDocsSearchResultListItem';
-
-const useStyles = makeStyles(theme => ({
-  root: {
-    width: '100%',
-  },
-  bar: {
-    padding: theme.spacing(1),
-  },
-}));
 
 /**
  * Props for {@link TechDocsSearch}
@@ -44,6 +34,7 @@ export type TechDocsSearchProps = {
   entityId: CompoundEntityRef;
   entityTitle?: string;
   debounceTime?: number;
+  searchResultUrlMapper?: (url: string) => string;
 };
 
 type TechDocsDoc = {
@@ -68,14 +59,19 @@ const isTechDocsSearchResult = (
 };
 
 const TechDocsSearchBar = (props: TechDocsSearchProps) => {
-  const { entityId, entityTitle, debounceTime = 150 } = props;
+  const {
+    entityId,
+    entityTitle,
+    debounceTime = 150,
+    searchResultUrlMapper,
+  } = props;
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const {
     setFilters,
+    term,
     result: { loading, value: searchVal },
   } = useSearch();
-  const classes = useStyles();
   const [options, setOptions] = useState<any[]>([]);
   useEffect(() => {
     let mounted = true;
@@ -112,48 +108,47 @@ const TechDocsSearchBar = (props: TechDocsSearchProps) => {
   ) => {
     if (isTechDocsSearchResult(selection)) {
       const { location } = selection.document;
-      navigate(location);
+      navigate(
+        searchResultUrlMapper ? searchResultUrlMapper(location) : location,
+      );
     }
   };
 
   return (
-    <Paper className={classes.bar} variant="outlined">
-      <SearchAutocomplete
-        classes={{ root: classes.root }}
-        data-testid="techdocs-search-bar"
-        size="small"
-        open={open}
-        getOptionLabel={() => ''}
-        filterOptions={x => {
-          return x; // This is needed to get renderOption to be called after options change. Bug in material-ui?
-        }}
-        onClose={() => {
-          setOpen(false);
-        }}
-        onFocus={() => {
-          setOpen(true);
-        }}
-        onChange={handleSelection}
-        blurOnSelect
-        noOptionsText="No results found"
-        value={null}
-        options={options}
-        renderOption={({ document, highlight }) => (
-          <TechDocsSearchResultListItem
-            result={document}
-            lineClamp={3}
-            asListItem={false}
-            asLink={false}
-            title={document.title}
-            highlight={highlight}
-          />
-        )}
-        loading={loading}
-        inputDebounceTime={debounceTime}
-        inputPlaceholder={`Search ${entityTitle || entityId.name} docs`}
-        freeSolo={false}
-      />
-    </Paper>
+    <SearchAutocomplete
+      data-testid="techdocs-search-bar"
+      size="small"
+      open={open && Boolean(term)}
+      getOptionLabel={() => ''}
+      filterOptions={x => {
+        return x; // This is needed to get renderOption to be called after options change. Bug in material-ui?
+      }}
+      onClose={() => {
+        setOpen(false);
+      }}
+      onOpen={() => {
+        setOpen(true);
+      }}
+      onChange={handleSelection}
+      blurOnSelect
+      noOptionsText="No results found"
+      value={null}
+      options={options}
+      renderOption={({ document, highlight }) => (
+        <TechDocsSearchResultListItem
+          result={document}
+          lineClamp={3}
+          asListItem={false}
+          asLink={false}
+          title={document.title}
+          highlight={highlight}
+        />
+      )}
+      loading={loading}
+      inputDebounceTime={debounceTime}
+      inputPlaceholder={`Search ${entityTitle || entityId.name} docs`}
+      freeSolo={false}
+    />
   );
 };
 

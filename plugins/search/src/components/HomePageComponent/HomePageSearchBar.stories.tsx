@@ -17,13 +17,14 @@
 import { rootRouteRef, HomePageSearchBar } from '../../plugin';
 import { searchApiRef } from '@backstage/plugin-search-react';
 import { wrapInTestApp, TestApiProvider } from '@backstage/test-utils';
-import { Grid, makeStyles } from '@material-ui/core';
-import React, { ComponentType } from 'react';
+import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import React, { ComponentType, PropsWithChildren } from 'react';
 
 export default {
   title: 'Plugins/Home/Components/SearchBar',
   decorators: [
-    (Story: ComponentType<{}>) =>
+    (Story: ComponentType<PropsWithChildren<{}>>) =>
       wrapInTestApp(
         <>
           <TestApiProvider
@@ -61,6 +62,9 @@ const useStyles = makeStyles(theme => ({
     borderRadius: '50px',
     margin: 'auto',
   },
+  searchBarOutline: {
+    borderStyle: 'none',
+  },
 }));
 
 export const CustomStyles = () => {
@@ -71,6 +75,7 @@ export const CustomStyles = () => {
       <Grid container item xs={12} alignItems="center" direction="row">
         <HomePageSearchBar
           classes={{ root: classes.searchBar }}
+          InputProps={{ classes: { notchedOutline: classes.searchBarOutline } }}
           placeholder="Search"
         />
       </Grid>

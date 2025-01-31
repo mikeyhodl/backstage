@@ -16,25 +16,45 @@
 
 import fs from 'fs-extra';
 import { paths } from '../../lib/paths';
-import { serveBackend } from '../../lib/bundler';
+import { runBackend } from '../../lib/runner';
 
 interface StartBackendOptions {
   checksEnabled: boolean;
   inspectEnabled: boolean;
   inspectBrkEnabled: boolean;
+  linkedWorkspace?: string;
+  require?: string;
 }
 
 export async function startBackend(options: StartBackendOptions) {
-  // Cleaning dist/ before we start the dev process helps work around an issue
-  // where we end up with the entrypoint executing multiple times, causing
-  // a port bind conflict among other things.
-  await fs.remove(paths.resolveTarget('dist'));
-
-  const waitForExit = await serveBackend({
+  const waitForExit = await runBackend({
     entry: 'src/index',
-    checksEnabled: options.checksEnabled,
     inspectEnabled: options.inspectEnabled,
     inspectBrkEnabled: options.inspectBrkEnabled,
+    linkedWorkspace: options.linkedWorkspace,
+    require: options.require,
+  });
+
+  await waitForExit();
+}
+
+export async function startBackendPlugin(options: StartBackendOptions) {
+  const hasDevIndexEntry = await fs.pathExists(
+    paths.resolveTarget('dev', 'index.ts'),
+  );
+  if (!hasDevIndexEntry) {
+    console.warn(
+      `The 'dev' directory is missing. Please create a proper dev/index.ts in order to start the plugin.`,
+    );
+    return;
+  }
+
+  const waitForExit = await runBackend({
+    entry: 'dev/index',
+    inspectEnabled: options.inspectEnabled,
+    inspectBrkEnabled: options.inspectBrkEnabled,
+    require: options.require,
+    linkedWorkspace: options.linkedWorkspace,
   });
 
   await waitForExit();

@@ -14,35 +14,35 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import {
-  PluginTaskScheduler,
-  TaskInvocationDefinition,
-  TaskRunner,
-} from '@backstage/backend-tasks';
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+  SchedulerServiceTaskInvocationDefinition,
+} from '@backstage/backend-plugin-api';
 import { ConfigReader } from '@backstage/config';
-import { EntityProviderConnection } from '@backstage/plugin-catalog-backend';
+import { EntityProviderConnection } from '@backstage/plugin-catalog-node';
 import { CodeSearchResultItem } from '../lib';
 import { AzureDevOpsEntityProvider } from './AzureDevOpsEntityProvider';
 import { codeSearch } from '../lib';
+import { mockServices } from '@backstage/backend-test-utils';
 
 jest.mock('../lib');
 const mockCodeSearch = codeSearch as jest.MockedFunction<typeof codeSearch>;
 
-class PersistingTaskRunner implements TaskRunner {
-  private tasks: TaskInvocationDefinition[] = [];
+class PersistingTaskRunner implements SchedulerServiceTaskRunner {
+  private tasks: SchedulerServiceTaskInvocationDefinition[] = [];
 
   getTasks() {
     return this.tasks;
   }
 
-  run(task: TaskInvocationDefinition): Promise<void> {
+  run(task: SchedulerServiceTaskInvocationDefinition): Promise<void> {
     this.tasks.push(task);
     return Promise.resolve(undefined);
   }
 }
 
-const logger = getVoidLogger();
+const logger = mockServices.logger.mock();
 
 describe('AzureDevOpsEntityProvider', () => {
   afterEach(() => {
@@ -83,7 +83,7 @@ describe('AzureDevOpsEntityProvider', () => {
     if (scheduleInConfig) {
       schedulingConfig.scheduler = {
         createScheduledTaskRunner: (_: any) => schedule,
-      } as unknown as PluginTaskScheduler;
+      } as unknown as SchedulerService;
     } else {
       schedulingConfig.schedule = schedule;
     }
@@ -105,9 +105,13 @@ describe('AzureDevOpsEntityProvider', () => {
     await (taskDef.fn as () => Promise<void>)();
 
     const expectedEntities = codeSearchResults.map(item => {
-      const url = encodeURI(
-        `${expectedBaseUrl}/_git/${item.repository.name}?path=${item.path}`,
-      );
+      const url = item.branch
+        ? encodeURI(
+            `${expectedBaseUrl}/_git/${item.repository.name}?path=${item.path}&version=GB${item.branch}`,
+          )
+        : encodeURI(
+            `${expectedBaseUrl}/_git/${item.repository.name}?path=${item.path}`,
+          );
       return {
         entity: {
           apiVersion: 'backstage.io/v1alpha1',
@@ -164,12 +168,45 @@ describe('AzureDevOpsEntityProvider', () => {
           repository: {
             name: 'myrepo',
           },
+          project: {
+            name: 'myproject',
+          },
         },
       ],
       'https://dev.azure.com/myorganization/myproject',
       {
         'myrepo?path=/catalog-info.yaml':
           'generated-87865246726bb12a8c4fb4f914443f1fbb91648c',
+      },
+    );
+  });
+
+  // eslint-disable-next-line jest/expect-expect
+  it('single mutation when repos use branch filter', async () => {
+    return expectMutation(
+      'allReposSingleFile',
+      {
+        organization: 'myorganization',
+        project: 'myproject',
+        branch: 'mybranch',
+      },
+      [
+        {
+          fileName: 'catalog-info.yaml',
+          path: '/catalog-info.yaml',
+          repository: {
+            name: 'myrepo',
+          },
+          project: {
+            name: 'myproject',
+          },
+          branch: 'mybranch',
+        },
+      ],
+      'https://dev.azure.com/myorganization/myproject',
+      {
+        'myrepo?path=/catalog-info.yaml':
+          'generated-589e8cc47341987c7a34f5291791151fa64f7754',
       },
     );
   });
@@ -189,12 +226,18 @@ describe('AzureDevOpsEntityProvider', () => {
           repository: {
             name: 'myrepo',
           },
+          project: {
+            name: 'myproject',
+          },
         },
         {
           fileName: 'catalog-info.yaml',
           path: '/catalog-info.yaml',
           repository: {
             name: 'myotherrepo',
+          },
+          project: {
+            name: 'myproject',
           },
         },
       ],
@@ -232,7 +275,7 @@ describe('AzureDevOpsEntityProvider', () => {
   it('fail with scheduler but no schedule config', () => {
     const scheduler = {
       createScheduledTaskRunner: (_: any) => jest.fn(),
-    } as unknown as PluginTaskScheduler;
+    } as unknown as SchedulerService;
     const config = new ConfigReader({
       catalog: {
         providers: {
@@ -277,12 +320,18 @@ describe('AzureDevOpsEntityProvider', () => {
           repository: {
             name: 'myrepo',
           },
+          project: {
+            name: 'myproject',
+          },
         },
         {
           fileName: 'catalog-info.yaml',
           path: '/catalog-info.yaml',
           repository: {
             name: 'myotherrepo',
+          },
+          project: {
+            name: 'myproject',
           },
         },
       ],

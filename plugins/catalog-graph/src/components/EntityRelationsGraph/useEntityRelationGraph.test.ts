@@ -19,7 +19,7 @@ import {
   RELATION_OWNER_OF,
   RELATION_PART_OF,
 } from '@backstage/catalog-model';
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react';
 import { pick } from 'lodash';
 import { useEntityRelationGraph } from './useEntityRelationGraph';
 import { useEntityStore as useEntityStoreMocked } from './useEntityStore';
@@ -349,6 +349,28 @@ describe('useEntityRelationGraph', () => {
 
     expect(result.current.entities).toEqual({
       'b:d/c': expect.anything(),
+      'k:d/a1': expect.anything(),
+    });
+  });
+
+  test('should filter by func', async () => {
+    const { result, rerender } = renderHook(() =>
+      useEntityRelationGraph({
+        rootEntityRefs: ['b:d/c'],
+        filter: {
+          entityFilter: e => e.metadata.name !== 'c2',
+        },
+      }),
+    );
+
+    // Simulate rerendering as this is triggered automatically due to the mock
+    for (let i = 0; i < 5; ++i) {
+      rerender();
+    }
+
+    expect(result.current.entities).toEqual({
+      'b:d/c': expect.anything(),
+      'b:d/c1': expect.anything(),
       'k:d/a1': expect.anything(),
     });
   });

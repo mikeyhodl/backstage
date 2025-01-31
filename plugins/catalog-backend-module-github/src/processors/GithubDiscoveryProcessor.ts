@@ -26,10 +26,10 @@ import {
   CatalogProcessorEmit,
   LocationSpec,
   processingResult,
-} from '@backstage/plugin-catalog-backend';
+} from '@backstage/plugin-catalog-node';
 import { graphql } from '@octokit/graphql';
-import { Logger } from 'winston';
 import { getOrganizationRepositories } from '../lib';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 /**
  * Extracts repositories out of a GitHub org.
@@ -46,16 +46,16 @@ import { getOrganizationRepositories } from '../lib';
  *    target: https://github.com/backstage/*\/blob/main/catalog-info.yaml
  *
  * @public
- **/
+ */
 export class GithubDiscoveryProcessor implements CatalogProcessor {
   private readonly integrations: ScmIntegrationRegistry;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
   private readonly githubCredentialsProvider: GithubCredentialsProvider;
 
   static fromConfig(
     config: Config,
     options: {
-      logger: Logger;
+      logger: LoggerService;
       githubCredentialsProvider?: GithubCredentialsProvider;
     },
   ) {
@@ -69,7 +69,7 @@ export class GithubDiscoveryProcessor implements CatalogProcessor {
 
   constructor(options: {
     integrations: ScmIntegrationRegistry;
-    logger: Logger;
+    logger: LoggerService;
     githubCredentialsProvider?: GithubCredentialsProvider;
   }) {
     this.integrations = options.integrations;
@@ -176,7 +176,7 @@ export function parseUrl(urlString: string): {
   host: string;
 } {
   const url = new URL(urlString);
-  const path = url.pathname.substr(1).split('/');
+  const path = url.pathname.slice(1).split('/');
 
   // /backstage/techdocs-*/blob/master/catalog-info.yaml
   // can also be

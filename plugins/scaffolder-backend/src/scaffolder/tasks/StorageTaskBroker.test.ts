@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
-import { getVoidLogger, DatabaseManager } from '@backstage/backend-common';
+import {
+  DatabaseManager,
+  loggerToWinstonLogger,
+} from '@backstage/backend-common';
 import { ConfigReader } from '@backstage/config';
 import { TaskSpec } from '@backstage/plugin-scaffolder-common';
+import {
+  SerializedTaskEvent,
+  TaskSecrets,
+} from '@backstage/plugin-scaffolder-node';
 import { DatabaseTaskStore } from './DatabaseTaskStore';
 import { StorageTaskBroker, TaskManager } from './StorageTaskBroker';
-import { TaskSecrets, SerializedTaskEvent } from './types';
+import { mockServices } from '@backstage/backend-test-utils';
 
 async function createStore(): Promise<DatabaseTaskStore> {
   const manager = DatabaseManager.fromConfig(
@@ -46,11 +53,19 @@ describe('StorageTaskBroker', () => {
     storage = await createStore();
   });
 
-  const logger = getVoidLogger();
+  const emptyTaskSpec = { spec: { steps: [] } as unknown as TaskSpec };
+  const emptyTaskWithFakeSecretsSpec = {
+    spec: { steps: [] } as unknown as TaskSpec,
+    secrets: fakeSecrets,
+  };
+
+  const logger = loggerToWinstonLogger(mockServices.logger.mock());
   it('should claim a dispatched work item', async () => {
     const broker = new StorageTaskBroker(storage, logger);
-    await broker.dispatch({ spec: {} as TaskSpec });
-    await expect(broker.claim()).resolves.toEqual(expect.any(TaskManager));
+    await broker.dispatch(emptyTaskSpec);
+    await expect(broker.claim()).resolves.toEqual(
+      expect.any(TaskManager as any),
+    );
   });
 
   it('should wait for a dispatched work item', async () => {
@@ -59,8 +74,8 @@ describe('StorageTaskBroker', () => {
 
     await expect(Promise.race([promise, 'waiting'])).resolves.toBe('waiting');
 
-    await broker.dispatch({ spec: {} as TaskSpec });
-    await expect(promise).resolves.toEqual(expect.any(TaskManager));
+    await broker.dispatch(emptyTaskSpec);
+    await expect(promise).resolves.toEqual(expect.any(TaskManager as any));
   });
 
   it('should dispatch multiple items and claim them in order', async () => {
@@ -72,24 +87,24 @@ describe('StorageTaskBroker', () => {
     const taskA = await broker.claim();
     const taskB = await broker.claim();
     const taskC = await broker.claim();
-    await expect(taskA).toEqual(expect.any(TaskManager));
-    await expect(taskB).toEqual(expect.any(TaskManager));
-    await expect(taskC).toEqual(expect.any(TaskManager));
-    await expect(taskA.spec.steps[0].id).toBe('a');
-    await expect(taskB.spec.steps[0].id).toBe('b');
-    await expect(taskC.spec.steps[0].id).toBe('c');
+    expect(taskA).toEqual(expect.any(TaskManager as any));
+    expect(taskB).toEqual(expect.any(TaskManager as any));
+    expect(taskC).toEqual(expect.any(TaskManager as any));
+    expect(taskA.spec.steps[0].id).toBe('a');
+    expect(taskB.spec.steps[0].id).toBe('b');
+    expect(taskC.spec.steps[0].id).toBe('c');
   });
 
   it('should store secrets', async () => {
     const broker = new StorageTaskBroker(storage, logger);
-    await broker.dispatch({ spec: {} as TaskSpec, secrets: fakeSecrets });
+    await broker.dispatch(emptyTaskWithFakeSecretsSpec);
     const task = await broker.claim();
     expect(task.secrets).toEqual(fakeSecrets);
   }, 10000);
 
   it('should complete a task', async () => {
     const broker = new StorageTaskBroker(storage, logger);
-    const dispatchResult = await broker.dispatch({ spec: {} as TaskSpec });
+    const dispatchResult = await broker.dispatch(emptyTaskSpec);
     const task = await broker.claim();
     await task.complete('completed');
     const taskRow = await storage.getTask(dispatchResult.taskId);
@@ -98,10 +113,7 @@ describe('StorageTaskBroker', () => {
 
   it('should remove secrets after picking up a task', async () => {
     const broker = new StorageTaskBroker(storage, logger);
-    const dispatchResult = await broker.dispatch({
-      spec: {} as TaskSpec,
-      secrets: fakeSecrets,
-    });
+    const dispatchResult = await broker.dispatch(emptyTaskWithFakeSecretsSpec);
     await broker.claim();
 
     const taskRow = await storage.getTask(dispatchResult.taskId);
@@ -110,7 +122,7 @@ describe('StorageTaskBroker', () => {
 
   it('should fail a task', async () => {
     const broker = new StorageTaskBroker(storage, logger);
-    const dispatchResult = await broker.dispatch({ spec: {} as TaskSpec });
+    const dispatchResult = await broker.dispatch(emptyTaskSpec);
     const task = await broker.claim();
     await task.complete('failed');
     const taskRow = await storage.getTask(dispatchResult.taskId);
@@ -121,7 +133,7 @@ describe('StorageTaskBroker', () => {
     const broker1 = new StorageTaskBroker(storage, logger);
     const broker2 = new StorageTaskBroker(storage, logger);
 
-    const { taskId } = await broker1.dispatch({ spec: {} as TaskSpec });
+    const { taskId } = await broker1.dispatch(emptyTaskSpec);
 
     const logPromise = new Promise<SerializedTaskEvent[]>(resolve => {
       const observedEvents = new Array<SerializedTaskEvent>();
@@ -166,7 +178,7 @@ describe('StorageTaskBroker', () => {
 
   it('should heartbeat', async () => {
     const broker = new StorageTaskBroker(storage, logger);
-    const { taskId } = await broker.dispatch({ spec: {} as TaskSpec });
+    const { taskId } = await broker.dispatch(emptyTaskSpec);
     const task = await broker.claim();
 
     const initialTask = await storage.getTask(taskId);
@@ -184,7 +196,7 @@ describe('StorageTaskBroker', () => {
 
   it('should be update the status to failed if heartbeat fails', async () => {
     const broker = new StorageTaskBroker(storage, logger);
-    const { taskId } = await broker.dispatch({ spec: {} as TaskSpec });
+    const { taskId } = await broker.dispatch(emptyTaskSpec);
     const task = await broker.claim();
 
     jest
@@ -210,7 +222,7 @@ describe('StorageTaskBroker', () => {
 
   it('should list all tasks', async () => {
     const broker = new StorageTaskBroker(storage, logger);
-    const { taskId } = await broker.dispatch({ spec: {} as TaskSpec });
+    const { taskId } = await broker.dispatch(emptyTaskSpec);
 
     const promise = broker.list();
     await expect(promise).resolves.toEqual({
@@ -219,19 +231,69 @@ describe('StorageTaskBroker', () => {
           id: taskId,
         }),
       ]),
+      totalTasks: 13,
     });
   });
 
   it('should list only tasks createdBy a specific user', async () => {
     const broker = new StorageTaskBroker(storage, logger);
     const { taskId } = await broker.dispatch({
-      spec: {} as TaskSpec,
+      spec: { steps: [] } as unknown as TaskSpec,
       createdBy: 'user:default/foo',
     });
 
     const task = await storage.getTask(taskId);
 
-    const promise = broker.list({ createdBy: 'user:default/foo' });
-    await expect(promise).resolves.toEqual({ tasks: [task] });
+    const promise = broker.list({
+      filters: { createdBy: ['user:default/foo'] },
+    });
+    await expect(promise).resolves.toEqual({ tasks: [task], totalTasks: 1 });
+  });
+
+  it('should list only tasks with specific status', async () => {
+    const broker = new StorageTaskBroker(storage, logger);
+    const { taskId } = await broker.dispatch({
+      spec: { steps: [] } as unknown as TaskSpec,
+      createdBy: 'user:default/foo',
+    });
+
+    const promise = broker.list({
+      filters: { status: ['open'] },
+    });
+    await expect(promise).resolves.toEqual({
+      tasks: expect.arrayContaining([
+        expect.objectContaining({
+          id: taskId,
+        }),
+      ]),
+      totalTasks: 3,
+    });
+  });
+
+  it('should handle checkpoints in task state', async () => {
+    const broker = new StorageTaskBroker(storage, logger);
+
+    await broker.dispatch({
+      spec: { steps: [] } as unknown as TaskSpec,
+      createdBy: 'user:default/foo',
+    });
+
+    const taskA = await broker.claim();
+    await taskA.updateCheckpoint?.({
+      key: 'repo.create',
+      status: 'success',
+      value: 'https://github.com/backstage/backstage.git',
+    });
+
+    expect(await taskA.getTaskState?.()).toEqual({
+      state: {
+        checkpoints: {
+          'repo.create': {
+            status: 'success',
+            value: 'https://github.com/backstage/backstage.git',
+          },
+        },
+      },
+    });
   });
 });

@@ -1,5 +1,1724 @@
 # @backstage/plugin-kubernetes
 
+## 0.12.4-next.1
+
+### Patch Changes
+
+- 58ec9e7: Removed older versions of React packages as a preparatory step for upgrading to React 19. This commit does not introduce any functional changes, but removes dependencies on previous React versions, allowing for a cleaner upgrade path in subsequent commits.
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.5.4-next.1
+  - @backstage/core-components@0.16.4-next.0
+  - @backstage/frontend-plugin-api@0.9.5-next.1
+  - @backstage/core-compat-api@0.3.6-next.1
+  - @backstage/core-plugin-api@1.10.4-next.0
+  - @backstage/plugin-catalog-react@1.15.2-next.1
+  - @backstage/catalog-model@1.7.3
+  - @backstage/plugin-kubernetes-common@0.9.3-next.0
+
+## 0.12.4-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.5.4-next.0
+  - @backstage/plugin-kubernetes-common@0.9.3-next.0
+  - @backstage/frontend-plugin-api@0.9.5-next.0
+  - @backstage/catalog-model@1.7.3
+  - @backstage/core-compat-api@0.3.6-next.0
+  - @backstage/core-components@0.16.3
+  - @backstage/core-plugin-api@1.10.3
+  - @backstage/plugin-catalog-react@1.15.2-next.0
+
+## 0.12.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.15.1
+  - @backstage/frontend-plugin-api@0.9.4
+  - @backstage/core-plugin-api@1.10.3
+  - @backstage/core-components@0.16.3
+  - @backstage/catalog-model@1.7.3
+  - @backstage/core-compat-api@0.3.5
+  - @backstage/plugin-kubernetes-common@0.9.2
+  - @backstage/plugin-kubernetes-react@0.5.3
+
+## 0.12.3-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.9.4-next.0
+  - @backstage/core-plugin-api@1.10.3-next.0
+  - @backstage/core-compat-api@0.3.5-next.0
+  - @backstage/plugin-catalog-react@1.15.1-next.1
+  - @backstage/core-components@0.16.3-next.0
+  - @backstage/plugin-kubernetes-react@0.5.3-next.0
+  - @backstage/catalog-model@1.7.3-next.0
+  - @backstage/plugin-kubernetes-common@0.9.2-next.0
+
+## 0.12.3-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.15.1-next.0
+  - @backstage/core-compat-api@0.3.4
+
+## 0.12.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.15.0
+  - @backstage/core-compat-api@0.3.4
+  - @backstage/frontend-plugin-api@0.9.3
+  - @backstage/core-components@0.16.2
+  - @backstage/catalog-model@1.7.2
+  - @backstage/core-plugin-api@1.10.2
+  - @backstage/plugin-kubernetes-common@0.9.1
+  - @backstage/plugin-kubernetes-react@0.5.2
+
+## 0.12.2-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-compat-api@0.3.4-next.2
+  - @backstage/plugin-catalog-react@1.14.3-next.2
+  - @backstage/catalog-model@1.7.2-next.0
+  - @backstage/core-components@0.16.2-next.2
+  - @backstage/core-plugin-api@1.10.2-next.0
+  - @backstage/frontend-plugin-api@0.9.3-next.2
+  - @backstage/plugin-kubernetes-common@0.9.1-next.0
+  - @backstage/plugin-kubernetes-react@0.5.2-next.2
+
+## 0.12.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.14.3-next.1
+  - @backstage/core-components@0.16.2-next.1
+  - @backstage/catalog-model@1.7.1
+  - @backstage/core-compat-api@0.3.4-next.1
+  - @backstage/core-plugin-api@1.10.1
+  - @backstage/frontend-plugin-api@0.9.3-next.1
+  - @backstage/plugin-kubernetes-common@0.9.0
+  - @backstage/plugin-kubernetes-react@0.5.2-next.1
+
+## 0.12.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.14.3-next.0
+  - @backstage/frontend-plugin-api@0.9.3-next.0
+  - @backstage/catalog-model@1.7.1
+  - @backstage/core-compat-api@0.3.4-next.0
+  - @backstage/core-components@0.16.2-next.0
+  - @backstage/core-plugin-api@1.10.1
+  - @backstage/plugin-kubernetes-common@0.9.0
+  - @backstage/plugin-kubernetes-react@0.5.2-next.0
+
+## 0.12.0
+
+### Minor Changes
+
+- 71b8704: Bumping @kubernetes/client-node to 1.0.0-rc7 to mitigate CVEs related to the request and tough-cookie packages
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.5.0
+  - @backstage/plugin-catalog-react@1.14.1
+  - @backstage/core-components@0.16.0
+  - @backstage/plugin-kubernetes-common@0.9.0
+  - @backstage/catalog-model@1.7.1
+  - @backstage/core-compat-api@0.3.2
+  - @backstage/core-plugin-api@1.10.1
+  - @backstage/frontend-plugin-api@0.9.1
+
+## 0.12.0-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.5.0-next.2
+  - @backstage/core-components@0.16.0-next.2
+  - @backstage/plugin-catalog-react@1.14.1-next.3
+  - @backstage/core-compat-api@0.3.2-next.2
+  - @backstage/catalog-model@1.7.0
+  - @backstage/core-plugin-api@1.10.0
+  - @backstage/frontend-plugin-api@0.9.1-next.2
+  - @backstage/plugin-kubernetes-common@0.9.0-next.0
+
+## 0.12.0-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.14.1-next.2
+  - @backstage/catalog-model@1.7.0
+  - @backstage/core-compat-api@0.3.2-next.1
+  - @backstage/core-components@0.16.0-next.1
+  - @backstage/core-plugin-api@1.10.0
+  - @backstage/frontend-plugin-api@0.9.1-next.1
+  - @backstage/plugin-kubernetes-common@0.9.0-next.0
+  - @backstage/plugin-kubernetes-react@0.5.0-next.1
+
+## 0.12.0-next.1
+
+### Minor Changes
+
+- 71b8704: Bumping @kubernetes/client-node to 1.0.0-rc7 to mitigate CVEs related to the request and tough-cookie packages
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-kubernetes-common@0.9.0-next.0
+  - @backstage/plugin-kubernetes-react@0.5.0-next.1
+  - @backstage/catalog-model@1.7.0
+  - @backstage/core-compat-api@0.3.2-next.1
+  - @backstage/core-components@0.16.0-next.1
+  - @backstage/core-plugin-api@1.10.0
+  - @backstage/frontend-plugin-api@0.9.1-next.1
+  - @backstage/plugin-catalog-react@1.14.1-next.1
+
+## 0.11.17-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.16.0-next.0
+  - @backstage/catalog-model@1.7.0
+  - @backstage/core-compat-api@0.3.2-next.0
+  - @backstage/core-plugin-api@1.10.0
+  - @backstage/frontend-plugin-api@0.9.1-next.0
+  - @backstage/plugin-catalog-react@1.14.1-next.0
+  - @backstage/plugin-kubernetes-common@0.8.3
+  - @backstage/plugin-kubernetes-react@0.4.5-next.0
+
+## 0.11.16
+
+### Patch Changes
+
+- e969dc7: Move `@types/react` to a peer dependency.
+- 605e0bb: Updated dependency `@kubernetes-models/base` to `^5.0.0`.
+- 276cd3d: Updated dependency `@kubernetes-models/apimachinery` to `^2.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.15.1
+  - @backstage/frontend-plugin-api@0.9.0
+  - @backstage/core-compat-api@0.3.1
+  - @backstage/core-plugin-api@1.10.0
+  - @backstage/plugin-kubernetes-react@0.4.4
+  - @backstage/plugin-catalog-react@1.14.0
+  - @backstage/catalog-model@1.7.0
+  - @backstage/plugin-kubernetes-common@0.8.3
+
+## 0.11.16-next.2
+
+### Patch Changes
+
+- 276cd3d: Updated dependency `@kubernetes-models/apimachinery` to `^2.0.0`.
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.14.0-next.2
+  - @backstage/plugin-kubernetes-react@0.4.4-next.2
+  - @backstage/catalog-model@1.7.0
+  - @backstage/core-compat-api@0.3.1-next.2
+  - @backstage/core-components@0.15.1-next.2
+  - @backstage/core-plugin-api@1.10.0-next.1
+  - @backstage/frontend-plugin-api@0.9.0-next.2
+  - @backstage/plugin-kubernetes-common@0.8.3
+
+## 0.11.16-next.1
+
+### Patch Changes
+
+- e969dc7: Move `@types/react` to a peer dependency.
+- 605e0bb: Updated dependency `@kubernetes-models/base` to `^5.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.15.1-next.1
+  - @backstage/frontend-plugin-api@0.9.0-next.1
+  - @backstage/core-compat-api@0.3.1-next.1
+  - @backstage/core-plugin-api@1.10.0-next.1
+  - @backstage/plugin-kubernetes-react@0.4.4-next.1
+  - @backstage/plugin-catalog-react@1.14.0-next.1
+  - @backstage/catalog-model@1.7.0
+  - @backstage/plugin-kubernetes-common@0.8.3
+
+## 0.11.15-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.9.0-next.0
+  - @backstage/core-compat-api@0.3.1-next.0
+  - @backstage/core-components@0.15.1-next.0
+  - @backstage/core-plugin-api@1.10.0-next.0
+  - @backstage/plugin-catalog-react@1.13.1-next.0
+  - @backstage/catalog-model@1.7.0
+  - @backstage/plugin-kubernetes-common@0.8.3
+  - @backstage/plugin-kubernetes-react@0.4.4-next.0
+
+## 0.11.14
+
+### Patch Changes
+
+- fec8b57: Updated exports to use the new type parameters for extensions and extension blueprints.
+- bfc0f42: Make k8s entity content appear on components & resources only by default in new FE system
+- 836127c: Updated dependency `@testing-library/react` to `^16.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.15.0
+  - @backstage/plugin-catalog-react@1.13.0
+  - @backstage/frontend-plugin-api@0.8.0
+  - @backstage/core-compat-api@0.3.0
+  - @backstage/catalog-model@1.7.0
+  - @backstage/core-plugin-api@1.9.4
+  - @backstage/plugin-kubernetes-react@0.4.3
+  - @backstage/plugin-kubernetes-common@0.8.3
+
+## 0.11.14-next.2
+
+### Patch Changes
+
+- 836127c: Updated dependency `@testing-library/react` to `^16.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.14.11-next.1
+  - @backstage/plugin-catalog-react@1.13.0-next.2
+  - @backstage/core-compat-api@0.3.0-next.2
+  - @backstage/core-plugin-api@1.9.4-next.0
+  - @backstage/frontend-plugin-api@0.8.0-next.2
+  - @backstage/plugin-kubernetes-react@0.4.3-next.1
+  - @backstage/catalog-model@1.6.0
+  - @backstage/plugin-kubernetes-common@0.8.2
+
+## 0.11.14-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.8.0-next.1
+  - @backstage/core-compat-api@0.3.0-next.1
+  - @backstage/core-components@0.14.11-next.0
+  - @backstage/plugin-catalog-react@1.12.4-next.1
+  - @backstage/catalog-model@1.6.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-common@0.8.2
+  - @backstage/plugin-kubernetes-react@0.4.3-next.0
+
+## 0.11.14-next.0
+
+### Patch Changes
+
+- fec8b57: Updated exports to use the new type parameters for extensions and extension blueprints.
+- bfc0f42: Make k8s entity content appear on components & resources only by default in new FE system
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.8.0-next.0
+  - @backstage/core-compat-api@0.2.9-next.0
+  - @backstage/plugin-catalog-react@1.12.4-next.0
+  - @backstage/catalog-model@1.6.0
+  - @backstage/core-components@0.14.10
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-common@0.8.2
+  - @backstage/plugin-kubernetes-react@0.4.2
+
+## 0.11.13
+
+### Patch Changes
+
+- e6c15cc: Adds support for Backstage's new frontend system, available via the `/alpha` sub-path export.
+- fe1fbb2: Migrating usages of the deprecated `createExtension` `v1` format to the newer `v2` format, and old `create*Extension` extension creators to blueprints.
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.7.0
+  - @backstage/plugin-catalog-react@1.12.3
+  - @backstage/plugin-kubernetes-react@0.4.2
+  - @backstage/core-components@0.14.10
+  - @backstage/core-compat-api@0.2.8
+  - @backstage/catalog-model@1.6.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-common@0.8.2
+
+## 0.11.13-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.7.0-next.3
+  - @backstage/catalog-model@1.6.0-next.0
+  - @backstage/core-compat-api@0.2.8-next.3
+  - @backstage/plugin-catalog-react@1.12.3-next.3
+  - @backstage/core-components@0.14.10-next.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-common@0.8.2-next.2
+  - @backstage/plugin-kubernetes-react@0.4.2-next.3
+
+## 0.11.13-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.7.0-next.2
+  - @backstage/core-compat-api@0.2.8-next.2
+  - @backstage/plugin-catalog-react@1.12.3-next.2
+  - @backstage/plugin-kubernetes-common@0.8.2-next.1
+  - @backstage/catalog-model@1.5.0
+  - @backstage/core-components@0.14.10-next.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-react@0.4.2-next.2
+
+## 0.11.13-next.1
+
+### Patch Changes
+
+- e6c15cc: Adds support for Backstage's new frontend system, available via the `/alpha` sub-path export.
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.12.3-next.1
+  - @backstage/frontend-plugin-api@0.6.8-next.1
+  - @backstage/core-compat-api@0.2.8-next.1
+  - @backstage/plugin-kubernetes-common@0.8.2-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/core-components@0.14.10-next.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-react@0.4.2-next.1
+
+## 0.11.13-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.12.3-next.0
+  - @backstage/core-components@0.14.10-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-common@0.8.1
+  - @backstage/plugin-kubernetes-react@0.4.2-next.0
+
+## 0.11.12
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.9
+  - @backstage/plugin-catalog-react@1.12.2
+  - @backstage/plugin-kubernetes-react@0.4.1
+  - @backstage/plugin-kubernetes-common@0.8.1
+  - @backstage/catalog-model@1.5.0
+  - @backstage/core-plugin-api@1.9.3
+
+## 0.11.12-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.9-next.1
+  - @backstage/plugin-kubernetes-react@0.4.1-next.1
+  - @backstage/plugin-catalog-react@1.12.2-next.2
+
+## 0.11.12-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.12.2-next.1
+  - @backstage/core-components@0.14.9-next.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-react@0.4.1-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/plugin-kubernetes-common@0.8.0
+
+## 0.11.12-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.9-next.0
+  - @backstage/plugin-catalog-react@1.12.2-next.0
+  - @backstage/plugin-kubernetes-react@0.4.1-next.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/catalog-model@1.5.0
+  - @backstage/plugin-kubernetes-common@0.8.0
+
+## 0.11.11
+
+### Patch Changes
+
+- 4f92394: Migrate from identityApi to fetchApi in frontend plugins.
+- d44a20a: Added additional plugin metadata to `package.json`.
+- Updated dependencies
+  - @backstage/core-components@0.14.8
+  - @backstage/plugin-kubernetes-react@0.4.0
+  - @backstage/core-plugin-api@1.9.3
+  - @backstage/plugin-kubernetes-common@0.8.0
+  - @backstage/plugin-catalog-react@1.12.1
+  - @backstage/catalog-model@1.5.0
+
+## 0.11.11-next.3
+
+### Patch Changes
+
+- d44a20a: Added additional plugin metadata to `package.json`.
+- Updated dependencies
+  - @backstage/core-components@0.14.8-next.2
+  - @backstage/plugin-kubernetes-common@0.8.0-next.1
+  - @backstage/plugin-kubernetes-react@0.4.0-next.3
+  - @backstage/plugin-catalog-react@1.12.1-next.2
+  - @backstage/catalog-model@1.5.0
+  - @backstage/core-plugin-api@1.9.3-next.0
+
+## 0.11.11-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.8-next.1
+  - @backstage/core-plugin-api@1.9.3-next.0
+  - @backstage/plugin-catalog-react@1.12.1-next.1
+  - @backstage/plugin-kubernetes-react@0.4.0-next.2
+  - @backstage/catalog-model@1.5.0
+  - @backstage/plugin-kubernetes-common@0.8.0-next.0
+
+## 0.11.11-next.1
+
+### Patch Changes
+
+- 4f92394: Migrate from identityApi to fetchApi in frontend plugins.
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.4.0-next.1
+  - @backstage/plugin-kubernetes-common@0.8.0-next.0
+  - @backstage/plugin-catalog-react@1.12.1-next.0
+
+## 0.11.11-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.8-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/core-plugin-api@1.9.2
+  - @backstage/plugin-catalog-react@1.12.1-next.0
+  - @backstage/plugin-kubernetes-common@0.7.6
+  - @backstage/plugin-kubernetes-react@0.3.6-next.0
+
+## 0.11.10
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.7
+  - @backstage/catalog-model@1.5.0
+  - @backstage/plugin-catalog-react@1.12.0
+  - @backstage/plugin-kubernetes-react@0.3.5
+  - @backstage/plugin-kubernetes-common@0.7.6
+
+## 0.11.10-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.12.0-next.2
+  - @backstage/core-components@0.14.7-next.2
+
+## 0.11.10-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.6-next.1
+  - @backstage/plugin-kubernetes-react@0.3.5-next.1
+  - @backstage/plugin-catalog-react@1.11.4-next.1
+
+## 0.11.10-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0-next.0
+  - @backstage/core-components@0.14.5-next.0
+  - @backstage/plugin-catalog-react@1.11.4-next.0
+  - @backstage/plugin-kubernetes-common@0.7.6-next.0
+  - @backstage/plugin-kubernetes-react@0.3.5-next.0
+  - @backstage/core-plugin-api@1.9.2
+
+## 0.11.9
+
+### Patch Changes
+
+- abfbcfc: Updated dependency `@testing-library/react` to `^15.0.0`.
+- cb1e3b0: Updated dependency `@testing-library/dom` to `^10.0.0`.
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.3.4
+  - @backstage/plugin-catalog-react@1.11.3
+  - @backstage/core-components@0.14.4
+  - @backstage/core-plugin-api@1.9.2
+  - @backstage/catalog-model@1.4.5
+  - @backstage/plugin-kubernetes-common@0.7.5
+
+## 0.11.9-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.3.4-next.1
+  - @backstage/catalog-model@1.4.5
+  - @backstage/core-components@0.14.4-next.0
+  - @backstage/core-plugin-api@1.9.1
+  - @backstage/plugin-catalog-react@1.11.3-next.1
+  - @backstage/plugin-kubernetes-common@0.7.5
+
+## 0.11.9-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.4-next.0
+  - @backstage/catalog-model@1.4.5
+  - @backstage/core-plugin-api@1.9.1
+  - @backstage/plugin-catalog-react@1.11.3-next.0
+  - @backstage/plugin-kubernetes-common@0.7.5
+  - @backstage/plugin-kubernetes-react@0.3.4-next.0
+
+## 0.11.8
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.3
+  - @backstage/plugin-kubernetes-react@0.3.3
+  - @backstage/plugin-catalog-react@1.11.2
+  - @backstage/core-plugin-api@1.9.1
+  - @backstage/catalog-model@1.4.5
+  - @backstage/plugin-kubernetes-common@0.7.5
+
+## 0.11.7
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.2
+  - @backstage/plugin-kubernetes-react@0.3.2
+  - @backstage/plugin-catalog-react@1.11.1
+  - @backstage/core-plugin-api@1.9.1
+  - @backstage/catalog-model@1.4.5
+  - @backstage/plugin-kubernetes-common@0.7.5
+
+## 0.11.6
+
+### Patch Changes
+
+- 0e1941b: Added an optional ESLint rule - no-top-level-material-ui-4-imports -in kubernetes plugin which has an auto fix function to migrate the imports and used it to migrate the Material UI imports for plugins/kubernetes.
+- Updated dependencies
+  - @backstage/core-components@0.14.1
+  - @backstage/plugin-catalog-react@1.11.0
+  - @backstage/plugin-kubernetes-common@0.7.5
+  - @backstage/plugin-kubernetes-react@0.3.1
+  - @backstage/catalog-model@1.4.5
+  - @backstage/core-plugin-api@1.9.1
+
+## 0.11.6-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.1-next.2
+  - @backstage/plugin-catalog-react@1.11.0-next.2
+  - @backstage/plugin-kubernetes-react@0.3.1-next.2
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/core-plugin-api@1.9.1-next.1
+  - @backstage/plugin-kubernetes-common@0.7.5-next.1
+
+## 0.11.6-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.1-next.1
+  - @backstage/plugin-catalog-react@1.10.1-next.1
+  - @backstage/core-plugin-api@1.9.1-next.1
+  - @backstage/plugin-kubernetes-react@0.3.1-next.1
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/plugin-kubernetes-common@0.7.5-next.1
+
+## 0.11.6-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.1-next.0
+  - @backstage/plugin-catalog-react@1.10.1-next.0
+  - @backstage/plugin-kubernetes-common@0.7.5-next.0
+  - @backstage/plugin-kubernetes-react@0.3.1-next.0
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/core-plugin-api@1.9.1-next.0
+
+## 0.11.5
+
+### Patch Changes
+
+- b01c86c: The `ErrorReporting` component's cluster column now displays cluster titles when
+  specified.
+- 8fe56a8: Widen `@types/react` dependency range to include version 18.
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.10.0
+  - @backstage/plugin-kubernetes-react@0.3.0
+  - @backstage/core-components@0.14.0
+  - @backstage/plugin-kubernetes-common@0.7.4
+  - @backstage/catalog-model@1.4.4
+  - @backstage/core-plugin-api@1.9.0
+
+## 0.11.5-next.3
+
+### Patch Changes
+
+- b01c86c: The `ErrorReporting` component's cluster column now displays cluster titles when
+  specified.
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.3.0-next.3
+  - @backstage/plugin-kubernetes-common@0.7.4-next.2
+  - @backstage/core-components@0.14.0-next.2
+  - @backstage/plugin-catalog-react@1.10.0-next.3
+  - @backstage/catalog-model@1.4.4-next.0
+  - @backstage/core-plugin-api@1.9.0-next.1
+
+## 0.11.5-next.2
+
+### Patch Changes
+
+- 8fe56a8: Widen `@types/react` dependency range to include version 18.
+- Updated dependencies
+  - @backstage/core-components@0.14.0-next.1
+  - @backstage/core-plugin-api@1.9.0-next.1
+  - @backstage/plugin-catalog-react@1.10.0-next.2
+  - @backstage/plugin-kubernetes-react@0.3.0-next.2
+  - @backstage/catalog-model@1.4.4-next.0
+  - @backstage/plugin-kubernetes-common@0.7.4-next.1
+
+## 0.11.5-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.14.0-next.0
+  - @backstage/catalog-model@1.4.4-next.0
+  - @backstage/plugin-kubernetes-react@0.3.0-next.1
+  - @backstage/core-plugin-api@1.8.3-next.0
+  - @backstage/plugin-catalog-react@1.9.4-next.1
+  - @backstage/plugin-kubernetes-common@0.7.4-next.1
+
+## 0.11.5-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.9.4-next.0
+  - @backstage/plugin-kubernetes-react@0.3.0-next.0
+  - @backstage/plugin-kubernetes-common@0.7.4-next.0
+  - @backstage/core-components@0.13.10
+  - @backstage/catalog-model@1.4.3
+  - @backstage/core-plugin-api@1.8.2
+
+## 0.11.4
+
+### Patch Changes
+
+- d5d2c67: Add `authuser` search parameter to GKE cluster link formatter in k8s plugin
+
+  Thanks to this, people with multiple simultaneously logged-in accounts in their GCP console will automatically view objects with the same email as the one signed in to the Google auth provider in Backstage.
+
+- 4016f21: Remove some unused dependencies
+- Updated dependencies
+  - @backstage/core-components@0.13.10
+  - @backstage/core-plugin-api@1.8.2
+  - @backstage/plugin-kubernetes-react@0.2.1
+  - @backstage/plugin-kubernetes-common@0.7.3
+  - @backstage/plugin-catalog-react@1.9.3
+  - @backstage/catalog-model@1.4.3
+
+## 0.11.4-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.9.3-next.2
+
+## 0.11.4-next.1
+
+### Patch Changes
+
+- d5d2c67: Add `authuser` search parameter to GKE cluster link formatter in k8s plugin
+
+  Thanks to this, people with multiple simultaneously logged-in accounts in their GCP console will automatically view objects with the same email as the one signed in to the Google auth provider in Backstage.
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.8.2-next.0
+  - @backstage/plugin-kubernetes-react@0.2.1-next.1
+  - @backstage/core-components@0.13.10-next.1
+  - @backstage/plugin-catalog-react@1.9.3-next.1
+  - @backstage/catalog-model@1.4.3
+  - @backstage/plugin-kubernetes-common@0.7.3-next.0
+
+## 0.11.4-next.0
+
+### Patch Changes
+
+- 4016f21: Remove some unused dependencies
+- Updated dependencies
+  - @backstage/core-components@0.13.10-next.0
+  - @backstage/plugin-kubernetes-common@0.7.3-next.0
+  - @backstage/plugin-catalog-react@1.9.3-next.0
+  - @backstage/plugin-kubernetes-react@0.2.1-next.0
+  - @backstage/catalog-model@1.4.3
+  - @backstage/core-plugin-api@1.8.1
+
+## 0.11.3
+
+### Patch Changes
+
+- 899d71a: Change `formatClusterLink` to be an API and make it async for further customization possibilities.
+
+  **BREAKING**
+  If you have a custom k8s page and used `formatClusterLink` directly, you need to migrate to new `kubernetesClusterLinkFormatterApiRef`
+
+- 706fc3a: Updated dependency `@kubernetes/client-node` to `0.20.0`.
+- Updated dependencies
+  - @backstage/core-plugin-api@1.8.1
+  - @backstage/plugin-catalog-react@1.9.2
+  - @backstage/core-components@0.13.9
+  - @backstage/theme@0.5.0
+  - @backstage/plugin-kubernetes-react@0.2.0
+  - @backstage/plugin-kubernetes-common@0.7.2
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/types@1.1.1
+
+## 0.11.3-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.13.9-next.3
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config@1.1.1
+  - @backstage/core-plugin-api@1.8.1-next.1
+  - @backstage/errors@1.2.3
+  - @backstage/theme@0.5.0-next.1
+  - @backstage/types@1.1.1
+  - @backstage/plugin-catalog-react@1.9.2-next.3
+  - @backstage/plugin-kubernetes-common@0.7.2-next.1
+  - @backstage/plugin-kubernetes-react@0.2.0-next.3
+
+## 0.11.3-next.2
+
+### Patch Changes
+
+- 899d71a: Change `formatClusterLink` to be an API and make it async for further customization possibilities.
+
+  **BREAKING**
+  If you have a custom k8s page and used `formatClusterLink` directly, you need to migrate to new `kubernetesClusterLinkFormatterApiRef`
+
+- Updated dependencies
+  - @backstage/theme@0.5.0-next.1
+  - @backstage/plugin-kubernetes-react@0.2.0-next.2
+  - @backstage/plugin-catalog-react@1.9.2-next.2
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config@1.1.1
+  - @backstage/core-components@0.13.9-next.2
+  - @backstage/core-plugin-api@1.8.1-next.1
+  - @backstage/errors@1.2.3
+  - @backstage/types@1.1.1
+  - @backstage/plugin-kubernetes-common@0.7.2-next.1
+
+## 0.11.3-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.13.9-next.1
+  - @backstage/core-plugin-api@1.8.1-next.1
+  - @backstage/plugin-catalog-react@1.9.2-next.1
+  - @backstage/plugin-kubernetes-common@0.7.2-next.1
+  - @backstage/plugin-kubernetes-react@0.1.2-next.1
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/theme@0.5.0-next.0
+  - @backstage/types@1.1.1
+
+## 0.11.3-next.0
+
+### Patch Changes
+
+- 706fc3a7e1: Updated dependency `@kubernetes/client-node` to `0.20.0`.
+- Updated dependencies
+  - @backstage/core-plugin-api@1.8.1-next.0
+  - @backstage/plugin-catalog-react@1.9.2-next.0
+  - @backstage/core-components@0.13.9-next.0
+  - @backstage/plugin-kubernetes-react@0.1.2-next.0
+  - @backstage/plugin-kubernetes-common@0.7.2-next.0
+  - @backstage/theme@0.5.0-next.0
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/types@1.1.1
+
+## 0.11.1
+
+### Patch Changes
+
+- 6c2b872153: Add official support for React 18.
+- fdb5e23602: Import `MissingAnnotationEmptyState` from `@backstage/plugin-catalog-react` to remove the cyclical dependency
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.9.0
+  - @backstage/core-components@0.13.8
+  - @backstage/plugin-kubernetes-common@0.7.1
+  - @backstage/plugin-kubernetes-react@0.1.1
+  - @backstage/core-plugin-api@1.8.0
+  - @backstage/theme@0.4.4
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/types@1.1.1
+
+## 0.11.1-next.2
+
+### Patch Changes
+
+- [#20842](https://github.com/backstage/backstage/pull/20842) [`fdb5e23602`](https://github.com/backstage/backstage/commit/fdb5e2360299c5faa30f4d4236fc548b94d37446) Thanks [@benjdlambert](https://github.com/benjdlambert)! - Import `MissingAnnotationEmptyState` from `@backstage/plugin-catalog-react` to remove the cyclical dependency
+
+- Updated dependencies
+  - @backstage/plugin-kubernetes-common@0.7.1-next.1
+  - @backstage/core-components@0.13.8-next.2
+  - @backstage/plugin-catalog-react@1.9.0-next.2
+  - @backstage/plugin-kubernetes-react@0.1.1-next.2
+
+## 0.11.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-kubernetes-react@0.1.1-next.1
+  - @backstage/plugin-catalog-react@1.9.0-next.1
+  - @backstage/core-components@0.13.8-next.1
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config@1.1.1
+  - @backstage/core-plugin-api@1.8.0-next.0
+  - @backstage/errors@1.2.3
+  - @backstage/theme@0.4.4-next.0
+  - @backstage/types@1.1.1
+  - @backstage/plugin-kubernetes-common@0.7.1-next.0
+
+## 0.11.1-next.0
+
+### Patch Changes
+
+- 6c2b872153: Add official support for React 18.
+- Updated dependencies
+  - @backstage/core-components@0.13.7-next.0
+  - @backstage/plugin-catalog-react@1.9.0-next.0
+  - @backstage/core-plugin-api@1.8.0-next.0
+  - @backstage/plugin-kubernetes-react@0.1.1-next.0
+  - @backstage/theme@0.4.4-next.0
+  - @backstage/catalog-model@1.4.3
+  - @backstage/config@1.1.1
+  - @backstage/errors@1.2.3
+  - @backstage/types@1.1.1
+  - @backstage/plugin-kubernetes-common@0.7.1-next.0
+
+## 0.11.0
+
+### Minor Changes
+
+- 2d8151061c: Refactor Kubernetes plugins in line with ADR 11, no breaking changes yet
+
+### Patch Changes
+
+- 9101c0d1b6: Updated dependency `@kubernetes/client-node` to `0.19.0`.
+- 9a1fce352e: Updated dependency `@testing-library/jest-dom` to `^6.0.0`.
+- f95af4e540: Updated dependency `@testing-library/dom` to `^9.0.0`.
+- b0aca1a798: Updated dependency `xterm-addon-attach` to `^0.9.0`.
+  Updated dependency `xterm-addon-fit` to `^0.8.0`.
+- 95518765ee: Add Kubernetes cluster plugin. Viewing Kubernetes clusters as an Admin from Backstage
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.8.5
+  - @backstage/core-plugin-api@1.7.0
+  - @backstage/core-components@0.13.6
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+  - @backstage/plugin-kubernetes-react@0.1.0
+  - @backstage/plugin-kubernetes-common@0.7.0
+  - @backstage/theme@0.4.3
+  - @backstage/config@1.1.1
+  - @backstage/types@1.1.1
+
+## 0.11.0-next.2
+
+### Patch Changes
+
+- 95518765ee: Add Kubernetes cluster plugin. Viewing Kubernetes clusters as an Admin from Backstage
+- Updated dependencies
+  - @backstage/core-components@0.13.6-next.2
+  - @backstage/core-plugin-api@1.7.0-next.1
+  - @backstage/catalog-model@1.4.3-next.0
+  - @backstage/plugin-catalog-react@1.8.5-next.2
+  - @backstage/errors@1.2.3-next.0
+  - @backstage/plugin-kubernetes-react@0.1.0-next.1
+  - @backstage/theme@0.4.3-next.0
+  - @backstage/plugin-kubernetes-common@0.7.0-next.1
+  - @backstage/config@1.1.1-next.0
+  - @backstage/types@1.1.1
+
+## 0.11.0-next.1
+
+### Minor Changes
+
+- 2d8151061c: Refactor Kubernetes plugins in line with ADR 11, no breaking changes yet
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.13.6-next.1
+  - @backstage/plugin-kubernetes-common@0.7.0-next.0
+  - @backstage/plugin-kubernetes-react@0.1.0-next.0
+  - @backstage/plugin-catalog-react@1.8.5-next.1
+  - @backstage/core-plugin-api@1.7.0-next.0
+  - @backstage/config@1.1.0
+  - @backstage/catalog-model@1.4.2
+  - @backstage/errors@1.2.2
+  - @backstage/theme@0.4.2
+  - @backstage/types@1.1.1
+
+## 0.10.4-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.8.5-next.0
+  - @backstage/core-plugin-api@1.7.0-next.0
+  - @backstage/core-components@0.13.6-next.0
+  - @backstage/config@1.1.0
+  - @backstage/catalog-model@1.4.2
+  - @backstage/errors@1.2.2
+  - @backstage/theme@0.4.2
+  - @backstage/types@1.1.1
+  - @backstage/plugin-kubernetes-common@0.6.6
+
+## 0.10.3
+
+### Patch Changes
+
+- 0ad36158d980: Loosened the type of the `auth` field in the body of requests to the `retrieveObjectsByServiceId` endpoint. Now any JSON object is allowed, which should make it easier for integrators to write their own custom auth strategies for Kubernetes.
+- 7032c214f3b4: Add pod exec terminal to Container Card
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- 6ddeade58b4c: Avoid eager use of `TextEncoder` in order not to break tests.
+- 6a5e04e20e6e: fix logs dialog min height
+- 8cec7664e146: Removed `@types/node` dependency
+- Updated dependencies
+  - @backstage/plugin-kubernetes-common@0.6.6
+  - @backstage/plugin-catalog-react@1.8.4
+  - @backstage/core-components@0.13.5
+  - @backstage/config@1.1.0
+  - @backstage/catalog-model@1.4.2
+  - @backstage/core-plugin-api@1.6.0
+  - @backstage/errors@1.2.2
+  - @backstage/theme@0.4.2
+  - @backstage/types@1.1.1
+
+## 0.10.3-next.3
+
+### Patch Changes
+
+- 7032c214f3b4: Add pod exec terminal to Container Card
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2-next.2
+  - @backstage/config@1.1.0-next.2
+  - @backstage/core-components@0.13.5-next.3
+  - @backstage/core-plugin-api@1.6.0-next.3
+  - @backstage/errors@1.2.2-next.0
+  - @backstage/plugin-catalog-react@1.8.4-next.3
+  - @backstage/plugin-kubernetes-common@0.6.6-next.2
+  - @backstage/theme@0.4.2-next.0
+
+## 0.10.3-next.2
+
+### Patch Changes
+
+- 8cec7664e146: Removed `@types/node` dependency
+- Updated dependencies
+  - @backstage/core-components@0.13.5-next.2
+  - @backstage/core-plugin-api@1.6.0-next.2
+  - @backstage/config@1.1.0-next.1
+  - @backstage/plugin-catalog-react@1.8.4-next.2
+  - @backstage/catalog-model@1.4.2-next.1
+  - @backstage/errors@1.2.1
+  - @backstage/theme@0.4.1
+  - @backstage/plugin-kubernetes-common@0.6.6-next.1
+
+## 0.10.3-next.1
+
+### Patch Changes
+
+- 6a5e04e20e6e: fix logs dialog min height
+- Updated dependencies
+  - @backstage/plugin-kubernetes-common@0.6.6-next.0
+  - @backstage/plugin-catalog-react@1.8.4-next.1
+  - @backstage/core-components@0.13.5-next.1
+  - @backstage/config@1.1.0-next.0
+  - @backstage/catalog-model@1.4.2-next.0
+  - @backstage/core-plugin-api@1.6.0-next.1
+  - @backstage/errors@1.2.1
+  - @backstage/theme@0.4.1
+
+## 0.10.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.6.0-next.0
+  - @backstage/core-components@0.13.5-next.0
+  - @backstage/catalog-model@1.4.1
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1
+  - @backstage/theme@0.4.1
+  - @backstage/plugin-catalog-react@1.8.3-next.0
+  - @backstage/plugin-kubernetes-common@0.6.5
+
+## 0.10.0
+
+### Minor Changes
+
+- 4b6d41737aad: **BREAKING**: Fixed typos in exported module attributes. Many users may see no changes, but if you have customized the plugin output, you may have to rename the following:
+
+  - Component attribute: `<ResourceUtilization totalFormated={} />` to `<ResourceUtilization totalFormatted={} />`
+  - Interface attribute: `DetectedError.occuranceCount` to `DetectedError.occurrenceCount`.
+
+### Patch Changes
+
+- 562e34d2693f: Fix container memory limits
+- Updated dependencies
+  - @backstage/core-components@0.13.4
+  - @backstage/plugin-catalog-react@1.8.1
+  - @backstage/core-plugin-api@1.5.3
+  - @backstage/catalog-model@1.4.1
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1
+  - @backstage/theme@0.4.1
+  - @backstage/plugin-kubernetes-common@0.6.5
+
+## 0.9.4-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.8.1-next.1
+
+## 0.9.4-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.13.4-next.0
+  - @backstage/core-plugin-api@1.5.3
+  - @backstage/plugin-catalog-react@1.8.1-next.0
+  - @backstage/catalog-model@1.4.1
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1
+  - @backstage/theme@0.4.1
+  - @backstage/plugin-kubernetes-common@0.6.5
+
+## 0.9.3
+
+### Patch Changes
+
+- d62fc3fe85ba: Make pod drawer headings consistent
+- cc27fa4a1aac: Changed Google cloud auth scope to read-only.
+- Updated dependencies
+  - @backstage/theme@0.4.1
+  - @backstage/errors@1.2.1
+  - @backstage/plugin-catalog-react@1.8.0
+  - @backstage/core-components@0.13.3
+  - @backstage/core-plugin-api@1.5.3
+  - @backstage/catalog-model@1.4.1
+  - @backstage/config@1.0.8
+  - @backstage/plugin-kubernetes-common@0.6.5
+
+## 0.9.3-next.2
+
+### Patch Changes
+
+- cc27fa4a1aac: Changed Google cloud auth scope to read-only.
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.8.0-next.2
+  - @backstage/theme@0.4.1-next.1
+  - @backstage/core-plugin-api@1.5.3-next.1
+  - @backstage/core-components@0.13.3-next.2
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/plugin-kubernetes-common@0.6.5-next.0
+
+## 0.9.3-next.1
+
+### Patch Changes
+
+- d62fc3fe85ba: Make pod drawer headings consistent
+- Updated dependencies
+  - @backstage/theme@0.4.1-next.0
+  - @backstage/core-components@0.13.3-next.1
+  - @backstage/core-plugin-api@1.5.3-next.0
+  - @backstage/plugin-catalog-react@1.7.1-next.1
+  - @backstage/config@1.0.8
+
+## 0.9.3-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/core-components@0.13.3-next.0
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/config@1.0.8
+  - @backstage/core-plugin-api@1.5.2
+  - @backstage/theme@0.4.0
+  - @backstage/plugin-catalog-react@1.7.1-next.0
+  - @backstage/plugin-kubernetes-common@0.6.5-next.0
+
+## 0.9.2
+
+### Patch Changes
+
+- dc3cddf51ab5: Fix cyclical dependency in built output
+- 4e697e88f0e2: Add resource utilization to Pod Drawer
+- 4b230b97660d: Add errors to PodDrawer
+- 73cc0deee48a: Add proposed fix dialog for pod errors
+- Updated dependencies
+  - @backstage/core-plugin-api@1.5.2
+  - @backstage/core-components@0.13.2
+  - @backstage/theme@0.4.0
+  - @backstage/plugin-catalog-react@1.7.0
+  - @backstage/catalog-model@1.4.0
+  - @backstage/errors@1.2.0
+  - @backstage/config@1.0.8
+  - @backstage/plugin-kubernetes-common@0.6.4
+
+## 0.9.2-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.13.2-next.3
+  - @backstage/catalog-model@1.4.0-next.1
+  - @backstage/config@1.0.7
+  - @backstage/core-plugin-api@1.5.2-next.0
+  - @backstage/errors@1.2.0-next.0
+  - @backstage/theme@0.4.0-next.1
+  - @backstage/plugin-catalog-react@1.7.0-next.3
+  - @backstage/plugin-kubernetes-common@0.6.4-next.1
+
+## 0.9.2-next.2
+
+### Patch Changes
+
+- 73cc0deee48a: Add proposed fix dialog for pod errors
+- Updated dependencies
+  - @backstage/theme@0.4.0-next.1
+  - @backstage/plugin-catalog-react@1.7.0-next.2
+  - @backstage/core-components@0.13.2-next.2
+  - @backstage/config@1.0.7
+  - @backstage/core-plugin-api@1.5.2-next.0
+
+## 0.9.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.0-next.0
+  - @backstage/core-components@0.13.2-next.1
+  - @backstage/plugin-catalog-react@1.7.0-next.1
+  - @backstage/catalog-model@1.4.0-next.0
+  - @backstage/core-plugin-api@1.5.2-next.0
+  - @backstage/plugin-kubernetes-common@0.6.4-next.0
+  - @backstage/config@1.0.7
+  - @backstage/theme@0.4.0-next.0
+
+## 0.9.2-next.0
+
+### Patch Changes
+
+- dc3cddf51ab5: Fix cyclical dependency in built output
+- 4b230b97660d: Add errors to PodDrawer
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.7.0-next.0
+  - @backstage/theme@0.4.0-next.0
+  - @backstage/config@1.0.7
+  - @backstage/core-components@0.13.2-next.0
+  - @backstage/core-plugin-api@1.5.1
+  - @backstage/catalog-model@1.3.0
+  - @backstage/errors@1.1.5
+  - @backstage/plugin-kubernetes-common@0.6.3
+
+## 0.9.0
+
+### Minor Changes
+
+- 280ec10c18e: Added Pod logs components for Kubernetes plugin
+
+  **BREAKING**: `kubernetesProxyApi` for custom plugins built with components from the Kubernetes plugin apis, `kubernetesProxyApi` should be added to the plugin's API list.
+
+  ```
+  ...
+  export const kubernetesPlugin = createPlugin({
+    id: 'kubernetes',
+    apis: [
+  ...
+      createApiFactory({
+          api: kubernetesProxyApiRef,
+          deps: {
+          kubernetesApi: kubernetesApiRef,
+          },
+          factory: ({ kubernetesApi }) =>
+          new KubernetesProxyClient({
+              kubernetesApi,
+          }),
+      }),
+  ```
+
+  **BREAKING**: `KubernetesDrawer` is now called `KubernetesStructuredMetadataTableDrawer` so that we can do more than just show `StructuredMetadataTable`
+
+  `import { KubernetesDrawer } from "@backstage/plugin-kubernetes"`
+
+  should now be:
+
+  `import { KubernetesStructuredMetadataTableDrawer } from "@backstage/plugin-kubernetes"`
+
+### Patch Changes
+
+- c7bad1005ba: The Kubernetes plugin now requests AKS access tokens from Azure when retrieving
+  objects from clusters configured with `authProvider: aks` and sets `auth.aks` in
+  its request bodies appropriately.
+- a160e02c3d7: Omit managed fields in the Kubernetes resource YAML display.
+- Updated dependencies
+  - @backstage/theme@0.3.0
+  - @backstage/plugin-catalog-react@1.6.0
+  - @backstage/core-components@0.13.1
+  - @backstage/plugin-kubernetes-common@0.6.3
+  - @backstage/catalog-model@1.3.0
+  - @backstage/config@1.0.7
+  - @backstage/core-plugin-api@1.5.1
+  - @backstage/errors@1.1.5
+
+## 0.9.0-next.2
+
+### Patch Changes
+
+- c7bad1005ba: The Kubernetes plugin now requests AKS access tokens from Azure when retrieving
+  objects from clusters configured with `authProvider: aks` and sets `auth.aks` in
+  its request bodies appropriately.
+- Updated dependencies
+  - @backstage/theme@0.3.0-next.0
+  - @backstage/core-components@0.13.1-next.1
+  - @backstage/plugin-kubernetes-common@0.6.3-next.0
+  - @backstage/plugin-catalog-react@1.6.0-next.2
+  - @backstage/config@1.0.7
+  - @backstage/core-plugin-api@1.5.1
+
+## 0.9.0-next.1
+
+### Minor Changes
+
+- 280ec10c18e: Added Pod logs components for Kubernetes plugin
+
+  **BREAKING**: `kubernetesProxyApi` for custom plugins built with components from the Kubernetes plugin apis, `kubernetesProxyApi` should be added to the plugin's API list.
+
+  ```
+  ...
+  export const kubernetesPlugin = createPlugin({
+    id: 'kubernetes',
+    apis: [
+  ...
+      createApiFactory({
+          api: kubernetesProxyApiRef,
+          deps: {
+          kubernetesApi: kubernetesApiRef,
+          },
+          factory: ({ kubernetesApi }) =>
+          new KubernetesProxyClient({
+              kubernetesApi,
+          }),
+      }),
+  ```
+
+  **BREAKING**: `KubernetesDrawer` is now called `KubernetesStructuredMetadataTableDrawer` so that we can do more than just show `StructuredMetadataTable`
+
+  `import { KubernetesDrawer } from "@backstage/plugin-kubernetes"`
+
+  should now be:
+
+  `import { KubernetesStructuredMetadataTableDrawer } from "@backstage/plugin-kubernetes"`
+
+### Patch Changes
+
+- a160e02c3d7: Omit managed fields in the Kubernetes resource YAML display.
+- Updated dependencies
+  - @backstage/core-components@0.13.1-next.0
+  - @backstage/core-plugin-api@1.5.1
+  - @backstage/plugin-catalog-react@1.6.0-next.1
+  - @backstage/config@1.0.7
+
+## 0.8.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.6.0-next.0
+  - @backstage/core-components@0.13.0
+  - @backstage/core-plugin-api@1.5.1
+  - @backstage/catalog-model@1.3.0
+  - @backstage/config@1.0.7
+  - @backstage/errors@1.1.5
+  - @backstage/theme@0.2.19
+  - @backstage/plugin-kubernetes-common@0.6.2
+
+## 0.8.0
+
+### Minor Changes
+
+- 754be7c5106: refactor kubernetes error detection to make way for proposed solutions
+
+  **BREAKING**: `DetectedError` now appears once per Kubernetes resource per error instead of for all resources which have that error, `namespace` and `name` fields are now in `sourceRef` object `message` is now a `string` instead of a `string[]`. `ErrorDetectableKind` has been removed.
+
+### Patch Changes
+
+- 8e00acb28db: Small tweaks to remove warnings in the console during development (mainly focusing on techdocs)
+- e7fb0117485: fixes a bug where an empty authorization header was provided to the proxy endpoint when a cluster had a server-side auth provider
+- c159ab64a60: `KubernetesBackendClient` now requires a `kubernetesAuthProvidersApi` value to be provided. `KubernetesApi` interface now has a proxy method requirement.
+- e0c6e8b9c3c: Update peer dependencies
+- Updated dependencies
+  - @backstage/core-components@0.13.0
+  - @backstage/plugin-catalog-react@1.5.0
+  - @backstage/theme@0.2.19
+  - @backstage/core-plugin-api@1.5.1
+  - @backstage/catalog-model@1.3.0
+  - @backstage/plugin-kubernetes-common@0.6.2
+  - @backstage/config@1.0.7
+  - @backstage/errors@1.1.5
+
+## 0.8.0-next.3
+
+### Minor Changes
+
+- 754be7c5106: refactor kubernetes error detection to make way for proposed solutions
+
+  **BREAKING**: `DetectedError` now appears once per Kubernetes resource per error instead of for all resources which have that error, `namespace` and `name` fields are now in `sourceRef` object `message` is now a `string` instead of a `string[]`. `ErrorDetectableKind` has been removed.
+
+### Patch Changes
+
+- e7fb0117485: fixes a bug where an empty authorization header was provided to the proxy endpoint when a cluster had a server-side auth provider
+- c159ab64a60: `KubernetesBackendClient` now requires a `kubernetesAuthProvidersApi` value to be provided. `KubernetesApi` interface now has a proxy method requirement.
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.5.0-next.3
+  - @backstage/catalog-model@1.3.0-next.0
+  - @backstage/core-components@0.13.0-next.3
+  - @backstage/config@1.0.7
+  - @backstage/core-plugin-api@1.5.1-next.1
+  - @backstage/errors@1.1.5
+  - @backstage/theme@0.2.19-next.0
+  - @backstage/plugin-kubernetes-common@0.6.2-next.2
+
+## 0.7.10-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.6-next.2
+  - @backstage/plugin-catalog-react@1.4.1-next.2
+  - @backstage/core-plugin-api@1.5.1-next.1
+  - @backstage/catalog-model@1.2.1
+  - @backstage/config@1.0.7
+  - @backstage/theme@0.2.19-next.0
+  - @backstage/plugin-kubernetes-common@0.6.2-next.1
+
+## 0.7.10-next.1
+
+### Patch Changes
+
+- e0c6e8b9c3c: Update peer dependencies
+- Updated dependencies
+  - @backstage/core-components@0.12.6-next.1
+  - @backstage/core-plugin-api@1.5.1-next.0
+  - @backstage/plugin-catalog-react@1.4.1-next.1
+  - @backstage/theme@0.2.19-next.0
+  - @backstage/catalog-model@1.2.1
+  - @backstage/config@1.0.7
+  - @backstage/plugin-kubernetes-common@0.6.2-next.1
+
+## 0.7.10-next.0
+
+### Patch Changes
+
+- 8e00acb28db: Small tweaks to remove warnings in the console during development (mainly focusing on techdocs)
+- Updated dependencies
+  - @backstage/core-components@0.12.6-next.0
+  - @backstage/plugin-catalog-react@1.4.1-next.0
+  - @backstage/plugin-kubernetes-common@0.6.2-next.0
+  - @backstage/core-plugin-api@1.5.0
+  - @backstage/config@1.0.7
+  - @backstage/catalog-model@1.2.1
+  - @backstage/theme@0.2.18
+
+## 0.7.9
+
+### Patch Changes
+
+- 8adeb19b37d: GitLab can now be used as an `oidcTokenProvider` for Kubernetes clusters
+- c10384a9235: Switch to using `LinkButton` instead of the deprecated `Button`
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.5
+  - @backstage/plugin-catalog-react@1.4.0
+  - @backstage/core-plugin-api@1.5.0
+  - @backstage/catalog-model@1.2.1
+  - @backstage/config@1.0.7
+  - @backstage/theme@0.2.18
+  - @backstage/plugin-kubernetes-common@0.6.1
+
+## 0.7.9-next.2
+
+### Patch Changes
+
+- 8adeb19b37d: GitLab can now be used as an `oidcTokenProvider` for Kubernetes clusters
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.2
+  - @backstage/plugin-catalog-react@1.4.0-next.2
+  - @backstage/core-plugin-api@1.5.0-next.2
+  - @backstage/config@1.0.7-next.0
+
+## 0.7.9-next.1
+
+### Patch Changes
+
+- c10384a9235: Switch to using `LinkButton` instead of the deprecated `Button`
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.1
+  - @backstage/core-plugin-api@1.4.1-next.1
+  - @backstage/config@1.0.7-next.0
+  - @backstage/theme@0.2.18-next.0
+  - @backstage/plugin-catalog-react@1.4.0-next.1
+  - @backstage/catalog-model@1.2.1-next.1
+  - @backstage/plugin-kubernetes-common@0.6.1-next.1
+
+## 0.7.9-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.4.0-next.0
+  - @backstage/core-plugin-api@1.4.1-next.0
+  - @backstage/catalog-model@1.2.1-next.0
+  - @backstage/config@1.0.6
+  - @backstage/core-components@0.12.5-next.0
+  - @backstage/theme@0.2.17
+  - @backstage/plugin-kubernetes-common@0.6.1-next.0
+
+## 0.7.8
+
+### Patch Changes
+
+- 145a79a15b: Condenses kubernetes ui plugin to fit more onscreen and increase visibility
+- 628e2bd89a: Updated dependency `@kubernetes/client-node` to `0.18.1`.
+- Updated dependencies
+  - @backstage/plugin-kubernetes-common@0.6.0
+  - @backstage/core-components@0.12.4
+  - @backstage/catalog-model@1.2.0
+  - @backstage/theme@0.2.17
+  - @backstage/core-plugin-api@1.4.0
+  - @backstage/plugin-catalog-react@1.3.0
+  - @backstage/config@1.0.6
+
+## 0.7.8-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0-next.1
+  - @backstage/core-components@0.12.4-next.1
+  - @backstage/config@1.0.6
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-catalog-react@1.3.0-next.2
+  - @backstage/plugin-kubernetes-common@0.6.0-next.2
+
+## 0.7.8-next.1
+
+### Patch Changes
+
+- 145a79a15b: Condenses kubernetes ui plugin to fit more onscreen and increase visibility
+- 628e2bd89a: Updated dependency `@kubernetes/client-node` to `0.18.1`.
+- Updated dependencies
+  - @backstage/core-components@0.12.4-next.0
+  - @backstage/plugin-kubernetes-common@0.6.0-next.1
+  - @backstage/plugin-catalog-react@1.3.0-next.1
+  - @backstage/catalog-model@1.1.6-next.0
+  - @backstage/config@1.0.6
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/theme@0.2.16
+
+## 0.7.8-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-kubernetes-common@0.6.0-next.0
+  - @backstage/plugin-catalog-react@1.3.0-next.0
+  - @backstage/catalog-model@1.1.6-next.0
+
+## 0.7.7
+
+### Patch Changes
+
+- 27a5e90e97: Small updates to some paragraph components to ensure theme typography properties are inherited correctly.
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5
+  - @backstage/plugin-catalog-react@1.2.4
+  - @backstage/core-components@0.12.3
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/config@1.0.6
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-kubernetes-common@0.5.1
+
+## 0.7.7-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.3.0-next.1
+  - @backstage/plugin-catalog-react@1.2.4-next.2
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/config@1.0.6-next.0
+  - @backstage/core-components@0.12.3-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-kubernetes-common@0.5.1-next.1
+
+## 0.7.7-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/config@1.0.6-next.0
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/core-components@0.12.3-next.1
+  - @backstage/core-plugin-api@1.2.1-next.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-catalog-react@1.2.4-next.1
+  - @backstage/plugin-kubernetes-common@0.5.1-next.1
+
+## 0.7.7-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.0
+  - @backstage/plugin-catalog-react@1.2.4-next.0
+  - @backstage/core-components@0.12.3-next.0
+  - @backstage/config@1.0.5
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-kubernetes-common@0.5.1-next.0
+
+## 0.7.6
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.2
+  - @backstage/plugin-catalog-react@1.2.3
+
+## 0.7.5
+
+### Patch Changes
+
+- 2db8acffe7: Kubernetes plugin now gracefully surfaces transport-level errors (like DNS or timeout, or other socket errors) occurring while fetching data. This will be merged into any data that is fetched successfully, fixing a bug where the whole page would be empty if any fetch operation encountered such an error.
+- 365f887717: Removed rendering for ErrorEmptyState in ErrorReporting component, so nothing is rendered when there are no errors. Also removed Divider on Kubernetes page.
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- 9ce7866ecd: Updated dependency `@kubernetes/client-node` to `0.18.0`.
+- Updated dependencies
+  - @backstage/plugin-kubernetes-common@0.5.0
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/core-components@0.12.1
+  - @backstage/plugin-catalog-react@1.2.2
+  - @backstage/catalog-model@1.1.4
+  - @backstage/config@1.0.5
+  - @backstage/theme@0.2.16
+
+## 0.7.5-next.4
+
+### Patch Changes
+
+- 365f887717: Removed rendering for ErrorEmptyState in ErrorReporting component, so nothing is rendered when there are no errors. Also removed Divider on Kubernetes page.
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.4
+  - @backstage/plugin-catalog-react@1.2.2-next.4
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-kubernetes-common@0.4.5-next.1
+
+## 0.7.5-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.3
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-catalog-react@1.2.2-next.3
+  - @backstage/plugin-kubernetes-common@0.4.5-next.1
+
+## 0.7.5-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/core-components@0.12.1-next.2
+  - @backstage/plugin-catalog-react@1.2.2-next.2
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-kubernetes-common@0.4.5-next.1
+
+## 0.7.5-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.1
+  - @backstage/core-plugin-api@1.1.1-next.1
+  - @backstage/plugin-catalog-react@1.2.2-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-kubernetes-common@0.4.5-next.1
+
+## 0.7.5-next.0
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.0
+  - @backstage/core-plugin-api@1.1.1-next.0
+  - @backstage/plugin-catalog-react@1.2.2-next.0
+  - @backstage/plugin-kubernetes-common@0.4.5-next.0
+  - @backstage/catalog-model@1.1.4-next.0
+  - @backstage/config@1.0.5-next.0
+  - @backstage/theme@0.2.16
+
 ## 0.7.4
 
 ### Patch Changes

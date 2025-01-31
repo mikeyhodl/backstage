@@ -16,7 +16,7 @@
 import React from 'react';
 import { RepoUrlPickerHost } from './RepoUrlPickerHost';
 import { renderInTestApp, TestApiProvider } from '@backstage/test-utils';
-import { scaffolderApiRef } from '../../../api';
+import { scaffolderApiRef } from '@backstage/plugin-scaffolder-react';
 import { fireEvent, within } from '@testing-library/react';
 
 describe('RepoUrlPickerHostField', () => {
@@ -64,7 +64,7 @@ describe('RepoUrlPickerHostField', () => {
       </TestApiProvider>,
     );
 
-    fireEvent.mouseDown(getByTestId('select'));
+    fireEvent.mouseDown(getByTestId('host-select'));
     expect(getByText('gitlab.com')).toBeInTheDocument();
 
     const listbox = within(getByRole('combobox'));
@@ -93,7 +93,7 @@ describe('RepoUrlPickerHostField', () => {
       </TestApiProvider>,
     );
 
-    fireEvent.mouseDown(getByTestId('select'));
+    fireEvent.mouseDown(getByTestId('host-select'));
     expect(getByText('gitlab.com')).toBeInTheDocument();
 
     const listbox = within(getByRole('combobox'));

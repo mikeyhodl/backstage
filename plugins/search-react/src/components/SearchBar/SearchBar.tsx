@@ -14,55 +14,42 @@
  * limitations under the License.
  */
 
-import React, {
-  ChangeEvent,
-  KeyboardEvent,
-  useState,
-  useEffect,
-  useCallback,
-  forwardRef,
-  ComponentType,
-  ForwardRefExoticComponent,
-} from 'react';
-import useDebounce from 'react-use/lib/useDebounce';
-
-import {
-  InputBase,
-  InputBaseProps,
-  InputAdornment,
-  IconButton,
-} from '@material-ui/core';
-import SearchIcon from '@material-ui/icons/Search';
-import ClearButton from '@material-ui/icons/Clear';
-
 import {
   AnalyticsContext,
   configApiRef,
   useApi,
+  useApp,
 } from '@backstage/core-plugin-api';
-
+import IconButton from '@material-ui/core/IconButton';
+import InputAdornment from '@material-ui/core/InputAdornment';
+import TextField from '@material-ui/core/TextField';
+import Button from '@material-ui/core/Button';
+import { TextFieldProps } from '@material-ui/core/TextField';
+import DefaultSearchIcon from '@material-ui/icons/Search';
+import React, {
+  ChangeEvent,
+  forwardRef,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import useDebounce from 'react-use/esm/useDebounce';
 import { SearchContextProvider, useSearch } from '../../context';
-import { TrackSearch } from '../SearchTracker';
-
-function withContext<T>(Component: ComponentType<T>) {
-  return forwardRef<unknown, T>((props, ref) => (
-    <SearchContextProvider inheritParentContextIfAvailable>
-      <Component {...props} ref={ref} />
-    </SearchContextProvider>
-  ));
-}
 
 /**
  * Props for {@link SearchBarBase}.
  *
  * @public
  */
-export type SearchBarBaseProps = Omit<InputBaseProps, 'onChange'> & {
+export type SearchBarBaseProps = Omit<TextFieldProps, 'onChange'> & {
   debounceTime?: number;
   clearButton?: boolean;
   onClear?: () => void;
   onSubmit?: () => void;
   onChange: (value: string) => void;
+  endAdornment?: React.ReactNode;
 };
 
 /**
@@ -72,98 +59,137 @@ export type SearchBarBaseProps = Omit<InputBaseProps, 'onChange'> & {
  *
  * @public
  */
-export const SearchBarBase: ForwardRefExoticComponent<SearchBarBaseProps> =
-  withContext(
-    forwardRef((props, ref) => {
-      const {
-        onChange,
-        onKeyDown = () => {},
-        onClear = () => {},
-        onSubmit = () => {},
-        debounceTime = 200,
-        clearButton = true,
-        fullWidth = true,
-        value: defaultValue,
-        placeholder: defaultPlaceholder,
-        inputProps: defaultInputProps = {},
-        endAdornment: defaultEndAdornment,
-        ...rest
-      } = props;
+export const SearchBarBase = forwardRef((props: SearchBarBaseProps, ref) => {
+  const {
+    onChange,
+    onKeyDown = () => {},
+    onClear = () => {},
+    onSubmit = () => {},
+    debounceTime = 200,
+    clearButton = true,
+    fullWidth = true,
+    value: defaultValue,
+    label,
+    placeholder,
+    inputProps = {},
+    InputProps = {},
+    endAdornment,
+    ...rest
+  } = props;
 
-      const configApi = useApi(configApiRef);
-      const [value, setValue] = useState<string>('');
+  const configApi = useApi(configApiRef);
+  const [value, setValue] = useState<string>('');
+  const forwardedValueRef = useRef<string>('');
 
-      useEffect(() => {
-        setValue(prevValue =>
-          prevValue !== defaultValue ? String(defaultValue) : prevValue,
-        );
-      }, [defaultValue]);
+  useEffect(() => {
+    setValue(prevValue => {
+      // We only update the value if our current value is the same as it was
+      // for the most recent onChange call. Otherwise it means that the users
+      // has continued typing and we should not replace their input.
+      if (prevValue === forwardedValueRef.current) {
+        return String(defaultValue);
+      }
+      return prevValue;
+    });
+  }, [defaultValue, forwardedValueRef]);
 
-      useDebounce(() => onChange(value), debounceTime, [value]);
-
-      const handleChange = useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {
-          setValue(e.target.value);
-        },
-        [setValue],
-      );
-
-      const handleKeyDown = useCallback(
-        (e: KeyboardEvent<HTMLInputElement>) => {
-          if (onKeyDown) onKeyDown(e);
-          if (onSubmit && e.key === 'Enter') {
-            onSubmit();
-          }
-        },
-        [onKeyDown, onSubmit],
-      );
-
-      const handleClear = useCallback(() => {
-        onChange('');
-        if (onClear) {
-          onClear();
-        }
-      }, [onChange, onClear]);
-
-      const placeholder =
-        defaultPlaceholder ??
-        `Search in ${configApi.getOptionalString('app.title') || 'Backstage'}`;
-
-      const startAdornment = (
-        <InputAdornment position="start">
-          <IconButton aria-label="Query" size="small" disabled>
-            <SearchIcon />
-          </IconButton>
-        </InputAdornment>
-      );
-
-      const endAdornment = (
-        <InputAdornment position="end">
-          <IconButton aria-label="Clear" size="small" onClick={handleClear}>
-            <ClearButton />
-          </IconButton>
-        </InputAdornment>
-      );
-
-      return (
-        <TrackSearch>
-          <InputBase
-            data-testid="search-bar-next"
-            ref={ref}
-            value={value}
-            placeholder={placeholder}
-            startAdornment={startAdornment}
-            endAdornment={clearButton ? endAdornment : defaultEndAdornment}
-            inputProps={{ 'aria-label': 'Search', ...defaultInputProps }}
-            fullWidth={fullWidth}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            {...rest}
-          />
-        </TrackSearch>
-      );
-    }),
+  useDebounce(
+    () => {
+      forwardedValueRef.current = value;
+      onChange(value);
+    },
+    debounceTime,
+    [value],
   );
+
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      setValue(e.target.value);
+    },
+    [setValue],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (onKeyDown) onKeyDown(e);
+      if (onSubmit && e.key === 'Enter') {
+        onSubmit();
+      }
+    },
+    [onKeyDown, onSubmit],
+  );
+
+  const handleClear = useCallback(() => {
+    forwardedValueRef.current = '';
+    onChange('');
+    setValue('');
+    if (onClear) {
+      onClear();
+    }
+  }, [onChange, onClear]);
+
+  const ariaLabel: string | undefined = label ? undefined : 'Search';
+
+  const inputPlaceholder =
+    placeholder ??
+    `Search in ${configApi.getOptionalString('app.title') || 'Backstage'}`;
+
+  const SearchIcon = useApp().getSystemIcon('search') || DefaultSearchIcon;
+
+  const startAdornment = (
+    <InputAdornment position="start">
+      <IconButton aria-label="Query" size="small" disabled>
+        <SearchIcon />
+      </IconButton>
+    </InputAdornment>
+  );
+
+  const clearButtonEndAdornment = (
+    <InputAdornment position="end">
+      <Button
+        aria-label="Clear"
+        size="small"
+        onClick={handleClear}
+        onKeyDown={event => {
+          if (event.key === 'Enter') {
+            // write your functionality here
+            event.stopPropagation();
+          }
+        }}
+      >
+        Clear
+      </Button>
+    </InputAdornment>
+  );
+
+  return (
+    <SearchContextProvider inheritParentContextIfAvailable>
+      <TextField
+        id="search-bar-text-field"
+        data-testid="search-bar-next"
+        variant="outlined"
+        margin="normal"
+        inputRef={ref}
+        value={value}
+        label={label}
+        placeholder={inputPlaceholder}
+        InputProps={{
+          startAdornment,
+          endAdornment: clearButton ? clearButtonEndAdornment : endAdornment,
+          ...InputProps,
+        }}
+        inputProps={{
+          'aria-label': ariaLabel,
+          ...inputProps,
+        }}
+        fullWidth={fullWidth}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        {...rest}
+      />
+    </SearchContextProvider>
+  );
+});
 
 /**
  * Props for {@link SearchBar}.
@@ -177,30 +203,30 @@ export type SearchBarProps = Partial<SearchBarBaseProps>;
  *
  * @public
  */
-export const SearchBar: ForwardRefExoticComponent<SearchBarProps> = withContext(
-  forwardRef((props, ref) => {
-    const { value: initialValue = '', onChange, ...rest } = props;
+export const SearchBar = forwardRef((props: SearchBarProps, ref) => {
+  const { value: initialValue = '', onChange, ...rest } = props;
 
-    const { term, setTerm } = useSearch();
+  const { term, setTerm } = useSearch();
 
-    useEffect(() => {
-      if (initialValue) {
-        setTerm(String(initialValue));
+  useEffect(() => {
+    if (initialValue) {
+      setTerm(String(initialValue));
+    }
+  }, [initialValue, setTerm]);
+
+  const handleChange = useCallback(
+    (newValue: string) => {
+      if (onChange) {
+        onChange(newValue);
+      } else {
+        setTerm(newValue);
       }
-    }, [initialValue, setTerm]);
+    },
+    [onChange, setTerm],
+  );
 
-    const handleChange = useCallback(
-      (newValue: string) => {
-        if (onChange) {
-          onChange(newValue);
-        } else {
-          setTerm(newValue);
-        }
-      },
-      [onChange, setTerm],
-    );
-
-    return (
+  return (
+    <SearchContextProvider inheritParentContextIfAvailable>
       <AnalyticsContext
         attributes={{ pluginId: 'search', extension: 'SearchBar' }}
       >
@@ -211,6 +237,6 @@ export const SearchBar: ForwardRefExoticComponent<SearchBarProps> = withContext(
           onChange={handleChange}
         />
       </AnalyticsContext>
-    );
-  }),
-);
+    </SearchContextProvider>
+  );
+});

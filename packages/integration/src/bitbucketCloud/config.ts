@@ -46,6 +46,11 @@ export type BitbucketCloudIntegrationConfig = {
    * See https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/
    */
   appPassword?: string;
+
+  /**
+   * The access token to use for requests to Bitbucket Cloud (bitbucket.org).
+   */
+  token?: string;
 };
 
 /**
@@ -62,7 +67,7 @@ export function readBitbucketCloudIntegrationConfig(
   // If config is provided, we assume authenticated access is desired
   // (as the anonymous one is provided by default).
   const username = config.getString('username');
-  const appPassword = config.getString('appPassword');
+  const appPassword = config.getString('appPassword')?.trim();
 
   return {
     host,

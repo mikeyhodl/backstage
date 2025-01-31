@@ -15,8 +15,10 @@
  */
 
 import { ConfigReader } from '@backstage/config';
-import { Duration } from 'luxon';
-import { readProviderConfigs } from './GithubEntityProviderConfig';
+import {
+  readProviderConfigs,
+  DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
+} from './GithubEntityProviderConfig';
 
 describe('readProviderConfigs', () => {
   afterEach(() => jest.resetAllMocks());
@@ -78,6 +80,18 @@ describe('readProviderConfigs', () => {
                 },
               },
             },
+            providerWithForkFilter: {
+              organization: 'test-org6',
+              filters: {
+                allowForks: false,
+              },
+            },
+            providerWithVisibilityFilter: {
+              organization: 'test-org6',
+              filters: {
+                visibility: ['public', 'internal'],
+              },
+            },
             providerWithHost: {
               organization: 'test-org1',
               host: 'ghe.internal.com',
@@ -97,7 +111,7 @@ describe('readProviderConfigs', () => {
     });
     const providerConfigs = readProviderConfigs(config);
 
-    expect(providerConfigs).toHaveLength(7);
+    expect(providerConfigs).toHaveLength(9);
     expect(providerConfigs[0]).toEqual({
       id: 'providerOrganizationOnly',
       organization: 'test-org1',
@@ -106,12 +120,14 @@ describe('readProviderConfigs', () => {
       filters: {
         repository: undefined,
         branch: undefined,
+        allowForks: true,
         topic: {
           include: undefined,
           exclude: undefined,
         },
+        visibility: undefined,
       },
-      schedule: undefined,
+      schedule: DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
       validateLocationsExist: false,
     });
     expect(providerConfigs[1]).toEqual({
@@ -122,12 +138,14 @@ describe('readProviderConfigs', () => {
       filters: {
         repository: undefined,
         branch: undefined,
+        allowForks: true,
         topic: {
           include: undefined,
           exclude: undefined,
         },
+        visibility: undefined,
       },
-      schedule: undefined,
+      schedule: DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
       validateLocationsExist: false,
     });
     expect(providerConfigs[2]).toEqual({
@@ -138,12 +156,14 @@ describe('readProviderConfigs', () => {
       filters: {
         repository: /^repository.*filter$/, // repo
         branch: undefined, // branch
+        allowForks: true,
         topic: {
           include: undefined,
           exclude: undefined,
         },
+        visibility: undefined,
       },
-      schedule: undefined,
+      schedule: DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
       validateLocationsExist: false,
     });
     expect(providerConfigs[3]).toEqual({
@@ -154,12 +174,14 @@ describe('readProviderConfigs', () => {
       filters: {
         repository: undefined,
         branch: 'branch-name',
+        allowForks: true,
         topic: {
           include: undefined,
           exclude: undefined,
         },
+        visibility: undefined,
       },
-      schedule: undefined,
+      schedule: DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
       validateLocationsExist: false,
     });
     expect(providerConfigs[4]).toEqual({
@@ -170,15 +192,53 @@ describe('readProviderConfigs', () => {
       filters: {
         repository: undefined,
         branch: undefined,
+        allowForks: true,
         topic: {
           include: ['backstage-include'],
           exclude: ['backstage-exclude'],
         },
+        visibility: undefined,
       },
-      schedule: undefined,
+      schedule: DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
       validateLocationsExist: false,
     });
     expect(providerConfigs[5]).toEqual({
+      id: 'providerWithForkFilter',
+      organization: 'test-org6',
+      catalogPath: '/catalog-info.yaml',
+      host: 'github.com',
+      filters: {
+        repository: undefined,
+        branch: undefined,
+        allowForks: false,
+        topic: {
+          include: undefined,
+          exclude: undefined,
+        },
+        visibility: undefined,
+      },
+      schedule: DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
+      validateLocationsExist: false,
+    });
+    expect(providerConfigs[6]).toEqual({
+      id: 'providerWithVisibilityFilter',
+      organization: 'test-org6',
+      catalogPath: '/catalog-info.yaml',
+      host: 'github.com',
+      filters: {
+        repository: undefined,
+        branch: undefined,
+        allowForks: true,
+        topic: {
+          include: undefined,
+          exclude: undefined,
+        },
+        visibility: ['public', 'internal'],
+      },
+      schedule: DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
+      validateLocationsExist: false,
+    });
+    expect(providerConfigs[7]).toEqual({
       id: 'providerWithHost',
       organization: 'test-org1',
       catalogPath: '/catalog-info.yaml',
@@ -186,15 +246,17 @@ describe('readProviderConfigs', () => {
       filters: {
         repository: undefined,
         branch: undefined,
+        allowForks: true,
         topic: {
           include: undefined,
           exclude: undefined,
         },
+        visibility: undefined,
       },
       validateLocationsExist: false,
-      schedule: undefined,
+      schedule: DEFAULT_GITHUB_ENTITY_PROVIDER_CONFIG_SCHEDULE,
     });
-    expect(providerConfigs[6]).toEqual({
+    expect(providerConfigs[8]).toEqual({
       id: 'providerWithSchedule',
       organization: 'test-org1',
       catalogPath: '/catalog-info.yaml',
@@ -202,13 +264,15 @@ describe('readProviderConfigs', () => {
       filters: {
         repository: undefined,
         branch: undefined,
+        allowForks: true,
         topic: {
           include: undefined,
           exclude: undefined,
         },
+        visibility: undefined,
       },
       schedule: {
-        frequency: Duration.fromISO('PT30M'),
+        frequency: { minutes: 30 },
         timeout: {
           minutes: 3,
         },

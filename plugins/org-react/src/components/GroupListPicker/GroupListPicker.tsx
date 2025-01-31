@@ -21,7 +21,7 @@ import {
 } from '@backstage/plugin-catalog-react';
 import TextField from '@material-ui/core/TextField';
 import Autocomplete from '@material-ui/lab/Autocomplete';
-import useAsync from 'react-use/lib/useAsync';
+import useAsync from 'react-use/esm/useAsync';
 import Popover from '@material-ui/core/Popover';
 import { useApi } from '@backstage/core-plugin-api';
 import { ResponseErrorPanel } from '@backstage/core-components';
@@ -34,6 +34,7 @@ import { GroupListPickerButton } from './GroupListPickerButton';
  * @public
  */
 export type GroupListPickerProps = {
+  defaultValue?: string;
   placeholder?: string;
   groupTypes?: Array<string>;
   onChange: (value: GroupEntity | undefined) => void;
@@ -43,9 +44,9 @@ export type GroupListPickerProps = {
 export const GroupListPicker = (props: GroupListPickerProps) => {
   const catalogApi = useApi(catalogApiRef);
 
-  const { onChange, groupTypes, placeholder = '' } = props;
+  const { onChange, groupTypes, placeholder = '', defaultValue = '' } = props;
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
-  const [inputValue, setInputValue] = React.useState('');
+  const [inputValue, setInputValue] = React.useState(defaultValue);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -73,8 +74,9 @@ export const GroupListPicker = (props: GroupListPickerProps) => {
   }, [catalogApi, groupTypes]);
 
   const handleChange = useCallback(
-    (_, v: GroupEntity | null) => {
+    (_: unknown, v: GroupEntity | null) => {
       onChange(v ?? undefined);
+      setAnchorEl(null);
     },
     [onChange],
   );
@@ -108,6 +110,8 @@ export const GroupListPicker = (props: GroupListPickerProps) => {
           renderInput={params => (
             <TextField
               {...params}
+              // eslint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
               placeholder={placeholder}
               variant="outlined"
             />

@@ -100,6 +100,21 @@ alongside the entity's source code, the value of this annotation can point to an
 absolute URL, matching the location reference string format outlined above, for
 example: `url:https://github.com/backstage/backstage/tree/master`
 
+### backstage.io/techdocs-entity
+
+```yaml
+# Example:
+metadata:
+  annotations:
+    backstage.io/techdocs-entity: component:default/example
+```
+
+The value of this annotation informs of an external entity that owns the TechDocs.
+This allows you to reference TechDocs from a single source without either duplicating
+the TechDocs in the TechDocs page or needing multiple builds of the same docs.
+
+This is for situations where you have complex systems where they share a single repo, and likely a single TechDoc location.
+
 ### backstage.io/view-url, backstage.io/edit-url
 
 ```yaml
@@ -130,6 +145,25 @@ A `Location` reference that points to the source code of the entity (typically a
 repository itself. If the URL points to a folder, it is important that it is
 suffixed with a `'/'` in order for relative path resolution to work
 consistently.
+
+### backstage.io/source-template
+
+```yaml
+# Example:
+metadata:
+  annotations:
+    backstage.io/source-template: template:default/create-react-app-template
+```
+
+Represents the entity ref of the Scaffolder template that was originally used
+to create the given entity. Useful to power "create something similar"
+experiences, as well as to track adherence to software standards across the
+Catalog.
+
+Note that this value is only automatically added to an entity when the
+`catalog:write` action is used to create the `catalog-info.yaml` file. It is
+otherwise the template author's responsibility to ensure that any entity
+definition included as part of the template contains this annotation.
 
 ### jenkins.io/job-full-name
 

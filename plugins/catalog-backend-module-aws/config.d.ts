@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { TaskScheduleDefinitionConfig } from '@backstage/backend-tasks';
+import { SchedulerServiceTaskScheduleDefinitionConfig } from '@backstage/backend-plugin-api';
 
 export interface Config {
   catalog?: {
@@ -26,8 +26,14 @@ export interface Config {
         provider: {
           /**
            * The role to be assumed by this processor
+           * @deprecated Use `accountId` instead.
            */
           roleArn?: string;
+
+          /**
+           * The AWS account ID to query for organizational data
+           */
+          accountId?: string;
         };
       };
     };
@@ -55,13 +61,18 @@ export interface Config {
              */
             region?: string;
             /**
+             * (Optional) AWS Account id.
+             * If not set, main account is used.
+             * @see https://github.com/backstage/backstage/blob/master/packages/integration-aws-node/README.md
+             */
+            accountId?: string;
+            /**
              * (Optional) TaskScheduleDefinition for the refresh.
              */
-            schedule?: TaskScheduleDefinitionConfig;
+            schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
           }
-        | Record<
-            string,
-            {
+        | {
+            [name: string]: {
               /**
                * (Required) AWS S3 Bucket Name
                */
@@ -78,11 +89,17 @@ export interface Config {
                */
               region?: string;
               /**
+               * (Optional) AWS Account id.
+               * If not set, main account is used.
+               * @see https://github.com/backstage/backstage/blob/master/packages/integration-aws-node/README.md
+               */
+              accountId?: string;
+              /**
                * (Optional) TaskScheduleDefinition for the refresh.
                */
-              schedule?: TaskScheduleDefinitionConfig;
-            }
-          >;
+              schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
+            };
+          };
     };
   };
 }

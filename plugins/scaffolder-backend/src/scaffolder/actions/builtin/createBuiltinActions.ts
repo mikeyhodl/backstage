@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { UrlReader } from '@backstage/backend-common';
 import { CatalogApi } from '@backstage/catalog-client';
 import { Config } from '@backstage/config';
 import {
@@ -22,39 +21,70 @@ import {
   GithubCredentialsProvider,
   ScmIntegrations,
 } from '@backstage/integration';
-import { JsonObject } from '@backstage/types';
+import {
+  TemplateAction,
+  TemplateFilter,
+  TemplateGlobal,
+} from '@backstage/plugin-scaffolder-node';
 import {
   createCatalogRegisterAction,
   createCatalogWriteAction,
+  createFetchCatalogEntityAction,
 } from './catalog';
 
-import { TemplateFilter, TemplateGlobal } from '../../../lib';
-import { TemplateAction } from '../types';
-import { createDebugLogAction } from './debug';
-import { createFetchPlainAction, createFetchTemplateAction } from './fetch';
+import { createDebugLogAction, createWaitAction } from './debug';
+import {
+  createFetchPlainAction,
+  createFetchPlainFileAction,
+  createFetchTemplateAction,
+  createFetchTemplateFileAction,
+} from './fetch';
 import {
   createFilesystemDeleteAction,
+  createFilesystemReadDirAction,
   createFilesystemRenameAction,
 } from './filesystem';
 import {
   createGithubActionsDispatchAction,
+  createGithubAutolinksAction,
+  createGithubDeployKeyAction,
+  createGithubEnvironmentAction,
   createGithubIssuesLabelAction,
   createGithubRepoCreateAction,
   createGithubRepoPushAction,
   createGithubWebhookAction,
-} from './github';
-import {
-  createPublishAzureAction,
-  createPublishBitbucketAction,
-  createPublishBitbucketCloudAction,
-  createPublishBitbucketServerAction,
-  createPublishGerritAction,
-  createPublishGerritReviewAction,
   createPublishGithubAction,
   createPublishGithubPullRequestAction,
+} from '@backstage/plugin-scaffolder-backend-module-github';
+
+import { createPublishAzureAction } from '@backstage/plugin-scaffolder-backend-module-azure';
+
+import { createPublishBitbucketAction } from '@backstage/plugin-scaffolder-backend-module-bitbucket';
+
+import {
+  createPublishBitbucketCloudAction,
+  createBitbucketPipelinesRunAction,
+  createPublishBitbucketCloudPullRequestAction,
+} from '@backstage/plugin-scaffolder-backend-module-bitbucket-cloud';
+
+import {
+  createPublishBitbucketServerAction,
+  createPublishBitbucketServerPullRequestAction,
+} from '@backstage/plugin-scaffolder-backend-module-bitbucket-server';
+
+import {
+  createPublishGerritAction,
+  createPublishGerritReviewAction,
+} from '@backstage/plugin-scaffolder-backend-module-gerrit';
+
+import {
   createPublishGitlabAction,
+  createGitlabRepoPushAction,
   createPublishGitlabMergeRequestAction,
-} from './publish';
+} from '@backstage/plugin-scaffolder-backend-module-gitlab';
+
+import { createPublishGiteaAction } from '@backstage/plugin-scaffolder-backend-module-gitea';
+import { AuthService, UrlReaderService } from '@backstage/backend-plugin-api';
 
 /**
  * The options passed to {@link createBuiltinActions}
@@ -62,9 +92,9 @@ import {
  */
 export interface CreateBuiltInActionsOptions {
   /**
-   * The {@link @backstage/backend-common#UrlReader} interface that will be used in the default actions.
+   * The {@link @backstage/backend-plugin-api#UrlReaderService} interface that will be used in the default actions.
    */
-  reader: UrlReader;
+  reader: UrlReaderService;
   /**
    * The {@link @backstage/integrations#ScmIntegrations} that will be used in the default actions.
    */
@@ -73,6 +103,10 @@ export interface CreateBuiltInActionsOptions {
    * The {@link @backstage/catalog-client#CatalogApi} that will be used in the default actions.
    */
   catalogClient: CatalogApi;
+  /**
+   * The {@link @backstage/backend-plugin-api#AuthService} that will be used in the default actions.
+   */
+  auth?: AuthService;
   /**
    * The {@link @backstage/config#Config} that will be used in the default actions.
    */
@@ -89,16 +123,20 @@ export interface CreateBuiltInActionsOptions {
  * A function to generate create a list of default actions that the scaffolder provides.
  * Is called internally in the default setup, but can be used when adding your own actions or overriding the default ones
  *
+ * TODO(blam): version 2 of the scaffolder shouldn't ship with the additional modules. We should ship the basics, and let people install
+ * modules for the providers they want to use.
  * @public
  * @returns A list of actions that can be used in the scaffolder
+ *
  */
 export const createBuiltinActions = (
   options: CreateBuiltInActionsOptions,
-): TemplateAction<JsonObject>[] => {
+): TemplateAction[] => {
   const {
     reader,
     integrations,
     catalogClient,
+    auth,
     config,
     additionalTemplateFilters,
     additionalTemplateGlobals,
@@ -112,7 +150,17 @@ export const createBuiltinActions = (
       reader,
       integrations,
     }),
+    createFetchPlainFileAction({
+      reader,
+      integrations,
+    }),
     createFetchTemplateAction({
+      integrations,
+      reader,
+      additionalTemplateFilters,
+      additionalTemplateGlobals,
+    }),
+    createFetchTemplateFileAction({
       integrations,
       reader,
       additionalTemplateFilters,
@@ -126,6 +174,10 @@ export const createBuiltinActions = (
       integrations,
       config,
     }),
+    createPublishGiteaAction({
+      integrations,
+      config,
+    }),
     createPublishGithubAction({
       integrations,
       config,
@@ -134,12 +186,16 @@ export const createBuiltinActions = (
     createPublishGithubPullRequestAction({
       integrations,
       githubCredentialsProvider,
+      config,
     }),
     createPublishGitlabAction({
       integrations,
       config,
     }),
     createPublishGitlabMergeRequestAction({
+      integrations,
+    }),
+    createGitlabRepoPushAction({
       integrations,
     }),
     createPublishBitbucketAction({
@@ -150,7 +206,12 @@ export const createBuiltinActions = (
       integrations,
       config,
     }),
+    createPublishBitbucketCloudPullRequestAction({ integrations, config }),
     createPublishBitbucketServerAction({
+      integrations,
+      config,
+    }),
+    createPublishBitbucketServerPullRequestAction({
       integrations,
       config,
     }),
@@ -159,9 +220,12 @@ export const createBuiltinActions = (
       config,
     }),
     createDebugLogAction(),
-    createCatalogRegisterAction({ catalogClient, integrations }),
+    createWaitAction(),
+    createCatalogRegisterAction({ catalogClient, integrations, auth }),
+    createFetchCatalogEntityAction({ catalogClient, auth }),
     createCatalogWriteAction(),
     createFilesystemDeleteAction(),
+    createFilesystemReadDirAction(),
     createFilesystemRenameAction(),
     createGithubActionsDispatchAction({
       integrations,
@@ -184,7 +248,21 @@ export const createBuiltinActions = (
       config,
       githubCredentialsProvider,
     }),
+    createGithubEnvironmentAction({
+      integrations,
+      catalogClient,
+    }),
+    createGithubDeployKeyAction({
+      integrations,
+    }),
+    createGithubAutolinksAction({
+      integrations,
+      githubCredentialsProvider,
+    }),
+    createBitbucketPipelinesRunAction({
+      integrations,
+    }),
   ];
 
-  return actions as TemplateAction<JsonObject>[];
+  return actions as TemplateAction[];
 };

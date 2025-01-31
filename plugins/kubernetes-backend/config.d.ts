@@ -21,14 +21,19 @@ export interface Config {
       | 'services'
       | 'configmaps'
       | 'deployments'
+      | 'limitranges'
+      | 'resourcequotas'
       | 'replicasets'
       | 'horizontalpodautoscalers'
       | 'jobs'
       | 'cronjobs'
       | 'ingresses'
+      | 'customresources'
+      | 'statefulsets'
+      | 'daemonsets'
     >;
     serviceLocatorMethod: {
-      type: 'multiTenant';
+      type: 'multiTenant' | 'singleTenant' | 'catalogRelation';
     };
     clusterLocatorMethods: Array<
       | {
@@ -39,21 +44,29 @@ export interface Config {
             url: string;
             /** @visibility frontend */
             name: string;
+            /** @visibility frontend */
+            title?: string;
             /** @visibility secret  */
             serviceAccountToken?: string;
             /** @visibility frontend */
-            authProvider:
-              | 'aws'
-              | 'google'
-              | 'serviceAccount'
-              | 'azure'
-              | 'oidc';
+            authProvider?: string;
+            /** @visibility secret  */
+            authMetadata?: object;
             /** @visibility frontend */
             oidcTokenProvider?: string;
             /** @visibility frontend */
             skipTLSVerify?: boolean;
             /** @visibility frontend */
             skipMetricsLookup?: boolean;
+            /** @visibility secret  */
+            caData?: string;
+            /** @visibility secret  */
+            caFile?: string;
+            customResources?: Array<{
+              group: string;
+              apiVersion: string;
+              plural: string;
+            }>;
           }>;
         }
       | {
@@ -71,6 +84,8 @@ export interface Config {
           projectId: string;
           /** @visibility frontend */
           region?: string;
+          /** @visibility frontend */
+          authProvider?: string;
           /** @visibility frontend */
           skipTLSVerify?: boolean;
           /** @visibility frontend */
@@ -94,11 +109,16 @@ export interface Config {
       services?: string;
       configmaps?: string;
       deployments?: string;
+      limitranges?: string;
+      resourcequotas?: string;
       replicasets?: string;
       horizontalpodautoscalers?: string;
-      cronjobs?: string;
       jobs?: string;
+      cronjobs?: string;
       ingresses?: string;
+      customresources?: string;
+      statefulsets?: string;
+      daemonsets?: string;
     } & { [pluralKind: string]: string };
   };
 }

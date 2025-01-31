@@ -91,12 +91,23 @@ export class ElasticSearchClientWrapper {
   }
 
   search(options: { index: string | string[]; body: Object }) {
+    const searchOptions = {
+      ignore_unavailable: true,
+      allow_no_indices: true,
+    };
+
     if (this.openSearchClient) {
-      return this.openSearchClient.search(options);
+      return this.openSearchClient.search({
+        ...options,
+        ...searchOptions,
+      });
     }
 
     if (this.elasticSearchClient) {
-      return this.elasticSearchClient.search(options);
+      return this.elasticSearchClient.search({
+        ...options,
+        ...searchOptions,
+      });
     }
 
     throw new Error('No client defined');
@@ -130,6 +141,18 @@ export class ElasticSearchClientWrapper {
     throw new Error('No client defined');
   }
 
+  listIndices(options: { index: string }) {
+    if (this.openSearchClient) {
+      return this.openSearchClient.indices.get(options);
+    }
+
+    if (this.elasticSearchClient) {
+      return this.elasticSearchClient.indices.get(options);
+    }
+
+    throw new Error('No client defined');
+  }
+
   indexExists(options: { index: string | string[] }) {
     if (this.openSearchClient) {
       return this.openSearchClient.indices.exists(options);
@@ -154,18 +177,9 @@ export class ElasticSearchClientWrapper {
     throw new Error('No client defined');
   }
 
-  createIndex(options: { index: string }) {
-    if (this.openSearchClient) {
-      return this.openSearchClient.indices.create(options);
-    }
-
-    if (this.elasticSearchClient) {
-      return this.elasticSearchClient.indices.create(options);
-    }
-
-    throw new Error('No client defined');
-  }
-
+  /**
+   * @deprecated unused by the ElasticSearch Engine, will be removed in the future
+   */
   getAliases(options: { aliases: string[] }) {
     const { aliases } = options;
 
@@ -181,6 +195,18 @@ export class ElasticSearchClientWrapper {
         format: 'json',
         name: aliases,
       });
+    }
+
+    throw new Error('No client defined');
+  }
+
+  createIndex(options: { index: string }) {
+    if (this.openSearchClient) {
+      return this.openSearchClient.indices.create(options);
+    }
+
+    if (this.elasticSearchClient) {
+      return this.elasticSearchClient.indices.create(options);
     }
 
     throw new Error('No client defined');

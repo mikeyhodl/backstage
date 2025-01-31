@@ -23,30 +23,44 @@ the `Scaffolder` frontend plugin in your own `App.tsx`.
 
 You can create your own Field Extension by using the
 [`createScaffolderFieldExtension`](https://backstage.io/docs/reference/plugin-scaffolder.createscaffolderfieldextension)
-`API` like below:
+`API` like below.
+
+As an example, we will create a component that validates whether a string is in the `Kebab-case` pattern:
 
 ```tsx
-//packages/app/src/scaffolder/MyCustomExtension/MyCustomExtension.tsx
+//packages/app/src/scaffolder/ValidateKebabCase/ValidateKebabCaseExtension.tsx
 import React from 'react';
-import { FieldProps, FieldValidation } from '@rjsf/core';
+import { FieldExtensionComponentProps } from '@backstage/plugin-scaffolder-react';
+import type { FieldValidation } from '@rjsf/utils';
 import FormControl from '@material-ui/core/FormControl';
-import { KubernetesValidatorFunctions } from '@backstage/catalog-model';
+import FormHelperText from '@material-ui/core/FormHelperText';
+import Input from '@material-ui/core/Input';
+import InputLabel from '@material-ui/core/InputLabel';
 /*
  This is the actual component that will get rendered in the form
 */
-export const MyCustomExtension = ({
+export const ValidateKebabCase = ({
   onChange,
   rawErrors,
   required,
   formData,
-}: FieldProps<string>) => {
+}: FieldExtensionComponentProps<string>) => {
   return (
     <FormControl
       margin="normal"
       required={required}
       error={rawErrors?.length > 0 && !formData}
-      onChange={onChange}
-    />
+    >
+      <InputLabel htmlFor="validateName">Name</InputLabel>
+      <Input
+        id="validateName"
+        aria-describedby="entityName"
+        onChange={e => onChange(e.target?.value)}
+      />
+      <FormHelperText id="entityName">
+        Use only letters, numbers, hyphens and underscores
+      </FormHelperText>
+    </FormControl>
   );
 };
 
@@ -55,20 +69,22 @@ export const MyCustomExtension = ({
   You will get the value from the `onChange` handler before as the value here to make sure that the types are aligned\
 */
 
-export const myCustomValidation = (
+export const validateKebabCaseValidation = (
   value: string,
   validation: FieldValidation,
 ) => {
-  if (!KubernetesValidatorFunctions.isValidObjectName(value)) {
+  const kebabCase = /^[a-z0-9-_]+$/g.test(value);
+
+  if (kebabCase === false) {
     validation.addError(
-      'must start and end with an alphanumeric character, and contain only alphanumeric characters, hyphens, underscores, and periods. Maximum length is 63 characters.',
+      `Only use letters, numbers, hyphen ("-") and underscore ("_").`,
     );
   }
 };
 ```
 
 ```tsx
-// packages/app/src/scaffolder/MyCustomExtension/extensions.ts
+// packages/app/src/scaffolder/ValidateKebabCase/extensions.ts
 
 /*
   This is where the magic happens and creates the custom field extension.
@@ -77,25 +93,26 @@ export const myCustomValidation = (
   then please use `scaffolderPlugin.provide` from there instead and export it part of your `plugin.ts` rather than re-using the `scaffolder.plugin`.
 */
 
+import { scaffolderPlugin } from '@backstage/plugin-scaffolder';
+import { createScaffolderFieldExtension } from '@backstage/plugin-scaffolder-react';
 import {
-  scaffolderPlugin,
-  createScaffolderFieldExtension,
-} from '@backstage/plugin-scaffolder';
-import { MyCustomExtension, myCustomValidation } from './MyCustomExtension';
+  ValidateKebabCase,
+  validateKebabCaseValidation,
+} from './ValidateKebabCaseExtension';
 
-export const MyCustomFieldExtension = scaffolderPlugin.provide(
+export const ValidateKebabCaseFieldExtension = scaffolderPlugin.provide(
   createScaffolderFieldExtension({
-    name: 'MyCustomExtension',
-    component: MyCustomExtension,
-    validation: myCustomValidation,
+    name: 'ValidateKebabCase',
+    component: ValidateKebabCase,
+    validation: validateKebabCaseValidation,
   }),
 );
 ```
 
 ```tsx
-// packages/app/src/scaffolder/MyCustomExtension/index.ts
+// packages/app/src/scaffolder/ValidateKebabCase/index.ts
 
-export { MyCustomFieldExtension } from './extensions';
+export { ValidateKebabCaseFieldExtension } from './extensions';
 ```
 
 Once all these files are in place, you then need to provide your custom
@@ -117,20 +134,46 @@ const routes = (
 Should look something like this instead:
 
 ```tsx
-import { MyCustomFieldExtension } from './scaffolder/MyCustomExtension';
-import { ScaffolderFieldExtensions } from '@backstage/plugin-scaffolder';
+import { ValidateKebabCaseFieldExtension } from './scaffolder/ValidateKebabCase';
+import { ScaffolderFieldExtensions } from '@backstage/plugin-scaffolder-react';
 
 const routes = (
   <FlatRoutes>
     ...
     <Route path="/create" element={<ScaffolderPage />}>
       <ScaffolderFieldExtensions>
-        <MyCustomFieldExtension />
+        <ValidateKebabCaseFieldExtension />
       </ScaffolderFieldExtensions>
     </Route>
     ...
   </FlatRoutes>
 );
+```
+
+### Async Validation Function
+
+A validation function can be asyncronous and use [Utility APIs](https://backstage.io/docs/api/utility-apis/) via the `ApiHolder` in the [field validation context](https://backstage.io/docs/reference/plugin-scaffolder-react.customfieldvalidator). The example below uses the `catalogApiRef` to check if the submitted value (in this scenario an entity ref) exists in the catalog.
+
+```tsx
+import { FieldValidation } from '@rjsf/utils';
+import { ApiHolder } from '@backstage/core-plugin-api';
+import { catalogApiRef } from '@backstage/plugin-catalog-react';
+
+/*
+  This validation function checks if the submitted entity ref value is present in the catalog.
+*/
+
+export const customFieldExtensionValidator = async (
+  value: string,
+  validation: FieldValidation,
+  context: { apiHolder: ApiHolder },
+) => {
+  const catalogApi = context.apiHolder.get(catalogApiRef);
+
+  if ((await catalogApi?.getEntityByRef(value)) === undefined) {
+    validation.addError('Entity not found');
+  }
+};
 ```
 
 ## Using the Custom Field Extension
@@ -158,7 +201,9 @@ spec:
           title: Name
           type: string
           description: My custom name for the component
-          ui:field: MyCustomExtension
+          ui:field: ValidateKebabCase
+  steps:
+  [...]
 ```
 
 ## Access Data from other Fields

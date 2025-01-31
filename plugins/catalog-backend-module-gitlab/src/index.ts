@@ -20,6 +20,21 @@
  * @packageDocumentation
  */
 
+export { catalogModuleGitlabDiscoveryEntityProvider as default } from './module/catalogModuleGitlabDiscoveryEntityProvider';
 export { GitLabDiscoveryProcessor } from './GitLabDiscoveryProcessor';
-export { GitlabDiscoveryEntityProvider } from './providers';
-export { gitlabDiscoveryEntityProviderCatalogModule } from './service/GitlabDiscoveryEntityProviderCatalogModule';
+export {
+  GitlabDiscoveryEntityProvider,
+  GitlabOrgDiscoveryEntityProvider,
+} from './providers';
+export type {
+  GitLabUser,
+  GitLabGroup,
+  GitlabProviderConfig,
+  GitLabGroupSamlIdentity,
+  GroupNameTransformer,
+  GroupNameTransformerOptions,
+  GroupTransformer,
+  GroupTransformerOptions,
+  UserTransformer,
+  UserTransformerOptions,
+} from './lib';

@@ -14,22 +14,18 @@
  * limitations under the License.
  */
 
-import {
-  PluginEndpointDiscovery,
-  TokenManager,
-} from '@backstage/backend-common';
+import { TokenManager } from '@backstage/backend-common';
 import {
   Entity,
   parseEntityRef,
   RELATION_OWNED_BY,
   stringifyEntityRef,
 } from '@backstage/catalog-model';
-import fetch from 'node-fetch';
 import unescape from 'lodash/unescape';
 import { Logger } from 'winston';
 import pLimit from 'p-limit';
 import { Config } from '@backstage/config';
-import { catalogEntityReadPermission } from '@backstage/plugin-catalog-common';
+import { catalogEntityReadPermission } from '@backstage/plugin-catalog-common/alpha';
 import { Permission } from '@backstage/plugin-permission-common';
 import {
   CatalogApi,
@@ -37,6 +33,8 @@ import {
   CATALOG_FILTER_EXISTS,
 } from '@backstage/catalog-client';
 import { TechDocsDocument } from '@backstage/plugin-techdocs-node';
+import { TECHDOCS_ANNOTATION } from '@backstage/plugin-techdocs-common';
+import { DiscoveryService } from '@backstage/backend-plugin-api';
 
 interface MkSearchIndexDoc {
   title: string;
@@ -50,7 +48,7 @@ interface MkSearchIndexDoc {
  * @public
  */
 export type TechDocsCollatorOptions = {
-  discovery: PluginEndpointDiscovery;
+  discovery: DiscoveryService;
   logger: Logger;
   tokenManager: TokenManager;
   locationTemplate?: string;
@@ -107,7 +105,7 @@ export class DefaultTechDocsCollator {
     ).getEntities(
       {
         filter: {
-          'metadata.annotations.backstage.io/techdocs-ref':
+          [`metadata.annotations.${TECHDOCS_ANNOTATION}`]:
             CATALOG_FILTER_EXISTS,
         },
         fields: [
@@ -136,6 +134,7 @@ export class DefaultTechDocsCollator {
         );
 
         try {
+          const { token: newToken } = await tokenManager.getToken();
           const searchIndexResponse = await fetch(
             DefaultTechDocsCollator.constructDocsIndexUrl(
               techDocsBaseUrl,
@@ -143,7 +142,7 @@ export class DefaultTechDocsCollator {
             ),
             {
               headers: {
-                Authorization: `Bearer ${token}`,
+                Authorization: `Bearer ${newToken}`,
               },
             },
           );

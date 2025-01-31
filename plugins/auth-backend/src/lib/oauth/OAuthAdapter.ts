@@ -18,14 +18,13 @@ import express, { CookieOptions } from 'express';
 import crypto from 'crypto';
 import { URL } from 'url';
 import {
+  AuthProviderConfig,
+  AuthProviderRouteHandlers,
   BackstageIdentityResponse,
   BackstageSignInResult,
-} from '@backstage/plugin-auth-node';
-import {
-  AuthProviderRouteHandlers,
-  AuthProviderConfig,
   CookieConfigurer,
-} from '../../providers/types';
+  OAuthState,
+} from '@backstage/plugin-auth-node';
 import {
   AuthenticationError,
   InputError,
@@ -33,12 +32,15 @@ import {
   NotAllowedError,
 } from '@backstage/errors';
 import { defaultCookieConfigurer, readState, verifyNonce } from './helpers';
-import { postMessageResponse, ensuresXRequestedWith } from '../flow';
+import {
+  postMessageResponse,
+  ensuresXRequestedWith,
+  WebMessageResponse,
+} from '../flow';
 import {
   OAuthHandlers,
   OAuthStartRequest,
   OAuthRefreshRequest,
-  OAuthState,
   OAuthLogoutRequest,
 } from './types';
 import { prepareBackstageIdentityResponse } from '../../providers/prepareBackstageIdentityResponse';
@@ -46,7 +48,10 @@ import { prepareBackstageIdentityResponse } from '../../providers/prepareBacksta
 export const THOUSAND_DAYS_MS = 1000 * 24 * 60 * 60 * 1000;
 export const TEN_MINUTES_MS = 600 * 1000;
 
-/** @public */
+/**
+ * @public
+ * @deprecated Use `createOAuthRouteHandlers` from `@backstage/plugin-auth-node` instead
+ */
 export type OAuthAdapterOptions = {
   providerId: string;
   persistScopes?: boolean;
@@ -57,7 +62,10 @@ export type OAuthAdapterOptions = {
   callbackUrl: string;
 };
 
-/** @public */
+/**
+ * @public
+ * @deprecated Use `createOAuthRouteHandlers` from `@backstage/plugin-auth-node` instead
+ */
 export class OAuthAdapter implements AuthProviderRouteHandlers {
   static fromConfig(
     config: AuthProviderConfig,
@@ -98,6 +106,8 @@ export class OAuthAdapter implements AuthProviderRouteHandlers {
     const scope = req.query.scope?.toString() ?? '';
     const env = req.query.env?.toString();
     const origin = req.query.origin?.toString();
+    const redirectUrl = req.query.redirectUrl?.toString();
+    const flow = req.query.flow?.toString();
 
     if (!env) {
       throw new InputError('No env provided in request query parameters');
@@ -109,7 +119,7 @@ export class OAuthAdapter implements AuthProviderRouteHandlers {
     // set a nonce cookie before redirecting to oauth provider
     this.setNonceCookie(res, nonce, cookieConfig);
 
-    const state: OAuthState = { nonce, env, origin };
+    const state: OAuthState = { nonce, env, origin, redirectUrl, flow };
 
     // If scopes are persisted then we pass them through the state so that we
     // can set the cookie on successful auth
@@ -169,11 +179,22 @@ export class OAuthAdapter implements AuthProviderRouteHandlers {
 
       const identity = await this.populateIdentity(response.backstageIdentity);
 
-      // post message back to popup if successful
-      return postMessageResponse(res, appOrigin, {
+      const responseObj: WebMessageResponse = {
         type: 'authorization_response',
         response: { ...response, backstageIdentity: identity },
-      });
+      };
+
+      if (state.flow === 'redirect') {
+        if (!state.redirectUrl) {
+          throw new InputError(
+            'No redirectUrl provided in request query parameters',
+          );
+        }
+        res.redirect(state.redirectUrl);
+        return undefined;
+      }
+      // post message back to popup if successful
+      return postMessageResponse(res, appOrigin, responseObj);
     } catch (error) {
       const { name, message } = isError(error)
         ? error

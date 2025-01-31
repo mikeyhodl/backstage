@@ -14,32 +14,48 @@
  * limitations under the License.
  */
 
-import { RELATION_HAS_PART } from '@backstage/catalog-model';
-import { InfoCardVariants } from '@backstage/core-components';
+import { ComponentEntity, RELATION_HAS_PART } from '@backstage/catalog-model';
+import {
+  InfoCardVariants,
+  TableColumn,
+  TableOptions,
+} from '@backstage/core-components';
 import React from 'react';
 import {
   asComponentEntities,
   componentEntityColumns,
   RelatedEntitiesCard,
 } from '../RelatedEntitiesCard';
+import { catalogTranslationRef } from '../../alpha/translation';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 
 /** @public */
 export interface HasSubcomponentsCardProps {
   variant?: InfoCardVariants;
+  title?: string;
+  columns?: TableColumn<ComponentEntity>[];
+  tableOptions?: TableOptions;
 }
 
 export function HasSubcomponentsCard(props: HasSubcomponentsCardProps) {
-  const { variant = 'gridItem' } = props;
+  const { t } = useTranslationRef(catalogTranslationRef);
+  const {
+    variant = 'gridItem',
+    title = t('hasSubcomponentsCard.title'),
+    columns = componentEntityColumns,
+    tableOptions = {},
+  } = props;
   return (
     <RelatedEntitiesCard
       variant={variant}
-      title="Has subcomponents"
+      title={title}
       entityKind="Component"
       relationType={RELATION_HAS_PART}
-      columns={componentEntityColumns}
+      columns={columns}
       asRenderableEntities={asComponentEntities}
-      emptyMessage="No subcomponent is part of this component"
+      emptyMessage={t('hasSubcomponentsCard.emptyMessage')}
       emptyHelpLink="https://backstage.io/docs/features/software-catalog/descriptor-format#specsubcomponentof-optional"
+      tableOptions={tableOptions}
     />
   );
 }

@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { RESOURCE_TYPE_CATALOG_ENTITY } from '@backstage/plugin-catalog-common';
+
+import { RESOURCE_TYPE_CATALOG_ENTITY } from '@backstage/plugin-catalog-common/alpha';
 import { z } from 'zod';
-import { EntitiesSearchFilter } from '../../catalog/types';
 import { createCatalogPermissionRule } from './util';
 
 /**
@@ -25,7 +25,7 @@ import { createCatalogPermissionRule } from './util';
  */
 export const isEntityKind = createCatalogPermissionRule({
   name: 'IS_ENTITY_KIND',
-  description: 'Allow entities with the specified kind',
+  description: 'Allow entities matching a specified kind',
   resourceType: RESOURCE_TYPE_CATALOG_ENTITY,
   paramsSchema: z.object({
     kinds: z
@@ -36,7 +36,7 @@ export const isEntityKind = createCatalogPermissionRule({
     const resourceKind = resource.kind.toLocaleLowerCase('en-US');
     return kinds.some(kind => kind.toLocaleLowerCase('en-US') === resourceKind);
   },
-  toQuery({ kinds }): EntitiesSearchFilter {
+  toQuery({ kinds }) {
     return {
       key: 'kind',
       values: kinds.map(kind => kind.toLocaleLowerCase('en-US')),

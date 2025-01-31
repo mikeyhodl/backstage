@@ -15,7 +15,6 @@
  */
 
 import { ConfigReader } from '@backstage/config';
-import { Duration } from 'luxon';
 import { readMicrosoftGraphConfig, readProviderConfigs } from './config';
 
 describe('readMicrosoftGraphConfig', () => {
@@ -52,6 +51,7 @@ describe('readMicrosoftGraphConfig', () => {
           authority: 'https://login.example.com/',
           userExpand: 'manager',
           userFilter: 'accountEnabled eq true',
+          userSelect: ['id', 'displayName', 'department'],
           groupExpand: 'member',
           groupSelect: ['id', 'displayName', 'description'],
           groupFilter: 'securityEnabled eq false',
@@ -69,6 +69,7 @@ describe('readMicrosoftGraphConfig', () => {
         authority: 'https://login.example.com/',
         userExpand: 'manager',
         userFilter: 'accountEnabled eq true',
+        userSelect: ['id', 'displayName', 'department'],
         groupExpand: 'member',
         groupSelect: ['id', 'displayName', 'description'],
         groupFilter: 'securityEnabled eq false',
@@ -167,11 +168,13 @@ describe('readProviderConfigs', () => {
               user: {
                 expand: 'manager',
                 filter: 'accountEnabled eq true',
+                select: ['id', 'displayName', 'department'],
               },
               group: {
                 expand: 'member',
                 filter: 'securityEnabled eq false',
                 select: ['id', 'displayName', 'description'],
+                includeSubGroups: true,
               },
               schedule: {
                 frequency: 'PT30M',
@@ -196,11 +199,13 @@ describe('readProviderConfigs', () => {
         queryMode: 'advanced',
         userExpand: 'manager',
         userFilter: 'accountEnabled eq true',
+        userSelect: ['id', 'displayName', 'department'],
         groupExpand: 'member',
         groupSelect: ['id', 'displayName', 'description'],
         groupFilter: 'securityEnabled eq false',
+        groupIncludeSubGroups: true,
         schedule: {
-          frequency: Duration.fromISO('PT30M'),
+          frequency: { minutes: 30 },
           timeout: {
             minutes: 3,
           },

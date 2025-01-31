@@ -14,213 +14,143 @@
  * limitations under the License.
  */
 
-import { createServiceFactory, createServiceRef } from './types';
+import {
+  InternalServiceFactory,
+  createServiceFactory,
+  createServiceRef,
+} from './types';
+
+const ref = createServiceRef<string>({ id: 'x' });
+const rootDep = createServiceRef<number>({ id: 'y', scope: 'root' });
+const pluginDep = createServiceRef<boolean>({ id: 'z' });
+function unused(..._any: any[]) {}
 
 describe('createServiceFactory', () => {
-  it('should create a meta factory with no options', () => {
-    const ref = createServiceRef<string>({ id: 'x' });
-    const metaFactory = createServiceFactory({
+  it('should create a plugin scoped factory', () => {
+    const factory = createServiceFactory({
       service: ref,
       deps: {},
+      createRootContext() {},
+      factory(_deps) {
+        return 'x';
+      },
+    });
+    expect(factory.$$type).toBe('@backstage/BackendFeature');
+    expect((factory as InternalServiceFactory).featureType).toBe('service');
+    expect(factory.service).toBe(ref);
+  });
+
+  it('should create a root scoped factory', () => {
+    const factory = createServiceFactory({
+      service: rootDep,
+      deps: {},
+      factory(_deps) {
+        return 0;
+      },
+    });
+    expect(factory.$$type).toBe('@backstage/BackendFeature');
+    expect((factory as InternalServiceFactory).featureType).toBe('service');
+    expect(factory.service).toBe(rootDep);
+  });
+
+  it('should create a plugin scoped factory with a root context', () => {
+    const factory = createServiceFactory({
+      service: ref,
+      deps: {},
+      async createRootContext() {},
       async factory(_deps) {
-        return async () => 'x';
+        return 'x';
       },
     });
-    expect(metaFactory).toEqual(expect.any(Function));
-    expect(metaFactory().service).toBe(ref);
-
-    // @ts-expect-error
-    metaFactory('string');
-    // @ts-expect-error
-    metaFactory({});
-    // @ts-expect-error
-    metaFactory({ x: 1 });
-    // @ts-expect-error
-    metaFactory(null);
-    metaFactory(undefined);
-    metaFactory();
+    expect(factory.$$type).toBe('@backstage/BackendFeature');
+    expect((factory as InternalServiceFactory).featureType).toBe('service');
+    expect(factory.service).toBe(ref);
   });
 
-  it('should create a meta factory with optional options', () => {
-    const ref = createServiceRef<string>({ id: 'x' });
-    const metaFactory = createServiceFactory({
-      service: ref,
-      deps: {},
-      async factory(_deps, _opts?: { x: number }) {
-        return async () => 'x';
+  it('should create root scoped factory with dependencies', () => {
+    const factory = createServiceFactory({
+      service: createServiceRef({ id: 'foo', scope: 'root' }),
+      deps: {
+        root: rootDep,
+      },
+      async factory({ root }) {
+        const root1: number = root;
+        // @ts-expect-error
+        const root2: string = root;
+        unused(root1, root2);
+        return 0;
       },
     });
-    expect(metaFactory).toEqual(expect.any(Function));
-
-    // @ts-expect-error
-    metaFactory('string');
-    // @ts-expect-error
-    metaFactory({});
-    metaFactory({ x: 1 });
-    // @ts-expect-error
-    metaFactory({ x: 1, y: 2 });
-    // @ts-expect-error
-    metaFactory(null);
-    metaFactory(undefined);
-    metaFactory();
+    expect(factory.$$type).toBe('@backstage/BackendFeature');
   });
 
-  it('should create a meta factory with required options', () => {
-    const ref = createServiceRef<string>({ id: 'x' });
-    const metaFactory = createServiceFactory({
-      service: ref,
-      deps: {},
-      async factory(_deps, _opts: { x: number }) {
-        return async () => 'x';
+  it('should create a plugin scoped factory with dependencies', () => {
+    const factory = createServiceFactory({
+      service: createServiceRef({ id: 'derp' }),
+      deps: {
+        root: rootDep,
+        plugin: pluginDep,
+      },
+      async createRootContext({ root }) {
+        const root1: number = root;
+        // @ts-expect-error
+        const root2: string = root;
+        unused(root1, root2);
+        return { root };
+      },
+      async factory({ plugin, root: rootB }, { root }) {
+        const root1: number = root;
+        // @ts-expect-error
+        const root2: string = root;
+        const root3: number = rootB;
+        // @ts-expect-error
+        const root4: string = rootB;
+        const plugin3: boolean = plugin;
+        // @ts-expect-error
+        const plugin4: number = plugin;
+        unused(root1, root2, root3, root4, plugin3, plugin4);
+        return 'x';
       },
     });
-    expect(metaFactory).toEqual(expect.any(Function));
-
-    // @ts-expect-error
-    metaFactory('string');
-    // @ts-expect-error
-    metaFactory({});
-    metaFactory({ x: 1 });
-    // @ts-expect-error
-    metaFactory({ x: 1, y: 2 });
-    // @ts-expect-error
-    metaFactory(null);
-    // @ts-expect-error
-    metaFactory(undefined);
-    // @ts-expect-error
-    metaFactory();
+    expect(factory.$$type).toBe('@backstage/BackendFeature');
   });
 
-  it('should create a meta factory with optional options as interface', () => {
-    interface TestOptions {
-      x: number;
-    }
-    const ref = createServiceRef<string>({ id: 'x' });
-    const metaFactory = createServiceFactory({
-      service: ref,
-      deps: {},
-      async factory(_deps, _opts?: TestOptions) {
-        return async () => 'x';
+  it('should create factory with dependencies with optional derpFactory', () => {
+    const factory = createServiceFactory({
+      service: createServiceRef({ id: 'derp' }),
+      deps: {
+        root: rootDep,
+        plugin: pluginDep,
+      },
+      async factory({ root, plugin }) {
+        const root1: number = root;
+        // @ts-expect-error
+        const root2: string = root;
+        const plugin3: boolean = plugin;
+        // @ts-expect-error
+        const plugin4: number = plugin;
+        unused(root1, root2, plugin3, plugin4);
+        return 'x';
       },
     });
-    expect(metaFactory).toEqual(expect.any(Function));
-
-    // @ts-expect-error
-    metaFactory('string');
-    // @ts-expect-error
-    metaFactory({});
-    metaFactory({ x: 1 });
-    // @ts-expect-error
-    metaFactory({ x: 1, y: 2 });
-    // @ts-expect-error
-    metaFactory(null);
-    metaFactory(undefined);
-    metaFactory();
+    expect(factory.$$type).toBe('@backstage/BackendFeature');
   });
 
-  it('should create a meta factory with required options as interface', () => {
-    interface TestOptions {
-      x: number;
-    }
-    const ref = createServiceRef<string>({ id: 'x' });
-    const metaFactory = createServiceFactory({
+  it('should support old service refs without a multiton field', () => {
+    const oldPluginDep = pluginDep as Omit<typeof pluginDep, 'multiton'>; // Old refs don't have a multiton field
+    const factory = createServiceFactory({
       service: ref,
-      deps: {},
-      async factory(_deps, _opts: TestOptions) {
-        return async () => 'x';
+      deps: {
+        plugin: oldPluginDep,
+      },
+      async factory({ plugin }) {
+        const plugin1: boolean = plugin;
+        // @ts-expect-error
+        const plugin2: number = plugin;
+        unused(plugin1, plugin2);
+        return 'x';
       },
     });
-    expect(metaFactory).toEqual(expect.any(Function));
-
-    // @ts-expect-error
-    metaFactory('string');
-    // @ts-expect-error
-    metaFactory({});
-    metaFactory({ x: 1 });
-    // @ts-expect-error
-    metaFactory({ x: 1, y: 2 });
-    // @ts-expect-error
-    metaFactory(null);
-    // @ts-expect-error
-    metaFactory(undefined);
-    // @ts-expect-error
-    metaFactory();
-  });
-
-  it('should only allow objects as options', () => {
-    const ref = createServiceRef<string>({ id: 'x' });
-    const metaFactory = createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: string) {
-        return async () => 'x';
-      },
-    });
-    expect(metaFactory).toEqual(expect.any(Function));
-    createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: number) {
-        return async () => 'x';
-      },
-    });
-    createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: symbol) {
-        return async () => 'x';
-      },
-    });
-    createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: bigint) {
-        return async () => 'x';
-      },
-    });
-    createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: 'string') {
-        return async () => 'x';
-      },
-    });
-    createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: Array) {
-        return async () => 'x';
-      },
-    });
-    createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: Map) {
-        return async () => 'x';
-      },
-    });
-    createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: Set) {
-        return async () => 'x';
-      },
-    });
-    createServiceFactory({
-      service: ref,
-      deps: {},
-      // @ts-expect-error
-      async factory(_deps, _opts: null) {
-        return async () => 'x';
-      },
-    });
+    expect(factory.$$type).toBe('@backstage/BackendFeature');
   });
 });

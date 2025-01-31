@@ -16,6 +16,7 @@
 
 import { Config } from '@backstage/config';
 import { AwsS3Integration } from './awsS3/AwsS3Integration';
+import { AwsCodeCommitIntegration } from './awsCodeCommit/AwsCodeCommitIntegration';
 import { AzureIntegration } from './azure/AzureIntegration';
 import { BitbucketCloudIntegration } from './bitbucketCloud/BitbucketCloudIntegration';
 import { BitbucketIntegration } from './bitbucket/BitbucketIntegration';
@@ -27,6 +28,8 @@ import { defaultScmResolveUrl } from './helpers';
 import { ScmIntegration, ScmIntegrationsGroup } from './types';
 import { ScmIntegrationRegistry } from './registry';
 import { GiteaIntegration } from './gitea';
+import { HarnessIntegration } from './harness/HarnessIntegration';
+import { AzureBlobStorageIntergation } from './azureBlobStorage';
 
 /**
  * The set of supported integrations.
@@ -35,6 +38,8 @@ import { GiteaIntegration } from './gitea';
  */
 export interface IntegrationsByType {
   awsS3: ScmIntegrationsGroup<AwsS3Integration>;
+  awsCodeCommit: ScmIntegrationsGroup<AwsCodeCommitIntegration>;
+  azureBlobStorage: ScmIntegrationsGroup<AzureBlobStorageIntergation>;
   azure: ScmIntegrationsGroup<AzureIntegration>;
   /**
    * @deprecated in favor of `bitbucketCloud` and `bitbucketServer`
@@ -46,6 +51,7 @@ export interface IntegrationsByType {
   github: ScmIntegrationsGroup<GithubIntegration>;
   gitlab: ScmIntegrationsGroup<GitLabIntegration>;
   gitea: ScmIntegrationsGroup<GiteaIntegration>;
+  harness: ScmIntegrationsGroup<HarnessIntegration>;
 }
 
 /**
@@ -59,6 +65,8 @@ export class ScmIntegrations implements ScmIntegrationRegistry {
   static fromConfig(config: Config): ScmIntegrations {
     return new ScmIntegrations({
       awsS3: AwsS3Integration.factory({ config }),
+      awsCodeCommit: AwsCodeCommitIntegration.factory({ config }),
+      azureBlobStorage: AzureBlobStorageIntergation.factory({ config }),
       azure: AzureIntegration.factory({ config }),
       bitbucket: BitbucketIntegration.factory({ config }),
       bitbucketCloud: BitbucketCloudIntegration.factory({ config }),
@@ -67,6 +75,7 @@ export class ScmIntegrations implements ScmIntegrationRegistry {
       github: GithubIntegration.factory({ config }),
       gitlab: GitLabIntegration.factory({ config }),
       gitea: GiteaIntegration.factory({ config }),
+      harness: HarnessIntegration.factory({ config }),
     });
   }
 
@@ -76,6 +85,14 @@ export class ScmIntegrations implements ScmIntegrationRegistry {
 
   get awsS3(): ScmIntegrationsGroup<AwsS3Integration> {
     return this.byType.awsS3;
+  }
+
+  get awsCodeCommit(): ScmIntegrationsGroup<AwsCodeCommitIntegration> {
+    return this.byType.awsCodeCommit;
+  }
+
+  get azureBlobStorage(): ScmIntegrationsGroup<AzureBlobStorageIntergation> {
+    return this.byType.azureBlobStorage;
   }
 
   get azure(): ScmIntegrationsGroup<AzureIntegration> {
@@ -111,6 +128,10 @@ export class ScmIntegrations implements ScmIntegrationRegistry {
 
   get gitea(): ScmIntegrationsGroup<GiteaIntegration> {
     return this.byType.gitea;
+  }
+
+  get harness(): ScmIntegrationsGroup<HarnessIntegration> {
+    return this.byType.harness;
   }
 
   list(): ScmIntegration[] {

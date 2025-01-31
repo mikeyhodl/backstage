@@ -16,10 +16,9 @@
 
 import React, { ReactNode, useState, useEffect } from 'react';
 import { useApi, storageApiRef } from '@backstage/core-plugin-api';
-import useObservable from 'react-use/lib/useObservable';
+import useObservable from 'react-use/esm/useObservable';
 import classNames from 'classnames';
 import { makeStyles } from '@material-ui/core/styles';
-import { BackstageTheme } from '@backstage/theme';
 import Snackbar from '@material-ui/core/Snackbar';
 import SnackbarContent from '@material-ui/core/SnackbarContent';
 import IconButton from '@material-ui/core/IconButton';
@@ -42,7 +41,7 @@ export type DismissableBannerClassKey =
 export type DismissbleBannerClassKey = DismissableBannerClassKey;
 
 const useStyles = makeStyles(
-  (theme: BackstageTheme) => ({
+  theme => ({
     root: {
       padding: theme.spacing(0),
       marginBottom: theme.spacing(0),
@@ -58,20 +57,23 @@ const useStyles = makeStyles(
       zIndex: 'unset',
     },
     icon: {
-      fontSize: 20,
+      fontSize: theme.typography.h6.fontSize,
     },
     content: {
       width: '100%',
       maxWidth: 'inherit',
       flexWrap: 'nowrap',
+      color: theme.palette.banner.text,
     },
     message: {
       display: 'flex',
       alignItems: 'center',
-      color: theme.palette.banner.text,
       '& a': {
         color: theme.palette.banner.link,
       },
+    },
+    button: {
+      color: theme.palette.banner.closeButtonColor ?? 'inherit',
     },
     info: {
       backgroundColor: theme.palette.banner.info,
@@ -144,7 +146,7 @@ export const DismissableBanner = (props: Props) => {
           <IconButton
             key="dismiss"
             title="Permanently dismiss this message"
-            color="inherit"
+            className={classes.button}
             onClick={handleClick}
           >
             <Close className={classes.icon} />

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { setupRequestMockHandlers } from '@backstage/backend-test-utils';
+import { registerMswTestHooks } from '@backstage/backend-test-utils';
 import { BitbucketServerIntegrationConfig } from '@backstage/integration';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
@@ -50,7 +50,7 @@ describe('BitbucketServerClient', () => {
     config: config,
   });
 
-  setupRequestMockHandlers(server);
+  registerMswTestHooks(server);
 
   it('listProjects', async () => {
     server.use(
@@ -121,6 +121,7 @@ describe('BitbucketServerClient', () => {
                       },
                     ],
                   },
+                  archived: false,
                 },
               ],
             };
@@ -152,7 +153,7 @@ describe('BitbucketServerClient', () => {
   it('getFile', async () => {
     server.use(
       rest.get(
-        `https://${config.host}/projects/test-project/repos/test-repo/raw/catalog-info.yaml`,
+        `${config.apiBaseUrl}/projects/test-project/repos/test-repo/raw/catalog-info.yaml`,
         (req, res, ctx) => {
           if (
             req.headers.get('authorization') !==
@@ -198,6 +199,7 @@ describe('BitbucketServerClient', () => {
                 },
               ],
             },
+            archived: false,
           };
 
           return res(ctx.json(response));

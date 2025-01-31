@@ -15,13 +15,16 @@
  */
 
 import fs from 'fs-extra';
-import mockFs from 'mock-fs';
-import { sep, resolve as resolvePath } from 'path';
-import { paths } from '../../paths';
+import { sep } from 'path';
 import { Task } from '../../tasks';
 import { FactoryRegistry } from '../FactoryRegistry';
-import { createMockOutputStream, mockPaths } from './common/testUtils';
+import {
+  createMockOutputStream,
+  expectLogsToMatch,
+  mockPaths,
+} from './common/testUtils';
 import { frontendPlugin } from './frontendPlugin';
+import { createMockDirectory } from '@backstage/backend-test-utils';
 
 const appTsxContent = `
 import { createApp } from '@backstage/app-defaults';
@@ -34,33 +37,29 @@ const router = (
 `;
 
 describe('frontendPlugin factory', () => {
+  const mockDir = createMockDirectory();
+
   beforeEach(() => {
     mockPaths({
-      targetRoot: '/root',
+      targetRoot: mockDir.path,
     });
   });
 
   afterEach(() => {
-    mockFs.restore();
     jest.resetAllMocks();
   });
 
   it('should create a frontend plugin', async () => {
-    mockFs({
-      '/root': {
-        packages: {
-          app: {
-            'package.json': JSON.stringify({}),
-            src: {
-              'App.tsx': appTsxContent,
-            },
+    mockDir.setContent({
+      packages: {
+        app: {
+          'package.json': JSON.stringify({}),
+          src: {
+            'App.tsx': appTsxContent,
           },
         },
-        plugins: mockFs.directory(),
       },
-      [paths.resolveOwn('templates')]: mockFs.load(
-        paths.resolveOwn('templates'),
-      ),
+      plugins: {},
     });
 
     const options = await FactoryRegistry.populateOptions(frontendPlugin, {
@@ -81,18 +80,18 @@ describe('frontendPlugin factory', () => {
         modified = true;
       },
       createTemporaryDirectory: () => fs.mkdtemp('test'),
+      license: 'Apache-2.0',
     });
 
     expect(modified).toBe(true);
 
-    expect(output).toEqual([
-      '',
+    expectLogsToMatch(output, [
       'Creating frontend plugin backstage-plugin-test',
       'Checking Prerequisites:',
       `availability  plugins${sep}test`,
       'creating      temp dir',
       'Executing Template:',
-      'copying       .eslintrc.js',
+      'templating    .eslintrc.js.hbs',
       'templating    README.md.hbs',
       'templating    package.json.hbs',
       'templating    index.tsx.hbs',
@@ -114,15 +113,16 @@ describe('frontendPlugin factory', () => {
     ]);
 
     await expect(
-      fs.readJson('/root/packages/app/package.json'),
+      fs.readJson(mockDir.resolve('packages/app/package.json')),
     ).resolves.toEqual({
       dependencies: {
         'backstage-plugin-test': '^1.0.0',
       },
     });
 
-    await expect(fs.readFile('/root/packages/app/src/App.tsx', 'utf8')).resolves
-      .toBe(`
+    await expect(
+      fs.readFile(mockDir.resolve('packages/app/src/App.tsx'), 'utf8'),
+    ).resolves.toBe(`
 import { createApp } from '@backstage/app-defaults';
 import { TestPage } from 'backstage-plugin-test';
 
@@ -136,32 +136,27 @@ const router = (
 
     expect(Task.forCommand).toHaveBeenCalledTimes(2);
     expect(Task.forCommand).toHaveBeenCalledWith('yarn install', {
-      cwd: resolvePath('/root/plugins/test'),
+      cwd: mockDir.resolve('plugins/test'),
       optional: true,
     });
     expect(Task.forCommand).toHaveBeenCalledWith('yarn lint --fix', {
-      cwd: resolvePath('/root/plugins/test'),
+      cwd: mockDir.resolve('plugins/test'),
       optional: true,
     });
   });
 
   it('should create a frontend plugin with more options and codeowners', async () => {
-    mockFs({
-      '/root': {
-        CODEOWNERS: '',
-        packages: {
-          app: {
-            'package.json': JSON.stringify({}),
-            src: {
-              'App.tsx': appTsxContent,
-            },
+    mockDir.setContent({
+      CODEOWNERS: '',
+      packages: {
+        app: {
+          'package.json': JSON.stringify({}),
+          src: {
+            'App.tsx': appTsxContent,
           },
         },
-        plugins: mockFs.directory(),
       },
-      [paths.resolveOwn('templates')]: mockFs.load(
-        paths.resolveOwn('templates'),
-      ),
+      plugins: {},
     });
 
     const options = await FactoryRegistry.populateOptions(frontendPlugin, {
@@ -180,20 +175,22 @@ const router = (
       defaultVersion: '1.0.0',
       markAsModified: () => {},
       createTemporaryDirectory: () => fs.mkdtemp('test'),
+      license: 'Apache-2.0',
     });
 
     await expect(
-      fs.readJson('/root/packages/app/package.json'),
+      fs.readJson(mockDir.resolve('packages/app/package.json')),
     ).resolves.toEqual({
       dependencies: {
-        '@internal/plugin-test': '^1.0.0',
+        '@internal/backstage-plugin-test': '^1.0.0',
       },
     });
 
-    await expect(fs.readFile('/root/packages/app/src/App.tsx', 'utf8')).resolves
-      .toBe(`
+    await expect(
+      fs.readFile(mockDir.resolve('packages/app/src/App.tsx'), 'utf8'),
+    ).resolves.toBe(`
 import { createApp } from '@backstage/app-defaults';
-import { TestPage } from '@internal/plugin-test';
+import { TestPage } from '@internal/backstage-plugin-test';
 
 const router = (
   <FlatRoutes>
@@ -205,11 +202,11 @@ const router = (
 
     expect(Task.forCommand).toHaveBeenCalledTimes(2);
     expect(Task.forCommand).toHaveBeenCalledWith('yarn install', {
-      cwd: resolvePath('/root/plugins/test'),
+      cwd: mockDir.resolve('plugins/test'),
       optional: true,
     });
     expect(Task.forCommand).toHaveBeenCalledWith('yarn lint --fix', {
-      cwd: resolvePath('/root/plugins/test'),
+      cwd: mockDir.resolve('plugins/test'),
       optional: true,
     });
   });

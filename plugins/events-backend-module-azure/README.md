@@ -1,9 +1,9 @@
 # events-backend-module-azure
 
-Welcome to the `events-backend-module-azure` backend plugin!
+Welcome to the `events-backend-module-azure` backend module!
 
-This plugin is a module for the `events-backend` backend plugin
-and extends it with an `AzureDevOpsEventRouter`.
+This package is a module for the `events-backend` backend plugin
+and extends the event system with an `AzureDevOpsEventRouter`.
 
 The event router will subscribe to the topic `azureDevOps`
 and route the events to more concrete topics based on the value
@@ -22,22 +22,22 @@ and [webhooks](https://learn.microsoft.com/en-us/azure/devops/service-hooks/serv
 
 ## Installation
 
-Install the [`events-backend` plugin](../events-backend/README.md).
-
-Install this module:
-
 ```bash
 # From your Backstage root directory
-yarn add --cwd packages/backend @backstage/plugin-events-backend-module-azure
+yarn --cwd packages/backend add @backstage/plugin-events-backend-module-azure
 ```
 
-Add the event router to the `EventsBackend`:
+```ts
+// packages/backend/src/index.ts
+backend.add(import('@backstage/plugin-events-backend-module-azure'));
+```
 
-```diff
-+const githubEventRouter = new AzureDevOpsEventRouter();
+### Legacy Backend System
 
- EventsBackend
-+  .addPublishers(githubEventRouter)
-+  .addSubscribers(githubEventRouter);
-// [...]
+```ts
+// packages/backend/src/plugins/events.ts
+const eventRouter = new AzureDevOpsEventRouter({
+  events: env.events,
+});
+await eventRouter.subscribe();
 ```

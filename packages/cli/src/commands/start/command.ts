@@ -15,9 +15,10 @@
  */
 
 import { OptionValues } from 'commander';
-import { startBackend } from './startBackend';
-import { startFrontend } from './startFrontend';
+import { PackageRole } from '@backstage/cli-node';
 import { findRoleFromCommand } from '../../lib/role';
+import { startBackend, startBackendPlugin } from './startBackend';
+import { startFrontend } from './startFrontend';
 
 export async function command(opts: OptionValues): Promise<void> {
   const role = await findRoleFromCommand(opts);
@@ -25,16 +26,19 @@ export async function command(opts: OptionValues): Promise<void> {
   const options = {
     configPaths: opts.config as string[],
     checksEnabled: Boolean(opts.check),
-    inspectEnabled: Boolean(opts.inspect),
-    inspectBrkEnabled: Boolean(opts.inspectBrk),
+    linkedWorkspace: opts.link,
+    inspectEnabled: opts.inspect,
+    inspectBrkEnabled: opts.inspectBrk,
+    require: opts.require,
   };
 
   switch (role) {
     case 'backend':
+      return startBackend(options);
     case 'backend-plugin':
     case 'backend-plugin-module':
     case 'node-library':
-      return startBackend(options);
+      return startBackendPlugin(options);
     case 'frontend':
       return startFrontend({
         ...options,
@@ -45,6 +49,13 @@ export async function command(opts: OptionValues): Promise<void> {
     case 'frontend-plugin':
     case 'frontend-plugin-module':
       return startFrontend({ entry: 'dev/index', ...options });
+    case 'frontend-dynamic-container' as PackageRole: // experimental
+      return startFrontend({
+        entry: 'src/index',
+        ...options,
+        skipOpenBrowser: true,
+        isModuleFederationRemote: true,
+      });
     default:
       throw new Error(
         `Start command is not supported for package role '${role}'`,
