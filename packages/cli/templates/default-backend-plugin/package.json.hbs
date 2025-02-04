@@ -3,7 +3,7 @@
   "version": "{{pluginVersion}}",
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "license": "Apache-2.0",
+  "license": "{{license}}",
 {{#if privatePackage}}
   "private": {{privatePackage}},
 {{/if}}
@@ -28,20 +28,21 @@
     "postpack": "backstage-cli package postpack"
   },
   "dependencies": {
-    "@backstage/backend-common": "{{versionQuery '@backstage/backend-common'}}",
-    "@backstage/config": "{{versionQuery '@backstage/config'}}",
-    "@types/express": "{{versionQuery '@types/express' '4.17.13'}}",
-    "express": "{{versionQuery 'express' '4.18.1'}}",
+    "@backstage/backend-defaults": "{{versionQuery '@backstage/backend-defaults'}}",
+    "@backstage/backend-plugin-api": "{{versionQuery '@backstage/backend-plugin-api'}}",
+    "@backstage/catalog-client": "{{versionQuery '@backstage/catalog-client'}}",
+    "@backstage/errors": "{{versionQuery '@backstage/errors'}}",
+    "@backstage/plugin-catalog-node": "{{versionQuery '@backstage/plugin-catalog-node'}}",
+    "express": "{{versionQuery 'express' '4.17.1'}}",
     "express-promise-router": "{{versionQuery 'express-promise-router' '4.1.0'}}",
-    "winston": "{{versionQuery 'winston' '3.2.1'}}",
-    "node-fetch": "{{versionQuery 'node-fetch' '2.6.7'}}",
-    "yn": "{{versionQuery 'yn' '4.0.0'}}"
+    "zod": "{{versionQuery 'zod' '3.22.4'}}"
   },
   "devDependencies": {
+    "@backstage/backend-test-utils": "{{versionQuery '@backstage/backend-test-utils'}}",
     "@backstage/cli": "{{versionQuery '@backstage/cli'}}",
+    "@types/express": "{{versionQuery '@types/express' '4.17.6'}}",
     "@types/supertest": "{{versionQuery '@types/supertest' '2.0.12'}}",
-    "supertest": "{{versionQuery 'supertest' '6.2.4'}}",
-    "msw": "{{versionQuery 'msw' '0.47.0'}}"
+    "supertest": "{{versionQuery 'supertest' '6.2.4'}}"
   },
   "files": [
     "dist"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { DistinctQuestion } from 'inquirer';
+import { Answers, DistinctQuestion } from 'inquirer';
 
 export interface CreateContext {
   /** The package scope to use for new packages */
@@ -27,6 +27,8 @@ export interface CreateContext {
   isMonoRepo: boolean;
   /** The default version to use for new packages */
   defaultVersion: string;
+  /** License to use for new packages */
+  license: string;
 
   /** Creates a temporary directory. This will always be deleted after creation is done. */
   createTemporaryDirectory(name: string): Promise<string>;
@@ -37,7 +39,9 @@ export interface CreateContext {
 
 export type AnyOptions = Record<string, string>;
 
-export type Prompt<TOptions> = DistinctQuestion<TOptions> & { name: string };
+export type Prompt<TOptions extends Answers> = DistinctQuestion<TOptions> & {
+  name: string;
+};
 
 export interface Factory<TOptions extends AnyOptions> {
   /**

@@ -20,15 +20,17 @@
  * @packageDocumentation
  */
 
+export { default } from './module';
 export { GithubLocationAnalyzer } from './analyzers/GithubLocationAnalyzer';
 export type { GithubLocationAnalyzerOptions } from './analyzers/GithubLocationAnalyzer';
 export { GithubDiscoveryProcessor } from './processors/GithubDiscoveryProcessor';
 export { GithubMultiOrgReaderProcessor } from './processors/GithubMultiOrgReaderProcessor';
 export { GithubOrgReaderProcessor } from './processors/GithubOrgReaderProcessor';
 export { GithubEntityProvider } from './providers/GithubEntityProvider';
+export { GithubMultiOrgEntityProvider } from './providers/GithubMultiOrgEntityProvider';
+export type { GithubMultiOrgEntityProviderOptions } from './providers/GithubMultiOrgEntityProvider';
 export { GithubOrgEntityProvider } from './providers/GithubOrgEntityProvider';
 export type { GithubOrgEntityProviderOptions } from './providers/GithubOrgEntityProvider';
-export { githubEntityProviderCatalogModule } from './service/GithubEntityProviderCatalogModule';
 export {
   type GithubMultiOrgConfig,
   type GithubTeam,

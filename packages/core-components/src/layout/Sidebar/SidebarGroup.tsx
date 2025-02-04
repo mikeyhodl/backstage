@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-import { BackstageTheme } from '@backstage/theme';
 import BottomNavigationAction, {
   BottomNavigationActionProps,
 } from '@material-ui/core/BottomNavigationAction';
-import { makeStyles } from '@material-ui/core/styles';
+import { Theme, makeStyles } from '@material-ui/core/styles';
 import React, { useContext } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Link } from '../../components';
-import { SidebarConfigContext, SidebarConfig } from './config';
-import { MobileSidebarContext } from './MobileSidebar';
+import { Link } from '../../components/Link/Link';
+import { SidebarConfig, SidebarConfigContext } from './config';
+import { MobileSidebarContext } from './MobileSidebarContext';
 import { useSidebarPinState } from './SidebarPinStateContext';
 
 /**
@@ -48,7 +47,7 @@ export interface SidebarGroupProps extends BottomNavigationActionProps {
   children?: React.ReactNode;
 }
 
-const useStyles = makeStyles<BackstageTheme, { sidebarConfig: SidebarConfig }>(
+const useStyles = makeStyles<Theme, { sidebarConfig: SidebarConfig }>(
   theme => ({
     root: {
       flexGrow: 0,
@@ -69,7 +68,7 @@ const useStyles = makeStyles<BackstageTheme, { sidebarConfig: SidebarConfig }>(
 );
 
 /**
- * Returns a MUI `BottomNavigationAction`, which is aware of the current location & the selected item in the `BottomNavigation`,
+ * Returns a Material UI `BottomNavigationAction`, which is aware of the current location & the selected item in the `BottomNavigation`,
  * such that it will highlight a `MobileSidebarGroup` either on location change or if the selected item changes.
  *
  * @param props `to`: pathname of link; `value`: index of the selected item
@@ -100,6 +99,7 @@ const MobileSidebarGroup = (props: SidebarGroupProps) => {
   return (
     // Material UI issue: https://github.com/mui-org/material-ui/issues/27820
     <BottomNavigationAction
+      aria-label={label}
       label={label}
       icon={icon}
       component={Link as any}

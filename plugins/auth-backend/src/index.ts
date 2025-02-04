@@ -20,7 +20,8 @@
  * @packageDocumentation
  */
 
-export * from './service/router';
+export { authPlugin as default } from './authPlugin';
+export * from './service';
 export type { TokenParams } from './identity';
 export * from './providers';
 

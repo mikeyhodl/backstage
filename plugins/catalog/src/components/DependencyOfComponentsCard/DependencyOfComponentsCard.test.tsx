@@ -16,23 +16,23 @@
 
 import { Entity, RELATION_DEPENDENCY_OF } from '@backstage/catalog-model';
 import {
-  CatalogApi,
   catalogApiRef,
   EntityProvider,
   entityRouteRef,
 } from '@backstage/plugin-catalog-react';
+import { catalogApiMock } from '@backstage/plugin-catalog-react/testUtils';
 import { renderInTestApp, TestApiProvider } from '@backstage/test-utils';
 import { screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { DependencyOfComponentsCard } from './DependencyOfComponentsCard';
 
 describe('<DependencyOfComponentsCard />', () => {
-  const getEntities: jest.MockedFunction<CatalogApi['getEntities']> = jest.fn();
-  let Wrapper: React.ComponentType;
+  const catalogApi = catalogApiMock.mock();
+  let Wrapper: React.ComponentType<React.PropsWithChildren<{}>>;
 
   beforeEach(() => {
     Wrapper = ({ children }: { children?: React.ReactNode }) => (
-      <TestApiProvider apis={[[catalogApiRef, { getEntities }]]}>
+      <TestApiProvider apis={[[catalogApiRef, catalogApi]]}>
         {children}
       </TestApiProvider>
     );
@@ -85,7 +85,7 @@ describe('<DependencyOfComponentsCard />', () => {
         },
       ],
     };
-    getEntities.mockResolvedValue({
+    catalogApi.getEntitiesByRefs.mockResolvedValue({
       items: [
         {
           apiVersion: 'v1',

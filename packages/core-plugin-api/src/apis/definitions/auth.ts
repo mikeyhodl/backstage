@@ -227,6 +227,11 @@ export type BackstageIdentityResponse = {
   token: string;
 
   /**
+   * The time at which the token expires. If not set, it can be assumed that the token does not expire.
+   */
+  expiresAt?: Date;
+
+  /**
    * Identity information derived from the token.
    */
   identity: BackstageUserIdentity;
@@ -357,7 +362,11 @@ export const oktaAuthApiRef: ApiRef<
  * for a full list of supported scopes.
  */
 export const gitlabAuthApiRef: ApiRef<
-  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
 > = createApiRef({
   id: 'core.auth.gitlab',
 });
@@ -413,6 +422,21 @@ export const bitbucketAuthApiRef: ApiRef<
 });
 
 /**
+ * Provides authentication towards Bitbucket Server APIs.
+ *
+ * @public
+ * @remarks
+ *
+ * See {@link https://confluence.atlassian.com/bitbucketserver/bitbucket-oauth-2-0-provider-api-1108483661.html#BitbucketOAuth2.0providerAPI-scopes}
+ * for a full list of supported scopes.
+ */
+export const bitbucketServerAuthApiRef: ApiRef<
+  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+> = createApiRef({
+  id: 'core.auth.bitbucket-server',
+});
+
+/**
  * Provides authentication towards Atlassian APIs.
  *
  * @public
@@ -425,4 +449,23 @@ export const atlassianAuthApiRef: ApiRef<
   OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
 > = createApiRef({
   id: 'core.auth.atlassian',
+});
+
+/**
+ * Provides authentication towards VMware Cloud APIs and identities.
+ *
+ * @public
+ * @remarks
+ *
+ * For more info about VMware Cloud identity and access management:
+ * - {@link https://docs.vmware.com/en/VMware-Cloud-services/services/Using-VMware-Cloud-Services/GUID-53D39337-D93A-4B84-BD18-DDF43C21479A.html}
+ */
+export const vmwareCloudAuthApiRef: ApiRef<
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
+> = createApiRef({
+  id: 'core.auth.vmware-cloud',
 });

@@ -20,8 +20,11 @@
  * @packageDocumentation
  */
 
-export type { CatalogProcessingExtensionPoint } from './extensions';
-export { catalogProcessingExtensionPoint } from './extensions';
-export { catalogServiceRef } from './catalogService';
 export * from './api';
+export * from './conversion';
 export * from './processing';
+export {
+  catalogServiceRef,
+  type CatalogService,
+  type CatalogServiceRequestOptions,
+} from './catalogService';

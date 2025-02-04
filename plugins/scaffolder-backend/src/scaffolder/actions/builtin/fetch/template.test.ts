@@ -14,40 +14,32 @@
  * limitations under the License.
  */
 
-import os from 'os';
+jest.mock('@backstage/plugin-scaffolder-node', () => {
+  const actual = jest.requireActual('@backstage/plugin-scaffolder-node');
+  return { ...actual, fetchContents: jest.fn() };
+});
+
 import { join as joinPath, sep as pathSep } from 'path';
 import fs from 'fs-extra';
-import mockFs from 'mock-fs';
 import {
-  getVoidLogger,
+  UrlReaderService,
   resolvePackagePath,
-  UrlReader,
-} from '@backstage/backend-common';
+} from '@backstage/backend-plugin-api';
 import { ScmIntegrations } from '@backstage/integration';
-import { PassThrough } from 'stream';
-import { fetchContents } from './helpers';
-import { ActionContext, TemplateAction } from '../../types';
 import { createFetchTemplateAction } from './template';
-
-jest.mock('./helpers', () => ({
-  fetchContents: jest.fn(),
-}));
+import {
+  fetchContents,
+  ActionContext,
+  TemplateAction,
+} from '@backstage/plugin-scaffolder-node';
+import { createMockDirectory } from '@backstage/backend-test-utils';
+import { createMockActionContext } from '@backstage/plugin-scaffolder-node-test-utils';
 
 type FetchTemplateInput = ReturnType<
   typeof createFetchTemplateAction
 > extends TemplateAction<infer U>
   ? U
   : never;
-
-const realFiles = Object.fromEntries(
-  [
-    resolvePackagePath(
-      '@backstage/plugin-scaffolder-backend',
-      'assets',
-      'nunjucks.js.txt',
-    ),
-  ].map(k => [k, mockFs.load(k)]),
-);
 
 const aBinaryFile = fs.readFileSync(
   resolvePackagePath(
@@ -63,50 +55,34 @@ const mockFetchContents = fetchContents as jest.MockedFunction<
 describe('fetch:template', () => {
   let action: TemplateAction<any>;
 
-  const workspacePath = os.tmpdir();
-  const createTemporaryDirectory: jest.MockedFunction<
-    ActionContext<FetchTemplateInput>['createTemporaryDirectory']
-  > = jest.fn(() =>
-    Promise.resolve(
-      joinPath(workspacePath, `${createTemporaryDirectory.mock.calls.length}`),
-    ),
-  );
+  const mockDir = createMockDirectory();
+  const workspacePath = mockDir.resolve('workspace');
 
-  const logger = getVoidLogger();
-
-  const mockContext = (inputPatch: Partial<FetchTemplateInput> = {}) => ({
-    templateInfo: {
-      baseUrl: 'base-url',
-      entityRef: 'template:default/test-template',
-    },
-    input: {
-      url: './skeleton',
-      targetPath: './target',
-      values: {
-        test: 'value',
+  const mockContext = (inputPatch: Partial<FetchTemplateInput> = {}) =>
+    createMockActionContext({
+      templateInfo: {
+        baseUrl: 'base-url',
+        entityRef: 'template:default/test-template',
       },
-      ...inputPatch,
-    },
-    output: jest.fn(),
-    logStream: new PassThrough(),
-    logger,
-    workspacePath,
-    createTemporaryDirectory,
-  });
+      input: {
+        url: './skeleton',
+        targetPath: './target',
+        values: {
+          test: 'value',
+        },
+        ...inputPatch,
+      },
+      workspacePath,
+    });
 
   beforeEach(() => {
-    mockFs({
-      ...realFiles,
+    mockDir.setContent({
+      workspace: {},
     });
-
     action = createFetchTemplateAction({
-      reader: Symbol('UrlReader') as unknown as UrlReader,
+      reader: Symbol('UrlReader') as unknown as UrlReaderService,
       integrations: Symbol('Integrations') as unknown as ScmIntegrations,
     });
-  });
-
-  afterEach(() => {
-    mockFs.restore();
   });
 
   it(`returns a TemplateAction with the id 'fetch:template'`, () => {
@@ -186,8 +162,7 @@ describe('fetch:template', () => {
         });
 
         mockFetchContents.mockImplementation(({ outputPath }) => {
-          mockFs({
-            ...realFiles,
+          mockDir.setContent({
             [outputPath]: {
               '{% if values.showDummyFile %}dummy-file.txt{% else %}{% endif %}':
                 'dummy file',
@@ -278,13 +253,8 @@ describe('fetch:template', () => {
         });
 
         mockFetchContents.mockImplementation(({ outputPath }) => {
-          mockFs({
-            ...realFiles,
+          mockDir.setContent({
             [outputPath]: {
-              'an-executable.sh': mockFs.file({
-                content: '#!/usr/bin/env bash',
-                mode: parseInt('100755', 8),
-              }),
               'empty-dir-${{ values.count }}': {},
               'static.txt': 'static content',
               '${{ values.name }}.txt': 'static content',
@@ -294,12 +264,13 @@ describe('fetch:template', () => {
               },
               '.${{ values.name }}': '${{ values.itemList | dump }}',
               'a-binary-file.png': aBinaryFile,
-              symlink: mockFs.symlink({
-                path: 'a-binary-file.png',
-              }),
-              brokenSymlink: mockFs.symlink({
-                path: './not-a-real-file.txt',
-              }),
+              'an-executable.sh': ctx =>
+                fs.writeFileSync(ctx.path, '#!/usr/bin/env bash', {
+                  encoding: 'utf-8',
+                  mode: parseInt('100755', 8),
+                }),
+              symlink: ctx => ctx.symlink('a-binary-file.png'),
+              brokenSymlink: ctx => ctx.symlink('./not-a-real-file.txt'),
             },
           });
 
@@ -374,7 +345,11 @@ describe('fetch:template', () => {
 
         await expect(
           fs.realpath(`${workspacePath}/target/symlink`),
-        ).resolves.toBe(joinPath(workspacePath, 'target', 'a-binary-file.png'));
+        ).resolves.toBe(
+          fs.realpathSync(
+            joinPath(workspacePath, 'target', 'a-binary-file.png'),
+          ),
+        );
       });
 
       it('copies broken symlinks as-is without processing them', async () => {
@@ -387,6 +362,18 @@ describe('fetch:template', () => {
         await expect(
           fs.readlink(`${workspacePath}/target/brokenSymlink`),
         ).resolves.toEqual(`.${pathSep}not-a-real-file.txt`);
+      });
+
+      it('passed through the token to the fetchContents call', async () => {
+        await action.handler(
+          mockContext({
+            token: 'mockToken',
+          }),
+        );
+
+        expect(mockFetchContents).toHaveBeenCalledWith(
+          expect.objectContaining({ token: 'mockToken' }),
+        );
       });
     });
   });
@@ -404,8 +391,7 @@ describe('fetch:template', () => {
       });
 
       mockFetchContents.mockImplementation(({ outputPath }) => {
-        mockFs({
-          ...realFiles,
+        mockDir.setContent({
           [outputPath]: {
             processed: {
               'templated-content-${{ values.name }}.txt': '${{ values.count }}',
@@ -454,8 +440,7 @@ describe('fetch:template', () => {
       });
 
       mockFetchContents.mockImplementation(({ outputPath }) => {
-        mockFs({
-          ...realFiles,
+        mockDir.setContent({
           [outputPath]: {
             processed: {
               'templated-content-${{ values.name }}.txt': '${{ values.count }}',
@@ -489,6 +474,57 @@ describe('fetch:template', () => {
         ),
       ).resolves.toEqual('1234');
     });
+
+    describe('with exclusion filter', () => {
+      beforeEach(async () => {
+        context = mockContext({
+          values: {
+            name: 'test-project',
+            count: 1234,
+          },
+          copyWithoutTemplating: [
+            '.unprocessed',
+            '!*/templated-process-content-${{ values.name }}.txt',
+          ],
+        });
+
+        mockFetchContents.mockImplementation(({ outputPath }) => {
+          mockDir.setContent({
+            [outputPath]: {
+              processed: {
+                'templated-content-${{ values.name }}.txt':
+                  '${{ values.count }}',
+              },
+              '.unprocessed': {
+                'templated-content-${{ values.name }}.txt':
+                  '${{ values.count }}',
+                'templated-process-content-${{ values.name }}.txt':
+                  '${{ values.count }}',
+              },
+            },
+          });
+
+          return Promise.resolve();
+        });
+
+        await action.handler(context);
+      });
+
+      it('renders path template including excluded matches in copyWithoutTemplating', async () => {
+        await expect(
+          fs.readFile(
+            `${workspacePath}/target/.unprocessed/templated-process-content-test-project.txt`,
+            'utf-8',
+          ),
+        ).resolves.toEqual('1234');
+        await expect(
+          fs.readFile(
+            `${workspacePath}/target/.unprocessed/templated-content-test-project.txt`,
+            'utf-8',
+          ),
+        ).resolves.toEqual('${{ values.count }}');
+      });
+    });
   });
 
   describe('cookiecutter compatibility mode', () => {
@@ -505,8 +541,7 @@ describe('fetch:template', () => {
       });
 
       mockFetchContents.mockImplementation(({ outputPath }) => {
-        mockFs({
-          ...realFiles,
+        mockDir.setContent({
           [outputPath]: {
             '{{ cookiecutter.name }}.txt': 'static content',
             subdir: {
@@ -560,8 +595,7 @@ describe('fetch:template', () => {
       });
 
       mockFetchContents.mockImplementation(({ outputPath }) => {
-        mockFs({
-          ...realFiles,
+        mockDir.setContent({
           [outputPath]: {
             'empty-dir-${{ values.count }}': {},
             'static.txt': 'static content',
@@ -642,8 +676,7 @@ describe('fetch:template', () => {
       });
 
       mockFetchContents.mockImplementation(({ outputPath }) => {
-        mockFs({
-          ...realFiles,
+        mockDir.setContent({
           [outputPath]: {
             '${{ values.name }}.njk': '${{ values.name }}: ${{ values.count }}',
             '${{ values.name }}.txt.jinja2':
@@ -667,6 +700,77 @@ describe('fetch:template', () => {
       await expect(
         fs.readFile(`${workspacePath}/target/test-project.txt`, 'utf-8'),
       ).resolves.toEqual('test-project: 1234');
+    });
+  });
+
+  describe('with replacement of existing files', () => {
+    let context: ActionContext<FetchTemplateInput>;
+
+    beforeEach(async () => {
+      context = mockContext({
+        values: {
+          name: 'test-project',
+          count: 1234,
+        },
+        replace: true,
+      });
+
+      mockFetchContents.mockImplementation(({ outputPath }) => {
+        mockDir.setContent({
+          [joinPath(workspacePath, 'target')]: {
+            'static-content.txt': 'static-content',
+          },
+          [outputPath]: {
+            'static-content.txt': '${{ values.name }}: ${{ values.count }}',
+          },
+        });
+
+        return Promise.resolve();
+      });
+
+      await action.handler(context);
+    });
+
+    it('overwrites existing file', async () => {
+      await expect(
+        fs.readFile(`${workspacePath}/target/static-content.txt`, 'utf-8'),
+      ).resolves.toEqual('test-project: 1234');
+    });
+  });
+
+  describe('without replacement of existing files', () => {
+    let context: ActionContext<FetchTemplateInput>;
+
+    beforeEach(async () => {
+      context = mockContext({
+        values: {
+          name: 'test-project',
+          count: 1234,
+        },
+        targetPath: './target',
+        replace: false,
+      });
+
+      mockFetchContents.mockImplementation(({ outputPath }) => {
+        mockDir.setContent({
+          [joinPath(workspacePath, 'target')]: {
+            'static-content.txt': 'static-content',
+          },
+          [outputPath]: {
+            'static-content.txt': '${{ values.name }}: ${{ values.count }}',
+          },
+        });
+
+        return Promise.resolve();
+      });
+
+      await action.handler(context);
+    });
+
+    it('keeps existing file', async () => {
+      await expect(
+        fs.readFile(`${workspacePath}/target/static-content.txt`, 'utf-8'),
+      ).resolves.toEqual('static-content');
     });
   });
 });

@@ -16,7 +16,7 @@
 
 import { Entity, EntityLink } from '@backstage/catalog-model';
 import { EntityProvider } from '@backstage/plugin-catalog-react';
-import { renderWithEffects, wrapInTestApp } from '@backstage/test-utils';
+import { renderInTestApp } from '@backstage/test-utils';
 import { screen } from '@testing-library/react';
 import React from 'react';
 import { EntityLinksCard } from './EntityLinksCard';
@@ -44,29 +44,25 @@ describe('EntityLinksCard', () => {
   it('should render a link', async () => {
     const links: EntityLink[] = [createLink()];
 
-    await renderWithEffects(
-      wrapInTestApp(
-        <EntityProvider entity={createEntity(links)}>
-          <EntityLinksCard />
-        </EntityProvider>,
-      ),
+    await renderInTestApp(
+      <EntityProvider entity={createEntity(links)}>
+        <EntityLinksCard />
+      </EntityProvider>,
     );
 
-    expect(screen.queryByText('admin dashboard')).toBeInTheDocument();
+    expect(screen.getByText('admin dashboard')).toBeInTheDocument();
     expect(screen.queryByText('derp')).not.toBeInTheDocument();
   });
 
   it('should show empty state', async () => {
-    await renderWithEffects(
-      wrapInTestApp(
-        <EntityProvider entity={createEntity([])}>
-          <EntityLinksCard />
-        </EntityProvider>,
-      ),
+    await renderInTestApp(
+      <EntityProvider entity={createEntity([])}>
+        <EntityLinksCard />
+      </EntityProvider>,
     );
 
     expect(
-      screen.queryByText(/.*No links defined for this entity.*/),
+      screen.getByText(/.*No links defined for this entity.*/),
     ).toBeInTheDocument();
     expect(screen.queryByText('admin dashboard')).not.toBeInTheDocument();
   });

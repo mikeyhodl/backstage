@@ -17,6 +17,7 @@
 import OAuth2 from './OAuth2';
 import MockOAuthApi from '../../OAuthRequestApi/MockOAuthApi';
 import { UrlPatternDiscovery } from '../../DiscoveryApi';
+import { mockApis } from '@backstage/test-utils';
 
 const theFuture = new Date(Date.now() + 3600000);
 const thePast = new Date(Date.now() - 10);
@@ -34,12 +35,15 @@ jest.mock('../../../../lib/AuthSessionManager', () => ({
   },
 }));
 
+const configApi = mockApis.config();
+
 describe('OAuth2', () => {
   it('should get refreshed access token', async () => {
     getSession = jest.fn().mockResolvedValue({
       providerInfo: { accessToken: 'access-token', expiresAt: theFuture },
     });
     const oauth2 = OAuth2.create({
+      configApi: configApi,
       scopeTransform: scopeTransform,
       oauthRequestApi: new MockOAuthApi(),
       discoveryApi: UrlPatternDiscovery.compile('http://example.com'),
@@ -48,9 +52,8 @@ describe('OAuth2', () => {
     expect(await oauth2.getAccessToken('my-scope my-scope2')).toBe(
       'access-token',
     );
-    expect(getSession).toHaveBeenCalledTimes(1);
-    expect(getSession.mock.calls[0][0].scopes).toEqual(
-      new Set(['my-scope', 'my-scope2']),
+    expect(getSession).toHaveBeenCalledWith(
+      expect.objectContaining({ scopes: new Set(['my-scope', 'my-scope2']) }),
     );
   });
 
@@ -59,30 +62,69 @@ describe('OAuth2', () => {
       providerInfo: { accessToken: 'access-token', expiresAt: theFuture },
     });
     const oauth2 = OAuth2.create({
+      configApi: configApi,
       scopeTransform: scopes => scopes.map(scope => `my-prefix/${scope}`),
       oauthRequestApi: new MockOAuthApi(),
       discoveryApi: UrlPatternDiscovery.compile('http://example.com'),
     });
 
     expect(await oauth2.getAccessToken('my-scope')).toBe('access-token');
-    expect(getSession).toHaveBeenCalledTimes(1);
-    expect(getSession.mock.calls[0][0].scopes).toEqual(
-      new Set(['my-prefix/my-scope']),
+    expect(getSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scopes: new Set(['my-prefix/my-scope']),
+      }),
     );
+  });
+
+  it('should forward backstage identity', async () => {
+    getSession = jest.fn().mockResolvedValue({
+      providerInfo: { accessToken: 'access-token', expiresAt: theFuture },
+      backstageIdentity: {
+        token: 'a.b.c',
+        expiresAt: theFuture,
+        identity: {
+          type: 'user',
+          userEntityRef: 'user:default/mock',
+          ownershipEntityRefs: [],
+        },
+      },
+    });
+    const oauth2 = OAuth2.create({
+      configApi: configApi,
+      scopeTransform: scopes => scopes.map(scope => `my-prefix/${scope}`),
+      oauthRequestApi: new MockOAuthApi(),
+      discoveryApi: UrlPatternDiscovery.compile('http://example.com'),
+    });
+
+    await expect(oauth2.getBackstageIdentity()).resolves.toEqual({
+      token: 'a.b.c',
+      expiresAt: theFuture,
+      identity: {
+        type: 'user',
+        userEntityRef: 'user:default/mock',
+        ownershipEntityRefs: [],
+      },
+    });
   });
 
   it('should get refreshed id token', async () => {
     getSession = jest.fn().mockResolvedValue({
       providerInfo: { idToken: 'id-token', expiresAt: theFuture },
     });
+
     const oauth2 = OAuth2.create({
+      configApi: configApi,
       scopeTransform: scopeTransform,
       oauthRequestApi: new MockOAuthApi(),
       discoveryApi: UrlPatternDiscovery.compile('http://example.com'),
     });
 
     expect(await oauth2.getIdToken()).toBe('id-token');
-    expect(getSession).toHaveBeenCalledTimes(1);
+    expect(getSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scopes: new Set(['openid']),
+      }),
+    );
   });
 
   it('should get optional id token', async () => {
@@ -90,13 +132,18 @@ describe('OAuth2', () => {
       providerInfo: { idToken: 'id-token', expiresAt: theFuture },
     });
     const oauth2 = OAuth2.create({
+      configApi: configApi,
       scopeTransform: scopes => scopes.map(scope => `my-prefix/${scope}`),
       oauthRequestApi: new MockOAuthApi(),
       discoveryApi: UrlPatternDiscovery.compile('http://example.com'),
     });
 
     expect(await oauth2.getIdToken({ optional: true })).toBe('id-token');
-    expect(getSession).toHaveBeenCalledTimes(1);
+    expect(getSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scopes: new Set(['openid']),
+      }),
+    );
   });
 
   it('should share popup closed errors', async () => {
@@ -113,6 +160,7 @@ describe('OAuth2', () => {
       })
       .mockRejectedValue(error);
     const oauth2 = OAuth2.create({
+      configApi: configApi,
       scopeTransform: scopes => scopes.map(scope => `my-prefix/${scope}`),
       oauthRequestApi: new MockOAuthApi(),
       discoveryApi: UrlPatternDiscovery.compile('http://example.com'),
@@ -147,6 +195,7 @@ describe('OAuth2', () => {
         },
       });
     const oauth2 = OAuth2.create({
+      configApi: configApi,
       scopeTransform: scopes => scopes.map(scope => `my-prefix/${scope}`),
       oauthRequestApi: new MockOAuthApi(),
       discoveryApi: UrlPatternDiscovery.compile('http://example.com'),

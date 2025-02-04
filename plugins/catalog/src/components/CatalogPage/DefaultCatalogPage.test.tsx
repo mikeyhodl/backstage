@@ -14,41 +14,32 @@
  * limitations under the License.
  */
 
-import { CatalogApi } from '@backstage/catalog-client';
-import {
-  Entity,
-  parseEntityRef,
-  RELATION_MEMBER_OF,
-  RELATION_OWNED_BY,
-} from '@backstage/catalog-model';
+import { QueryEntitiesInitialRequest } from '@backstage/catalog-client';
+import { RELATION_OWNED_BY } from '@backstage/catalog-model';
 import { TableColumn, TableProps } from '@backstage/core-components';
-import {
-  createPlugin,
-  IdentityApi,
-  identityApiRef,
-  PluginProvider,
-  ProfileInfo,
-  storageApiRef,
-} from '@backstage/core-plugin-api';
+import { identityApiRef, storageApiRef } from '@backstage/core-plugin-api';
 import {
   catalogApiRef,
   entityRouteRef,
-  starredEntitiesApiRef,
   MockStarredEntitiesApi,
+  starredEntitiesApiRef,
 } from '@backstage/plugin-catalog-react';
+import { mockBreakpoint } from '@backstage/core-components/testUtils';
 import {
-  mockBreakpoint,
-  MockStorageApi,
-  renderWithEffects,
   TestApiProvider,
-  wrapInTestApp,
+  mockApis,
+  renderInTestApp,
 } from '@backstage/test-utils';
 import DashboardIcon from '@material-ui/icons/Dashboard';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { createComponentRouteRef } from '../../routes';
 import { CatalogTableRow } from '../CatalogTable';
 import { DefaultCatalogPage } from './DefaultCatalogPage';
+
+import { CatalogTableColumnsFunc } from '../CatalogTable/types';
+import { permissionApiRef } from '@backstage/plugin-permission-react';
+import { catalogApiMock } from '@backstage/plugin-catalog-react/testUtils';
 
 describe('DefaultCatalogPage', () => {
   const origReplaceState = window.history.replaceState;
@@ -57,10 +48,11 @@ describe('DefaultCatalogPage', () => {
   });
   afterEach(() => {
     window.history.replaceState = origReplaceState;
+    jest.clearAllMocks();
   });
 
-  const catalogApi: Partial<CatalogApi> = {
-    getEntities: () =>
+  const catalogApi = catalogApiMock.mock({
+    getEntities: jest.fn().mockImplementation(() =>
       Promise.resolve({
         items: [
           {
@@ -68,6 +60,7 @@ describe('DefaultCatalogPage', () => {
             kind: 'Component',
             metadata: {
               name: 'Entity1',
+              namespace: 'default',
             },
             spec: {
               owner: 'tools',
@@ -85,6 +78,7 @@ describe('DefaultCatalogPage', () => {
             kind: 'Component',
             metadata: {
               name: 'Entity2',
+              namespace: 'default',
             },
             spec: {
               owner: 'not-tools',
@@ -102,75 +96,94 @@ describe('DefaultCatalogPage', () => {
               },
             ],
           },
-        ] as Entity[],
-      }),
-    getLocationByRef: () =>
-      Promise.resolve({ id: 'id', type: 'url', target: 'url' }),
-    getEntityByRef: async entityRef => {
-      return {
-        apiVersion: 'backstage.io/v1alpha1',
-        kind: 'User',
-        metadata: { name: parseEntityRef(entityRef).name },
-        relations: [
-          {
-            type: RELATION_MEMBER_OF,
-            targetRef: 'group:default/tools',
-            target: { namespace: 'default', kind: 'Group', name: 'tools' },
-          },
         ],
-      };
-    },
-  };
-  const testProfile: Partial<ProfileInfo> = {
+      }),
+    ),
+    getLocationByRef: jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve({ id: 'id', type: 'url', target: 'url' }),
+      ),
+    getEntityFacets: jest.fn().mockImplementation(async () => ({
+      facets: {
+        'relations.ownedBy': [
+          { count: 1, value: 'group:default/not-tools' },
+          { count: 1, value: 'group:default/tools' },
+        ],
+      },
+    })),
+    getEntitiesByRefs: jest.fn().mockImplementation(async () => ({
+      items: [
+        {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Group',
+          metadata: {
+            name: 'not-tools',
+            namespace: 'default',
+          },
+        },
+        {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Group',
+          metadata: {
+            name: 'tools',
+            namespace: 'default',
+          },
+        },
+      ],
+    })),
+    queryEntities: jest
+      .fn()
+      .mockImplementation(async (request: QueryEntitiesInitialRequest) => {
+        if ((request.filter as any)['relations.ownedBy']) {
+          // owned entities
+          return { items: [], totalItems: 3, pageInfo: {} };
+        }
+
+        if ((request.filter as any)['metadata.name']) {
+          // starred entities
+          return {
+            items: [
+              {
+                apiVersion: '1',
+                kind: 'component',
+                metadata: { name: 'Entity1', namespace: 'default' },
+              },
+            ],
+            totalItems: 1,
+            pageInfo: {},
+          };
+        }
+        // all items
+        return { items: [], totalItems: 2, pageInfo: {} };
+      }),
+  });
+
+  const identityApi = mockApis.identity({
+    userEntityRef: 'user:default/guest',
+    ownershipEntityRefs: ['user:default/guest', 'group:default/tools'],
     displayName: 'Display Name',
-  };
-  const identityApi: Partial<IdentityApi> = {
-    getBackstageIdentity: async () => ({
-      type: 'user',
-      userEntityRef: 'user:default/guest',
-      ownershipEntityRefs: ['user:default/guest', 'group:default/tools'],
-    }),
-    getCredentials: async () => ({ token: undefined }),
-    getProfileInfo: async () => testProfile,
-  };
-  const storageApi = MockStorageApi.create();
-
-  type TestInputPluginOptions = {
-    'key-1': string;
-  };
-
-  type TestPluginOptions = {
-    'key-1': string;
-    'key-2': string;
-  };
-
-  const plugin = createPlugin({
-    id: 'my-plugin',
-    __experimentalConfigure(_: TestInputPluginOptions): TestPluginOptions {
-      return { 'key-1': 'value-1', 'key-2': 'value-2' };
-    },
   });
 
   const renderWrapped = (children: React.ReactNode) =>
-    renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider
-          apis={[
-            [catalogApiRef, catalogApi],
-            [identityApiRef, identityApi],
-            [storageApiRef, storageApi],
-            [starredEntitiesApiRef, new MockStarredEntitiesApi()],
-          ]}
-        >
-          <PluginProvider plugin={plugin}>{children}</PluginProvider>
-        </TestApiProvider>,
-        {
-          mountedRoutes: {
-            '/create': createComponentRouteRef,
-            '/catalog/:namespace/:kind/:name': entityRouteRef,
-          },
+    renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [catalogApiRef, catalogApi],
+          [identityApiRef, identityApi],
+          [storageApiRef, mockApis.storage()],
+          [starredEntitiesApiRef, new MockStarredEntitiesApi()],
+          [permissionApiRef, mockApis.permission()],
+        ]}
+      >
+        {children}
+      </TestApiProvider>,
+      {
+        mountedRoutes: {
+          '/create': createComponentRouteRef,
+          '/catalog/:namespace/:kind/:name': entityRouteRef,
         },
-      ),
+      },
     );
 
   // TODO(freben): The test timeouts are bumped in this file, because it seems
@@ -212,13 +225,38 @@ describe('DefaultCatalogPage', () => {
     expect(columnHeaderLabels).toEqual(['Foo', 'Bar', 'Baz', 'Actions']);
   }, 20_000);
 
+  it('should render the custom column function passed as prop', async () => {
+    const columns: CatalogTableColumnsFunc = ({ filters, entities }) => {
+      return filters.kind?.value === 'component' && entities.length
+        ? [
+            { title: 'Foo', field: 'entity.foo' },
+            { title: 'Bar', field: 'entity.bar' },
+            { title: 'Baz', field: 'entity.spec.lifecycle' },
+          ]
+        : [];
+    };
+    await renderWrapped(<DefaultCatalogPage columns={columns} />);
+
+    const columnHeader = screen
+      .getAllByRole('button')
+      .filter(c => c.tagName === 'SPAN');
+    const columnHeaderLabels = columnHeader.map(c => c.textContent);
+    expect(columnHeaderLabels).toEqual(['Foo', 'Bar', 'Baz', 'Actions']);
+  }, 20_000);
+
   it('should render the default actions of an item in the grid', async () => {
     await renderWrapped(<DefaultCatalogPage />);
+    await waitFor(() => expect(catalogApi.queryEntities).toHaveBeenCalled());
+
     fireEvent.click(screen.getByTestId('user-picker-owned'));
-    expect(await screen.findByText(/Owned \(1\)/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/View/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/Edit/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/Add to favorites/)).toBeInTheDocument();
+    await expect(
+      screen.findByText(/Owned components \(1\)/),
+    ).resolves.toBeInTheDocument();
+    await expect(screen.findByTitle(/View/)).resolves.toBeInTheDocument();
+    await expect(screen.findByTitle(/Edit/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByTitle(/Add to favorites/),
+    ).resolves.toBeInTheDocument();
   }, 20_000);
 
   it('should render the custom actions of an item passed as prop', async () => {
@@ -242,11 +280,17 @@ describe('DefaultCatalogPage', () => {
     ];
 
     await renderWrapped(<DefaultCatalogPage actions={actions} />);
+    await waitFor(() => expect(catalogApi.queryEntities).toHaveBeenCalled());
+
     fireEvent.click(screen.getByTestId('user-picker-owned'));
-    expect(await screen.findByText(/Owned \(1\)/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/Foo Action/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/Bar Action/)).toBeInTheDocument();
-    expect((await screen.findByTitle(/Bar Action/)).firstChild).toBeDisabled();
+    await expect(
+      screen.findByText(/Owned components \(1\)/),
+    ).resolves.toBeInTheDocument();
+    await expect(screen.findByTitle(/Foo Action/)).resolves.toBeInTheDocument();
+    await expect(screen.findByTitle(/Bar Action/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByTitle(/Bar Action/).then(e => e.firstChild),
+    ).resolves.toBeDisabled();
   }, 20_000);
 
   // this test right now causes some red lines in the log output when running tests
@@ -254,45 +298,61 @@ describe('DefaultCatalogPage', () => {
   // https://github.com/mbrn/material-table/issues/1293
   it('should render', async () => {
     await renderWrapped(<DefaultCatalogPage />);
+    await waitFor(() => expect(catalogApi.queryEntities).toHaveBeenCalled());
+
     fireEvent.click(screen.getByTestId('user-picker-owned'));
-    await expect(screen.findByText(/Owned \(1\)/)).resolves.toBeInTheDocument();
+
+    await expect(
+      screen.findByText(/Owned components \(1\)/),
+    ).resolves.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('user-picker-all'));
-    await expect(screen.findByText(/All \(2\)/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByText(/All components \(2\)/),
+    ).resolves.toBeInTheDocument();
   }, 20_000);
 
   it('should set initial filter correctly', async () => {
     await renderWrapped(<DefaultCatalogPage initiallySelectedFilter="all" />);
-    await expect(screen.findByText(/All \(2\)/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByText(/All components \(2\)/),
+    ).resolves.toBeInTheDocument();
   }, 20_000);
 
   // this test is for fixing the bug after favoriting an entity, the matching
   // entities defaulting to "owned" filter and not based on the selected filter
   it('should render the correct entities filtered on the selected filter', async () => {
     await renderWrapped(<DefaultCatalogPage />);
+    await waitFor(() => expect(catalogApi.queryEntities).toHaveBeenCalled());
+
     fireEvent.click(screen.getByTestId('user-picker-owned'));
-    await expect(screen.findByText(/Owned \(1\)/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByText(/Owned components \(1\)/),
+    ).resolves.toBeInTheDocument();
     // The "Starred" menu option should initially be disabled, since there
     // aren't any starred entities.
-    await expect(screen.getByTestId('user-picker-starred')).toHaveAttribute(
+    expect(screen.getByTestId('user-picker-starred')).toHaveAttribute(
       'aria-disabled',
       'true',
     );
     fireEvent.click(screen.getByTestId('user-picker-all'));
-    await expect(screen.findByText(/All \(2\)/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByText(/All components \(2\)/),
+    ).resolves.toBeInTheDocument();
 
     const starredIcons = await screen.findAllByTitle('Add to favorites');
     fireEvent.click(starredIcons[0]);
-    await expect(screen.findByText(/All \(2\)/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByText(/All components \(2\)/),
+    ).resolves.toBeInTheDocument();
 
     // Now that we've starred an entity, the "Starred" menu option should be
     // enabled.
-    await expect(screen.getByTestId('user-picker-starred')).not.toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
+    expect(
+      await screen.findByTestId('user-picker-starred'),
+    ).not.toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(screen.getByTestId('user-picker-starred'));
     await expect(
-      screen.findByText(/Starred \(1\)/),
+      screen.findByText(/Starred components \(1\)/),
     ).resolves.toBeInTheDocument();
   }, 20_000);
 

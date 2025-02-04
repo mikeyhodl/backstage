@@ -13,16 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { UrlReader } from '@backstage/backend-common';
-import { Entity } from '@backstage/catalog-model';
-import { Config } from '@backstage/config';
-import { ScmIntegrations } from '@backstage/integration';
+
 import {
-  CatalogProcessor,
-  LocationSpec,
-} from '@backstage/plugin-catalog-backend';
-import { bundleOpenApiSpecification } from './lib';
-import { Logger } from 'winston';
+  LoggerService,
+  RootConfigService,
+  UrlReaderService,
+} from '@backstage/backend-plugin-api';
+import { Entity } from '@backstage/catalog-model';
+import { ScmIntegrations } from '@backstage/integration';
+import { CatalogProcessor } from '@backstage/plugin-catalog-node';
+import { LocationSpec } from '@backstage/plugin-catalog-common';
+import { bundleFileWithRefs } from './lib';
 
 /**
  * @public
@@ -30,12 +31,12 @@ import { Logger } from 'winston';
  */
 export class OpenApiRefProcessor implements CatalogProcessor {
   private readonly integrations: ScmIntegrations;
-  private readonly logger: Logger;
-  private readonly reader: UrlReader;
+  private readonly logger: LoggerService;
+  private readonly reader: UrlReaderService;
 
   static fromConfig(
-    config: Config,
-    options: { logger: Logger; reader: UrlReader },
+    config: RootConfigService,
+    options: { logger: LoggerService; reader: UrlReaderService },
   ) {
     const integrations = ScmIntegrations.fromConfig(config);
 
@@ -47,8 +48,8 @@ export class OpenApiRefProcessor implements CatalogProcessor {
 
   constructor(options: {
     integrations: ScmIntegrations;
-    logger: Logger;
-    reader: UrlReader;
+    logger: LoggerService;
+    reader: UrlReaderService;
   }) {
     this.integrations = options.integrations;
     this.logger = options.logger;
@@ -84,10 +85,14 @@ export class OpenApiRefProcessor implements CatalogProcessor {
 
     this.logger.debug(`Bundling OpenAPI specification from ${location.target}`);
     try {
-      const bundledSpec = await bundleOpenApiSpecification(
+      const read = async (url: string) => {
+        const { buffer } = await this.reader.readUrl(url);
+        return await buffer();
+      };
+      const bundledSpec = await bundleFileWithRefs(
         definition.toString(),
         location.target,
-        this.reader.read,
+        read,
         resolveUrl,
       );
 

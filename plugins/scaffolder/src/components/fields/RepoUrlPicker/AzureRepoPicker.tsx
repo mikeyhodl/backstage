@@ -17,35 +17,36 @@
 import React from 'react';
 import FormControl from '@material-ui/core/FormControl';
 import FormHelperText from '@material-ui/core/FormHelperText';
-import Input from '@material-ui/core/Input';
-import InputLabel from '@material-ui/core/InputLabel';
-import { RepoUrlPickerState } from './types';
+import TextField from '@material-ui/core/TextField';
+import { BaseRepoUrlPickerProps } from './types';
 import { Select, SelectItem } from '@backstage/core-components';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
+import { scaffolderTranslationRef } from '../../../translation';
 
-export const AzureRepoPicker = (props: {
-  allowedOrganizations?: string[];
-  allowedOwners?: string[];
-  rawErrors: string[];
-  state: RepoUrlPickerState;
-  onChange: (state: RepoUrlPickerState) => void;
-}) => {
+export const AzureRepoPicker = (
+  props: BaseRepoUrlPickerProps<{
+    allowedOrganizations?: string[];
+    allowedProject?: string[];
+  }>,
+) => {
   const {
     allowedOrganizations = [],
-    allowedOwners = [],
+    allowedProject = [],
     rawErrors,
     state,
     onChange,
   } = props;
+  const { t } = useTranslationRef(scaffolderTranslationRef);
 
   const organizationItems: SelectItem[] = allowedOrganizations
     ? allowedOrganizations.map(i => ({ label: i, value: i }))
     : [{ label: 'Loading...', value: 'loading' }];
 
-  const ownerItems: SelectItem[] = allowedOwners
-    ? allowedOwners.map(i => ({ label: i, value: i }))
+  const projectItems: SelectItem[] = allowedProject
+    ? allowedProject.map(i => ({ label: i, value: i }))
     : [{ label: 'Loading...', value: 'loading' }];
 
-  const { organization, owner } = state;
+  const { organization, project } = state;
 
   return (
     <>
@@ -55,59 +56,61 @@ export const AzureRepoPicker = (props: {
         error={rawErrors?.length > 0 && !organization}
       >
         {allowedOrganizations?.length ? (
-          <Select
-            native
-            label="Organization"
-            onChange={s =>
-              onChange({ organization: String(Array.isArray(s) ? s[0] : s) })
-            }
-            disabled={allowedOrganizations.length === 1}
-            selected={organization}
-            items={organizationItems}
-          />
-        ) : (
           <>
-            <InputLabel htmlFor="orgInput">Organization</InputLabel>
-            <Input
-              id="orgInput"
-              onChange={e => onChange({ organization: e.target.value })}
-              value={organization}
+            <Select
+              native
+              label={t('fields.azureRepoPicker.organization.title')}
+              onChange={s =>
+                onChange({ organization: String(Array.isArray(s) ? s[0] : s) })
+              }
+              disabled={allowedOrganizations.length === 1}
+              selected={organization}
+              items={organizationItems}
             />
+            <FormHelperText>
+              {t('fields.azureRepoPicker.organization.description')}
+            </FormHelperText>
           </>
+        ) : (
+          <TextField
+            id="orgInput"
+            label={t('fields.azureRepoPicker.organization.title')}
+            onChange={e => onChange({ organization: e.target.value })}
+            helperText={t('fields.azureRepoPicker.organization.description')}
+            value={organization}
+          />
         )}
-        <FormHelperText>
-          The Organization that this repo will belong to
-        </FormHelperText>
       </FormControl>
       <FormControl
         margin="normal"
         required
-        error={rawErrors?.length > 0 && !owner}
+        error={rawErrors?.length > 0 && !project}
       >
-        {allowedOwners?.length ? (
-          <Select
-            native
-            label="Owner"
-            onChange={s =>
-              onChange({ owner: String(Array.isArray(s) ? s[0] : s) })
-            }
-            disabled={allowedOwners.length === 1}
-            selected={owner}
-            items={ownerItems}
-          />
-        ) : (
+        {allowedProject?.length ? (
           <>
-            <InputLabel htmlFor="ownerInput">Project</InputLabel>
-            <Input
-              id="ownerInput"
-              onChange={e => onChange({ owner: e.target.value })}
-              value={owner}
+            <Select
+              native
+              label={t('fields.azureRepoPicker.project.title')}
+              onChange={s =>
+                onChange({ project: String(Array.isArray(s) ? s[0] : s) })
+              }
+              disabled={allowedProject.length === 1}
+              selected={project}
+              items={projectItems}
             />
+            <FormHelperText>
+              {t('fields.azureRepoPicker.project.description')}
+            </FormHelperText>
           </>
+        ) : (
+          <TextField
+            id="projectInput"
+            label={t('fields.azureRepoPicker.project.title')}
+            onChange={e => onChange({ project: e.target.value })}
+            value={project}
+            helperText={t('fields.azureRepoPicker.project.description')}
+          />
         )}
-        <FormHelperText>
-          The Project that this repo will belong to
-        </FormHelperText>
       </FormControl>
     </>
   );

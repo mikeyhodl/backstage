@@ -21,5 +21,5 @@
  */
 
 export * from './api';
-export type { EventsExtensionPoint } from './extensions';
-export { eventsExtensionPoint } from './extensions';
+export * from './deprecated';
+export { eventsServiceRef, eventsServiceFactory } from './service';

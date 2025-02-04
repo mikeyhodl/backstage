@@ -14,20 +14,28 @@
  * limitations under the License.
  */
 
-import { PluginTaskScheduler, TaskRunner } from '@backstage/backend-tasks';
 import { Config } from '@backstage/config';
-import { AzureIntegration, ScmIntegrations } from '@backstage/integration';
+import {
+  AzureDevOpsCredentialsProvider,
+  AzureIntegration,
+  DefaultAzureDevOpsCredentialsProvider,
+  ScmIntegrations,
+} from '@backstage/integration';
 import {
   EntityProvider,
   EntityProviderConnection,
-  LocationSpec,
   locationSpecToLocationEntity,
-} from '@backstage/plugin-catalog-backend';
+} from '@backstage/plugin-catalog-node';
+import { LocationSpec } from '@backstage/plugin-catalog-common';
 import { readAzureDevOpsConfigs } from './config';
-import { Logger } from 'winston';
 import { AzureDevOpsConfig } from './types';
 import * as uuid from 'uuid';
 import { codeSearch, CodeSearchResultItem } from '../lib';
+import {
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+  LoggerService,
+} from '@backstage/backend-plugin-api';
 
 /**
  * Provider which discovers catalog files within an Azure DevOps repositories.
@@ -37,19 +45,22 @@ import { codeSearch, CodeSearchResultItem } from '../lib';
  * @public
  */
 export class AzureDevOpsEntityProvider implements EntityProvider {
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
   private readonly scheduleFn: () => Promise<void>;
   private connection?: EntityProviderConnection;
 
   static fromConfig(
     configRoot: Config,
     options: {
-      logger: Logger;
-      schedule?: TaskRunner;
-      scheduler?: PluginTaskScheduler;
+      logger: LoggerService;
+      schedule?: SchedulerServiceTaskRunner;
+      scheduler?: SchedulerService;
     },
   ): AzureDevOpsEntityProvider[] {
     const providerConfigs = readAzureDevOpsConfigs(configRoot);
+    const scmIntegrations = ScmIntegrations.fromConfig(configRoot);
+    const credentialsProvider =
+      DefaultAzureDevOpsCredentialsProvider.fromIntegrations(scmIntegrations);
 
     if (!options.schedule && !options.scheduler) {
       throw new Error('Either schedule or scheduler must be provided.');
@@ -79,6 +90,7 @@ export class AzureDevOpsEntityProvider implements EntityProvider {
       return new AzureDevOpsEntityProvider(
         providerConfig,
         integration,
+        credentialsProvider,
         options.logger,
         taskRunner,
       );
@@ -88,8 +100,9 @@ export class AzureDevOpsEntityProvider implements EntityProvider {
   private constructor(
     private readonly config: AzureDevOpsConfig,
     private readonly integration: AzureIntegration,
-    logger: Logger,
-    taskRunner: TaskRunner,
+    private readonly credentialsProvider: AzureDevOpsCredentialsProvider,
+    logger: LoggerService,
+    taskRunner: SchedulerServiceTaskRunner,
   ) {
     this.logger = logger.child({
       target: this.getProviderName(),
@@ -98,7 +111,9 @@ export class AzureDevOpsEntityProvider implements EntityProvider {
     this.scheduleFn = this.createScheduleFn(taskRunner);
   }
 
-  private createScheduleFn(taskRunner: TaskRunner): () => Promise<void> {
+  private createScheduleFn(
+    taskRunner: SchedulerServiceTaskRunner,
+  ): () => Promise<void> {
     return async () => {
       const taskId = `${this.getProviderName()}:refresh`;
       return taskRunner.run({
@@ -113,7 +128,10 @@ export class AzureDevOpsEntityProvider implements EntityProvider {
           try {
             await this.refresh(logger);
           } catch (error) {
-            logger.error(error);
+            logger.error(
+              `${this.getProviderName()} refresh failed, ${error}`,
+              error,
+            );
           }
         },
       });
@@ -131,7 +149,7 @@ export class AzureDevOpsEntityProvider implements EntityProvider {
     await this.scheduleFn();
   }
 
-  async refresh(logger: Logger) {
+  async refresh(logger: LoggerService) {
     if (!this.connection) {
       throw new Error('Not initialized');
     }
@@ -139,16 +157,21 @@ export class AzureDevOpsEntityProvider implements EntityProvider {
     logger.info('Discovering Azure DevOps catalog files');
 
     const files = await codeSearch(
+      this.credentialsProvider,
       this.integration.config,
       this.config.organization,
       this.config.project,
       this.config.repository,
       this.config.path,
+      this.config.branch || '',
     );
 
     logger.info(`Discovered ${files.length} catalog files`);
 
-    const locations = files.map(key => this.createLocationSpec(key));
+    const targets = files.map(key => this.createObjectUrl(key));
+    const locations = Array.from(new Set(targets)).map(key =>
+      this.createLocationSpec(key),
+    );
 
     await this.connection.applyMutation({
       type: 'full',
@@ -165,18 +188,22 @@ export class AzureDevOpsEntityProvider implements EntityProvider {
     );
   }
 
-  private createLocationSpec(file: CodeSearchResultItem): LocationSpec {
+  private createLocationSpec(target: string): LocationSpec {
     return {
       type: 'url',
-      target: this.createObjectUrl(file),
+      target: target,
       presence: 'required',
     };
   }
 
   private createObjectUrl(file: CodeSearchResultItem): string {
-    const baseUrl = `https://${this.config.host}/${this.config.organization}/${this.config.project}`;
-    return encodeURI(
-      `${baseUrl}/_git/${file.repository.name}?path=${file.path}`,
-    );
+    const baseUrl = `https://${this.config.host}/${this.config.organization}/${file.project.name}`;
+
+    let fullUrl = `${baseUrl}/_git/${file.repository.name}?path=${file.path}`;
+    if (this.config.branch) {
+      fullUrl += `&version=GB${this.config.branch}`;
+    }
+
+    return encodeURI(fullUrl);
   }
 }

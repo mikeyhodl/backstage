@@ -14,28 +14,28 @@
  * limitations under the License.
  */
 
-import { PluginEndpointDiscovery } from '@backstage/backend-common';
 import {
   createBackendModule,
   createServiceFactory,
-  discoveryServiceRef,
+  createServiceRef,
 } from '@backstage/backend-plugin-api';
-import { startTestBackend } from '@backstage/backend-test-utils';
-import { CatalogClient } from '@backstage/catalog-client';
+import {
+  ServiceFactoryTester,
+  mockCredentials,
+  mockServices,
+  registerMswTestHooks,
+  startTestBackend,
+} from '@backstage/backend-test-utils';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
 import { catalogServiceRef } from './catalogService';
 
 describe('catalogServiceRef', () => {
+  const server = setupServer();
+  registerMswTestHooks(server);
+
   it('should return a catalogClient', async () => {
     expect.assertions(1);
-
-    const mockDiscoveryFactory = createServiceFactory({
-      service: discoveryServiceRef,
-      deps: {},
-      factory: async ({}) => {
-        return async () => jest.fn() as unknown as PluginEndpointDiscovery;
-      },
-    });
-
     const testModule = createBackendModule({
       moduleId: 'test',
       pluginId: 'test',
@@ -45,15 +45,76 @@ describe('catalogServiceRef', () => {
             catalog: catalogServiceRef,
           },
           async init({ catalog }) {
-            expect(catalog).toBeInstanceOf(CatalogClient);
+            expect(catalog.getEntities).toBeDefined();
           },
         });
       },
     });
 
     await startTestBackend({
-      services: [mockDiscoveryFactory],
-      features: [testModule()],
+      features: [testModule],
     });
+  });
+
+  it('should inject token from user credentials', async () => {
+    expect.assertions(1);
+
+    server.use(
+      rest.get('http://localhost/api/catalog/entities', (req, res, ctx) => {
+        expect(req.headers.get('authorization')).toBe(
+          mockCredentials.service.header({
+            onBehalfOf: mockCredentials.user(),
+            targetPluginId: 'catalog',
+          }),
+        );
+        return res(ctx.json({}));
+      }),
+    );
+    const tester = ServiceFactoryTester.from(
+      createServiceFactory({
+        service: createServiceRef<void>({ id: 'unused-dummy' }),
+        deps: {},
+        factory() {},
+      }),
+      { dependencies: [mockServices.discovery.factory()] },
+    );
+
+    const catalogService = await tester.getService(catalogServiceRef);
+
+    await catalogService.getEntities(
+      {},
+      { credentials: mockCredentials.user() },
+    );
+  });
+
+  it('should inject token from service credentials', async () => {
+    expect.assertions(1);
+
+    server.use(
+      rest.get('http://localhost/api/catalog/entities', (req, res, ctx) => {
+        expect(req.headers.get('authorization')).toBe(
+          mockCredentials.service.header({
+            onBehalfOf: mockCredentials.service(),
+            targetPluginId: 'catalog',
+          }),
+        );
+        return res(ctx.json({}));
+      }),
+    );
+    const tester = ServiceFactoryTester.from(
+      createServiceFactory({
+        service: createServiceRef<void>({ id: 'unused-dummy' }),
+        deps: {},
+        factory() {},
+      }),
+      { dependencies: [mockServices.discovery.factory()] },
+    );
+
+    const catalogService = await tester.getService(catalogServiceRef);
+
+    await catalogService.getEntities(
+      {},
+      { credentials: mockCredentials.service() },
+    );
   });
 });

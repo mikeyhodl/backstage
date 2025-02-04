@@ -30,8 +30,9 @@ const EXPANDABLE_NAVIGATION_LOCAL_STORAGE =
 const StyledButton = withStyles({
   root: {
     position: 'absolute',
-    left: '220px',
+    left: '13.7rem', // Sidebar inner width (15.1em) minus the different margins/paddings
     top: '19px',
+    zIndex: 2,
     padding: 0,
     minWidth: 0,
   },
@@ -61,10 +62,10 @@ type expandableNavigationLocalStorage = {
  */
 export const ExpandableNavigationAddon = () => {
   const defaultValue = { expandAllNestedNavs: false };
-  const [expanded, setExpanded] =
+  const { value: expanded, set: setExpanded } =
     useLocalStorageValue<expandableNavigationLocalStorage>(
       EXPANDABLE_NAVIGATION_LOCAL_STORAGE,
-      defaultValue,
+      { defaultValue },
     );
   const [hasNavSubLevels, setHasNavSubLevels] = useState<boolean>(false);
 

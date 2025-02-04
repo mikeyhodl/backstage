@@ -16,17 +16,26 @@
 
 import React, { ChangeEvent, useCallback, useMemo } from 'react';
 
-import { CircularProgress } from '@material-ui/core';
-import {
-  Autocomplete,
+import CircularProgress from '@material-ui/core/CircularProgress';
+import { makeStyles } from '@material-ui/core/styles';
+import Autocomplete, {
   AutocompleteProps,
+  AutocompleteRenderInputParams,
+} from '@material-ui/lab/Autocomplete';
+import {
   AutocompleteChangeDetails,
   AutocompleteChangeReason,
-  AutocompleteRenderInputParams,
-} from '@material-ui/lab';
+} from '@material-ui/lab/useAutocomplete';
 
 import { SearchContextProvider, useSearch } from '../../context';
 import { SearchBar, SearchBarProps } from '../SearchBar';
+
+const useStyles = makeStyles(theme => ({
+  loading: {
+    right: theme.spacing(1),
+    position: 'absolute',
+  },
+}));
 
 /**
  * Props for {@link SearchAutocomplete}.
@@ -58,6 +67,18 @@ const withContext = (
     <SearchContextProvider inheritParentContextIfAvailable>
       <Component {...props} />
     </SearchContextProvider>
+  );
+};
+
+const SearchAutocompleteLoadingAdornment = () => {
+  const classes = useStyles();
+  return (
+    <CircularProgress
+      className={classes.loading}
+      data-testid="search-autocomplete-progressbar"
+      color="inherit"
+      size={20}
+    />
   );
 };
 
@@ -116,7 +137,7 @@ export const SearchAutocomplete = withContext(
 
     const renderInput = useCallback(
       ({
-        InputProps: { ref, endAdornment },
+        InputProps: { ref, className, endAdornment },
         InputLabelProps,
         ...params
       }: AutocompleteRenderInputParams) => (
@@ -128,16 +149,9 @@ export const SearchAutocomplete = withContext(
           placeholder={inputPlaceholder}
           debounceTime={inputDebounceTime}
           endAdornment={
-            loading ? (
-              <CircularProgress
-                data-testid="search-autocomplete-progressbar"
-                color="inherit"
-                size={20}
-              />
-            ) : (
-              endAdornment
-            )
+            loading ? <SearchAutocompleteLoadingAdornment /> : endAdornment
           }
+          InputProps={{ className }}
         />
       ),
       [loading, inputValue, inputPlaceholder, inputDebounceTime],

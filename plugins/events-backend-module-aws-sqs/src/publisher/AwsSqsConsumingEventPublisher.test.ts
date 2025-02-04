@@ -19,12 +19,12 @@ import {
   ReceiveMessageCommand,
   SQSClient,
 } from '@aws-sdk/client-sqs';
-import { getVoidLogger } from '@backstage/backend-common';
-import { PluginTaskScheduler } from '@backstage/backend-tasks';
+import { SchedulerService } from '@backstage/backend-plugin-api';
 import { ConfigReader } from '@backstage/config';
-import { TestEventBroker } from '@backstage/plugin-events-backend-test-utils';
+import { TestEventsService } from '@backstage/plugin-events-backend-test-utils';
 import { mockClient } from 'aws-sdk-client-mock';
 import { AwsSqsConsumingEventPublisher } from './AwsSqsConsumingEventPublisher';
+import { mockServices } from '@backstage/backend-test-utils';
 
 describe('AwsSqsConsumingEventPublisher', () => {
   it('creates one publisher instance per configured topic', async () => {
@@ -52,13 +52,15 @@ describe('AwsSqsConsumingEventPublisher', () => {
         },
       },
     });
-    const logger = getVoidLogger();
+    const logger = mockServices.logger.mock();
+    const events = new TestEventsService();
     const scheduler = {
       scheduleTask: jest.fn(),
-    } as unknown as PluginTaskScheduler;
+    } as unknown as SchedulerService;
 
     const publishers = AwsSqsConsumingEventPublisher.fromConfig({
       config,
+      events,
       logger,
       scheduler,
     });
@@ -84,22 +86,22 @@ describe('AwsSqsConsumingEventPublisher', () => {
         },
       },
     });
-    const logger = getVoidLogger();
+    const logger = mockServices.logger.mock();
+    const events = new TestEventsService();
     const scheduler = {
       scheduleTask: jest.fn(),
-    } as unknown as PluginTaskScheduler;
+    } as unknown as SchedulerService;
 
     const publishers = AwsSqsConsumingEventPublisher.fromConfig({
       config,
+      events,
       logger,
       scheduler,
     });
     expect(publishers.length).toEqual(1);
 
     const publisher = publishers[0];
-
-    const eventBroker = new TestEventBroker();
-    await publisher.setEventBroker(eventBroker);
+    await publisher.start();
 
     // publisher.connect(..) was causing the polling for events to be scheduled
     expect(scheduler.scheduleTask).toHaveBeenCalledWith(
@@ -132,13 +134,14 @@ describe('AwsSqsConsumingEventPublisher', () => {
         },
       },
     });
-    const logger = getVoidLogger();
+    const logger = mockServices.logger.mock();
+    const events = new TestEventsService();
     let taskFn: (() => Promise<void>) | undefined = undefined;
     const scheduler = {
       scheduleTask: (spec: { fn: () => Promise<void> }) => {
         taskFn = spec.fn;
       },
-    } as unknown as PluginTaskScheduler;
+    } as unknown as SchedulerService;
 
     // on the first attempt, we will return 1 message and 0 messages afterwards
     const sqsMock = mockClient(SQSClient);
@@ -196,32 +199,31 @@ describe('AwsSqsConsumingEventPublisher', () => {
 
     const publishers = AwsSqsConsumingEventPublisher.fromConfig({
       config,
+      events,
       logger,
       scheduler,
     });
     expect(publishers.length).toEqual(1);
     const publisher = publishers[0];
-
-    const eventBroker = new TestEventBroker();
-    await publisher.setEventBroker(eventBroker);
+    await publisher.start();
 
     await taskFn!();
     await taskFn!();
     await taskFn!();
 
-    expect(eventBroker.published.length).toEqual(2);
-    expect(eventBroker.published[0].topic).toEqual('fake1');
-    expect(eventBroker.published[0].eventPayload).toEqual({
+    expect(events.published).toHaveLength(2);
+    expect(events.published[0].topic).toEqual('fake1');
+    expect(events.published[0].eventPayload).toEqual({
       event: 'payload1',
     });
-    expect(eventBroker.published[0].metadata).toEqual({
+    expect(events.published[0].metadata).toEqual({
       'X-Custom-Attr': 'value',
     });
 
-    expect(eventBroker.published[1].topic).toEqual('fake1');
-    expect(eventBroker.published[1].eventPayload).toEqual({
+    expect(events.published[1].topic).toEqual('fake1');
+    expect(events.published[1].eventPayload).toEqual({
       event: 'payload2',
     });
-    expect(eventBroker.published[1].metadata).toEqual({});
+    expect(events.published[1].metadata).toEqual({});
   });
 });

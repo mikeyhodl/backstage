@@ -18,16 +18,20 @@ import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { MenuItem } from '@material-ui/core';
+import MenuItem from '@material-ui/core/MenuItem';
 import DocsIcon from '@material-ui/icons/InsertDriveFile';
 
 import {
+  renderInTestApp,
   TestApiProvider,
-  renderWithEffects,
-  wrapInTestApp,
+  mockApis,
 } from '@backstage/test-utils';
+import { createPlugin, analyticsApiRef } from '@backstage/core-plugin-api';
 
 import { searchApiRef } from '../../api';
+import { SearchContextProvider } from '../../context';
+import { createSearchResultListItemExtension } from '../../extensions';
+
 import {
   SearchResultGroup,
   SearchResultGroupSelectFilterField,
@@ -36,6 +40,7 @@ import {
 
 const query = jest.fn().mockResolvedValue({ results: [] });
 const searchApiMock = { query };
+const analyticsApiMock = mockApis.analytics();
 
 describe('SearchResultGroup', () => {
   const results = [
@@ -62,16 +67,23 @@ describe('SearchResultGroup', () => {
   });
 
   it('Renders without exploding', async () => {
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{ types: ['techdocs'] }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-          />
-        </TestApiProvider>,
-      ),
+    query.mockResolvedValueOnce({
+      results,
+    });
+
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+        />
+      </TestApiProvider>,
     );
 
     expect(screen.getByTitle('Docs icon')).toBeInTheDocument();
@@ -84,17 +96,94 @@ describe('SearchResultGroup', () => {
     });
   });
 
-  it('Defines a default link', async () => {
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
+  it('Renders search results from context', async () => {
+    query.mockResolvedValueOnce({
+      results,
+    });
+
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchContextProvider>
           <SearchResultGroup
-            query={{ types: ['techdocs'] }}
             icon={<DocsIcon titleAccess="Docs icon" />}
             title="Documentation"
           />
-        </TestApiProvider>,
-      ),
+        </SearchContextProvider>
+      </TestApiProvider>,
+    );
+
+    expect(screen.getByText('Search Result 1')).toBeInTheDocument();
+    expect(
+      screen.getByText('Some text from the search result 1'),
+    ).toBeInTheDocument();
+
+    expect(screen.getByText('Search Result 2')).toBeInTheDocument();
+    expect(
+      screen.getByText('Some text from the search result 2'),
+    ).toBeInTheDocument();
+  });
+
+  it('Renders search results using extensions', async () => {
+    query.mockResolvedValueOnce({
+      results,
+    });
+
+    const SearchResultGroupItemExtension = createPlugin({
+      id: 'plugin',
+    }).provide(
+      createSearchResultListItemExtension({
+        name: 'SearchResultGroupItemExtension',
+        component: async () => props => <>Result: {props.result?.title}</>,
+      }),
+    );
+
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+        >
+          <SearchResultGroupItemExtension />
+        </SearchResultGroup>
+      </TestApiProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Result: Search Result 1')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Result: Search Result 2')).toBeInTheDocument();
+  });
+
+  it('Defines a default link', async () => {
+    query.mockResolvedValueOnce({
+      results,
+    });
+
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+        />
+      </TestApiProvider>,
     );
 
     const link = screen.getByText('See all', { exact: false });
@@ -106,16 +195,19 @@ describe('SearchResultGroup', () => {
       results,
     });
 
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{ types: ['techdocs'] }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+        />
+      </TestApiProvider>,
     );
 
     expect(screen.getByText('Search Result 1')).toBeInTheDocument();
@@ -130,16 +222,19 @@ describe('SearchResultGroup', () => {
   });
 
   it('Could be customized with no results text', async () => {
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{ types: ['techdocs'] }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+        />
+      </TestApiProvider>,
     );
 
     expect(
@@ -152,17 +247,20 @@ describe('SearchResultGroup', () => {
       results,
     });
 
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{ types: ['techdocs'] }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-            filterOptions={['lifecycle', 'owner']}
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+          filterOptions={['lifecycle', 'owner']}
+        />
+      </TestApiProvider>,
     );
 
     await userEvent.click(screen.getByText('Add filter', { exact: false }));
@@ -182,30 +280,33 @@ describe('SearchResultGroup', () => {
     const handleFilterChange = jest.fn();
     const handleFilterDelete = jest.fn();
 
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{
-              types: ['techdocs'],
-              filters: { owner: null },
-            }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-            filterOptions={['owner']}
-            renderFilterField={(key: string) =>
-              key === 'owner' ? (
-                <SearchResultGroupTextFilterField
-                  key={key}
-                  label="Owner"
-                  onChange={handleFilterChange}
-                  onDelete={handleFilterDelete}
-                />
-              ) : null
-            }
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{
+            types: ['techdocs'],
+            filters: { owner: null },
+          }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+          filterOptions={['owner']}
+          renderFilterField={(key: string) =>
+            key === 'owner' ? (
+              <SearchResultGroupTextFilterField
+                key={key}
+                label="Owner"
+                onChange={handleFilterChange}
+                onDelete={handleFilterDelete}
+              />
+            ) : null
+          }
+        />
+      </TestApiProvider>,
     );
 
     await userEvent.click(screen.getByText('Add filter', { exact: false }));
@@ -230,33 +331,36 @@ describe('SearchResultGroup', () => {
     const handleFilterChange = jest.fn();
     const handleFilterDelete = jest.fn();
 
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{
-              types: ['techdocs'],
-              filters: { lifecycle: null },
-            }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-            filterOptions={['lifecycle']}
-            renderFilterField={(key: string) =>
-              key === 'lifecycle' ? (
-                <SearchResultGroupSelectFilterField
-                  key={key}
-                  label="Lifecycle"
-                  onChange={handleFilterChange}
-                  onDelete={handleFilterDelete}
-                >
-                  <MenuItem value="production">Production</MenuItem>
-                  <MenuItem value="experimental">Experimental</MenuItem>
-                </SearchResultGroupSelectFilterField>
-              ) : null
-            }
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{
+            types: ['techdocs'],
+            filters: { lifecycle: null },
+          }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+          filterOptions={['lifecycle']}
+          renderFilterField={(key: string) =>
+            key === 'lifecycle' ? (
+              <SearchResultGroupSelectFilterField
+                key={key}
+                label="Lifecycle"
+                onChange={handleFilterChange}
+                onDelete={handleFilterDelete}
+              >
+                <MenuItem value="production">Production</MenuItem>
+                <MenuItem value="experimental">Experimental</MenuItem>
+              </SearchResultGroupSelectFilterField>
+            ) : null
+          }
+        />
+      </TestApiProvider>,
     );
 
     await userEvent.click(screen.getByText('Add filter', { exact: false }));
@@ -274,16 +378,19 @@ describe('SearchResultGroup', () => {
 
   it('Shows a progress bar when loading results', async () => {
     query.mockReturnValueOnce(new Promise(() => {}));
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{ types: ['techdocs'] }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+        />
+      </TestApiProvider>,
     );
 
     await waitFor(() => {
@@ -293,17 +400,20 @@ describe('SearchResultGroup', () => {
 
   it('Does not render result group if no results returned and disableRenderingWithNoResults prop is provided', async () => {
     query.mockResolvedValueOnce({ results: [] });
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{ types: ['techdocs'] }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-            disableRenderingWithNoResults
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+          disableRenderingWithNoResults
+        />
+      </TestApiProvider>,
     );
 
     await waitFor(() => {
@@ -313,17 +423,20 @@ describe('SearchResultGroup', () => {
 
   it('Should render custom component when no results returned', async () => {
     query.mockResolvedValueOnce({ results: [] });
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{ types: ['techdocs'] }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-            noResultsComponent="No results were found"
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+          noResultsComponent="No results were found"
+        />
+      </TestApiProvider>,
     );
 
     await waitFor(() => {
@@ -333,16 +446,19 @@ describe('SearchResultGroup', () => {
 
   it('Shows an error panel when results rendering fails', async () => {
     query.mockRejectedValueOnce(new Error());
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultGroup
-            query={{ types: ['techdocs'] }}
-            icon={<DocsIcon titleAccess="Docs icon" />}
-            title="Documentation"
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultGroup
+          query={{ types: ['techdocs'] }}
+          icon={<DocsIcon titleAccess="Docs icon" />}
+          title="Documentation"
+        />
+      </TestApiProvider>,
     );
 
     await waitFor(() => {

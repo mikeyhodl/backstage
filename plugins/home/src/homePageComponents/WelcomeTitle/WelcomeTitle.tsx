@@ -18,15 +18,21 @@ import {
   identityApiRef,
   useApi,
 } from '@backstage/core-plugin-api';
-import { Tooltip } from '@material-ui/core';
+import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
 import React, { useEffect, useMemo } from 'react';
-import useAsync from 'react-use/lib/useAsync';
+import useAsync from 'react-use/esm/useAsync';
 import { getTimeBasedGreeting } from './timeUtil';
 
-export const WelcomeTitle = () => {
+/** @public */
+export type WelcomeTitleLanguageProps = {
+  language?: string[];
+};
+
+export const WelcomeTitle = ({ language }: WelcomeTitleLanguageProps) => {
   const identityApi = useApi(identityApiRef);
   const alertApi = useApi(alertApiRef);
-  const greeting = useMemo(() => getTimeBasedGreeting(), []);
+  const greeting = useMemo(() => getTimeBasedGreeting(language), [language]);
 
   const { value: profile, error } = useAsync(() =>
     identityApi.getProfileInfo(),
@@ -43,9 +49,9 @@ export const WelcomeTitle = () => {
 
   return (
     <Tooltip title={greeting.language}>
-      <span>{`${greeting.greeting}${
+      <Typography component="span" variant="inherit">{`${greeting.greeting}${
         profile?.displayName ? `, ${profile?.displayName}` : ''
-      }!`}</span>
+      }!`}</Typography>
     </Tooltip>
   );
 };

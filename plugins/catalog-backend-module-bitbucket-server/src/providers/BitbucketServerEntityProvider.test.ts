@@ -14,28 +14,30 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import {
-  PluginTaskScheduler,
-  TaskInvocationDefinition,
-  TaskRunner,
-} from '@backstage/backend-tasks';
-import { setupRequestMockHandlers } from '@backstage/backend-test-utils';
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+  SchedulerServiceTaskInvocationDefinition,
+} from '@backstage/backend-plugin-api';
+import {
+  mockServices,
+  registerMswTestHooks,
+} from '@backstage/backend-test-utils';
 import { ConfigReader } from '@backstage/config';
-import { EntityProviderConnection } from '@backstage/plugin-catalog-backend';
+import { EntityProviderConnection } from '@backstage/plugin-catalog-node';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import { BitbucketServerEntityProvider } from './BitbucketServerEntityProvider';
 import { BitbucketServerPagedResponse } from '../lib';
 
-class PersistingTaskRunner implements TaskRunner {
-  private tasks: TaskInvocationDefinition[] = [];
+class PersistingTaskRunner implements SchedulerServiceTaskRunner {
+  private tasks: SchedulerServiceTaskInvocationDefinition[] = [];
 
   getTasks() {
     return this.tasks;
   }
 
-  run(task: TaskInvocationDefinition): Promise<void> {
+  run(task: SchedulerServiceTaskInvocationDefinition): Promise<void> {
     this.tasks.push(task);
     return Promise.resolve(undefined);
   }
@@ -43,7 +45,7 @@ class PersistingTaskRunner implements TaskRunner {
 
 type Project = {
   key: string;
-  repos: [string];
+  repos: { name: string; archived?: true }[];
 };
 
 function pagedResponse(values: any): BitbucketServerPagedResponse<any> {
@@ -53,7 +55,7 @@ function pagedResponse(values: any): BitbucketServerPagedResponse<any> {
   } as BitbucketServerPagedResponse<any>;
 }
 
-const logger = getVoidLogger();
+const logger = mockServices.logger.mock();
 
 const server = setupServer();
 
@@ -82,14 +84,15 @@ function setupStubs(projects: Project[], baseUrl: string) {
           const response = [];
           for (const repo of project.repos) {
             response.push({
-              slug: repo,
+              slug: repo.name,
               links: {
                 self: [
                   {
-                    href: `${baseUrl}/projects/${project.key}/repos/${repo}/browse`,
+                    href: `${baseUrl}/projects/${project.key}/repos/${repo.name}/browse`,
                   },
                 ],
               },
+              archived: repo.archived ?? false,
             });
           }
           return res(ctx.json(pagedResponse(response)));
@@ -100,8 +103,10 @@ function setupStubs(projects: Project[], baseUrl: string) {
 }
 
 describe('BitbucketServerEntityProvider', () => {
-  setupRequestMockHandlers(server);
-  afterEach(() => jest.resetAllMocks());
+  registerMswTestHooks(server);
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
   it('no provider config', () => {
     const schedule = new PersistingTaskRunner();
@@ -216,6 +221,7 @@ describe('BitbucketServerEntityProvider', () => {
               filters: {
                 projectKey: 'project-.*',
                 repoSlug: 'repo-.*',
+                skipArchivedRepos: true,
               },
             },
           },
@@ -237,8 +243,14 @@ describe('BitbucketServerEntityProvider', () => {
 
     setupStubs(
       [
-        { key: 'project-test', repos: ['repo-test'] },
-        { key: 'other-project', repos: ['other-repo'] },
+        {
+          key: 'project-test',
+          repos: [
+            { name: 'repo-test' },
+            { name: 'repo-archived', archived: true },
+          ],
+        },
+        { key: 'other-project', repos: [{ name: 'other-repo' }] },
       ],
       `https://${host}`,
     );
@@ -313,8 +325,8 @@ describe('BitbucketServerEntityProvider', () => {
 
     setupStubs(
       [
-        { key: 'project-test', repos: ['repo-test'] },
-        { key: 'other-project', repos: ['other-repo'] },
+        { key: 'project-test', repos: [{ name: 'repo-test' }] },
+        { key: 'other-project', repos: [{ name: 'other-repo' }] },
       ],
       `https://${host}`,
     );
@@ -400,7 +412,7 @@ describe('BitbucketServerEntityProvider', () => {
   it('fail with scheduler but no schedule config', () => {
     const scheduler = {
       createScheduledTaskRunner: (_: any) => jest.fn(),
-    } as unknown as PluginTaskScheduler;
+    } as unknown as SchedulerService;
     const config = new ConfigReader({
       catalog: {
         providers: {
@@ -457,7 +469,7 @@ describe('BitbucketServerEntityProvider', () => {
     const schedule = new PersistingTaskRunner();
     const scheduler = {
       createScheduledTaskRunner: (_: any) => schedule,
-    } as unknown as PluginTaskScheduler;
+    } as unknown as SchedulerService;
     const entityProviderConnection: EntityProviderConnection = {
       applyMutation: jest.fn(),
       refresh: jest.fn(),
@@ -472,8 +484,8 @@ describe('BitbucketServerEntityProvider', () => {
 
     setupStubs(
       [
-        { key: 'project-test', repos: ['repo-test'] },
-        { key: 'other-project', repos: ['other-repo'] },
+        { key: 'project-test', repos: [{ name: 'repo-test' }] },
+        { key: 'other-project', repos: [{ name: 'other-repo' }] },
       ],
       `https://${host}`,
     );

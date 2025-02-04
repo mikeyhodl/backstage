@@ -16,27 +16,38 @@
 
 import fs from 'fs-extra';
 import { resolve as resolvePath } from 'path';
-import { buildBundle } from '../../lib/bundler';
+import { buildBundle, getModuleFederationOptions } from '../../lib/bundler';
 import { getEnvironmentParallelism } from '../../lib/parallel';
-import { loadCliConfig } from '../../lib/config';
+import { loadCliConfig } from '../../modules/config/lib/config';
+import { BackstagePackageJson } from '@backstage/cli-node';
 
 interface BuildAppOptions {
   targetDir: string;
   writeStats: boolean;
   configPaths: string[];
+  isModuleFederationRemote?: true;
+  rspack?: typeof import('@rspack/core').rspack;
 }
 
 export async function buildFrontend(options: BuildAppOptions) {
-  const { targetDir, writeStats, configPaths } = options;
-  const { name } = await fs.readJson(resolvePath(targetDir, 'package.json'));
+  const { targetDir, writeStats, configPaths, rspack } = options;
+  const packageJson = (await fs.readJson(
+    resolvePath(targetDir, 'package.json'),
+  )) as BackstagePackageJson;
   await buildBundle({
     targetDir,
     entry: 'src/index',
     parallelism: getEnvironmentParallelism(),
     statsJsonEnabled: writeStats,
+    moduleFederation: await getModuleFederationOptions(
+      packageJson,
+      resolvePath(targetDir),
+      options.isModuleFederationRemote,
+    ),
     ...(await loadCliConfig({
       args: configPaths,
-      fromPackage: name,
+      fromPackage: packageJson.name,
     })),
+    rspack,
   });
 }

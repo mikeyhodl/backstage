@@ -22,6 +22,7 @@ export type {
   CatalogRequestOptions,
   EntityFieldsQuery,
   EntityFilterQuery,
+  EntityOrderQuery,
   GetEntitiesByRefsRequest,
   GetEntitiesByRefsResponse,
   GetEntitiesRequest,
@@ -32,5 +33,9 @@ export type {
   GetEntityFacetsResponse,
   Location,
   ValidateEntityResponse,
+  QueryEntitiesCursorRequest,
+  QueryEntitiesInitialRequest,
+  QueryEntitiesRequest,
+  QueryEntitiesResponse,
 } from './api';
 export { ENTITY_STATUS_CATALOG_PROCESSING_TYPE } from './status';

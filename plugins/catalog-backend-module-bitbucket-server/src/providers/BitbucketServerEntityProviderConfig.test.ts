@@ -15,7 +15,6 @@
  */
 
 import { ConfigReader } from '@backstage/config';
-import { Duration } from 'luxon';
 import { readProviderConfigs } from './BitbucketServerEntityProviderConfig';
 
 describe('readProviderConfigs', () => {
@@ -48,6 +47,7 @@ describe('readProviderConfigs', () => {
       filters: {
         projectKey: undefined,
         repoSlug: undefined,
+        skipArchivedRepos: undefined,
       },
     });
   });
@@ -87,6 +87,7 @@ describe('readProviderConfigs', () => {
       filters: {
         projectKey: undefined,
         repoSlug: undefined,
+        skipArchivedRepos: undefined,
       },
     });
     expect(providerConfigs[1]).toEqual({
@@ -96,6 +97,7 @@ describe('readProviderConfigs', () => {
       filters: {
         projectKey: undefined,
         repoSlug: undefined,
+        skipArchivedRepos: undefined,
       },
     });
     expect(providerConfigs[2]).toEqual({
@@ -105,9 +107,10 @@ describe('readProviderConfigs', () => {
       filters: {
         projectKey: undefined,
         repoSlug: undefined,
+        skipArchivedRepos: undefined,
       },
       schedule: {
-        frequency: Duration.fromISO('PT30M'),
+        frequency: { minutes: 30 },
         timeout: {
           minutes: 3,
         },
@@ -125,6 +128,7 @@ describe('readProviderConfigs', () => {
               filters: {
                 projectKey: 'project1',
                 repoSlug: '.*',
+                skipArchivedRepos: true,
               },
             },
           },
@@ -141,6 +145,7 @@ describe('readProviderConfigs', () => {
       filters: {
         projectKey: /project1/,
         repoSlug: /.*/,
+        skipArchivedRepos: true,
       },
     });
   });

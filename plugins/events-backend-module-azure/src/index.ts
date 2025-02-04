@@ -21,5 +21,5 @@
  * @packageDocumentation
  */
 
+export { eventsModuleAzureDevOpsEventRouter as default } from './service/eventsModuleAzureDevOpsEventRouter';
 export { AzureDevOpsEventRouter } from './router/AzureDevOpsEventRouter';
-export { azureDevOpsEventRouterEventsModule } from './service/AzureDevOpsEventRouterEventsModule';

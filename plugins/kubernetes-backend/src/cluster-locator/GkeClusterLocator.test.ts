@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
+import { ANNOTATION_KUBERNETES_AUTH_PROVIDER } from '@backstage/plugin-kubernetes-common';
 import '@backstage/backend-common';
 import { ConfigReader, Config } from '@backstage/config';
 import { GkeClusterLocator } from './GkeClusterLocator';
+import * as container from '@google-cloud/container';
 
 const mockedListClusters = jest.fn();
+jest.mock('@google-cloud/container', () => {
+  return {
+    v1: {
+      ClusterManagerClient: jest.fn().mockImplementation(() => {
+        mockedListClusters();
+      }),
+    },
+  };
+});
 
 describe('GkeClusterLocator', () => {
   beforeEach(() => {
@@ -104,9 +115,9 @@ describe('GkeClusterLocator', () => {
 
       expect(result).toStrictEqual([
         {
-          authProvider: 'google',
           name: 'some-cluster',
           url: 'https://1.2.3.4',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
           skipTLSVerify: false,
           skipMetricsLookup: true,
         },
@@ -141,9 +152,9 @@ describe('GkeClusterLocator', () => {
 
       expect(result).toStrictEqual([
         {
-          authProvider: 'google',
           name: 'some-cluster',
           url: 'https://1.2.3.4',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
           skipTLSVerify: false,
           skipMetricsLookup: false,
         },
@@ -183,16 +194,16 @@ describe('GkeClusterLocator', () => {
 
       expect(result).toStrictEqual([
         {
-          authProvider: 'google',
           name: 'some-cluster',
           url: 'https://1.2.3.4',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
           skipTLSVerify: false,
           skipMetricsLookup: false,
         },
         {
-          authProvider: 'google',
           name: 'some-other-cluster',
           url: 'https://6.7.8.9',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
           skipTLSVerify: false,
           skipMetricsLookup: false,
         },
@@ -238,16 +249,16 @@ describe('GkeClusterLocator', () => {
 
       expect(result).toStrictEqual([
         {
-          authProvider: 'google',
           name: 'some-cluster',
           url: 'https://1.2.3.4',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
           skipTLSVerify: false,
           skipMetricsLookup: false,
         },
         {
-          authProvider: 'google',
           name: 'some-other-cluster',
           url: 'https://6.7.8.9',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
           skipTLSVerify: false,
           skipMetricsLookup: false,
         },
@@ -299,9 +310,9 @@ describe('GkeClusterLocator', () => {
 
       expect(result).toStrictEqual([
         {
-          authProvider: 'google',
           name: 'some-cluster',
           url: 'https://1.2.3.4',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
           skipTLSVerify: false,
           skipMetricsLookup: false,
         },
@@ -363,9 +374,9 @@ describe('GkeClusterLocator', () => {
 
       expect(result).toStrictEqual([
         {
-          authProvider: 'google',
           name: 'some-cluster',
           url: 'https://1.2.3.4',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
           skipTLSVerify: false,
           skipMetricsLookup: true,
           dashboardApp: 'gke',
@@ -379,6 +390,122 @@ describe('GkeClusterLocator', () => {
       expect(mockedListClusters).toHaveBeenCalledTimes(1);
       expect(mockedListClusters).toHaveBeenCalledWith({
         parent: 'projects/some-project/locations/some-region',
+      });
+    });
+    it('return google login when no authProvider is specified', async () => {
+      mockedListClusters.mockReturnValueOnce([
+        {
+          clusters: [
+            {
+              name: 'some-cluster',
+              endpoint: '1.2.3.4',
+            },
+          ],
+        },
+      ]);
+
+      const config: Config = new ConfigReader({
+        type: 'gke',
+        projectId: 'some-project',
+      });
+
+      const sut = GkeClusterLocator.fromConfigWithClient(config, {
+        listClusters: mockedListClusters,
+      } as any);
+
+      const result = await sut.getClusters();
+
+      expect(result).toStrictEqual([
+        {
+          name: 'some-cluster',
+          url: 'https://1.2.3.4',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
+          skipTLSVerify: false,
+          skipMetricsLookup: false,
+        },
+      ]);
+    });
+    it('return googleServiceAccount login when authProvider is specified', async () => {
+      mockedListClusters.mockReturnValueOnce([
+        {
+          clusters: [
+            {
+              name: 'some-cluster',
+              endpoint: '1.2.3.4',
+            },
+          ],
+        },
+      ]);
+
+      const config: Config = new ConfigReader({
+        type: 'gke',
+        projectId: 'some-project',
+        authProvider: 'googleServiceAccount',
+      });
+
+      const sut = GkeClusterLocator.fromConfigWithClient(config, {
+        listClusters: mockedListClusters,
+      } as any);
+
+      const result = await sut.getClusters();
+
+      expect(result).toStrictEqual([
+        {
+          name: 'some-cluster',
+          url: 'https://1.2.3.4',
+          authMetadata: {
+            [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'googleServiceAccount',
+          },
+          skipTLSVerify: false,
+          skipMetricsLookup: false,
+        },
+      ]);
+    });
+    it('return google login when authProvider property has invalid value', async () => {
+      mockedListClusters.mockReturnValueOnce([
+        {
+          clusters: [
+            {
+              name: 'some-cluster',
+              endpoint: '1.2.3.4',
+            },
+          ],
+        },
+      ]);
+
+      const config: Config = new ConfigReader({
+        type: 'gke',
+        projectId: 'some-project',
+        authProvider: 'differentValue',
+      });
+
+      const sut = GkeClusterLocator.fromConfigWithClient(config, {
+        listClusters: mockedListClusters,
+      } as any);
+
+      const result = await sut.getClusters();
+
+      expect(result).toStrictEqual([
+        {
+          name: 'some-cluster',
+          url: 'https://1.2.3.4',
+          authMetadata: { [ANNOTATION_KUBERNETES_AUTH_PROVIDER]: 'google' },
+          skipTLSVerify: false,
+          skipMetricsLookup: false,
+        },
+      ]);
+    });
+    it('constructs ClusterManagerClient with identifying metadata', async () => {
+      const configs: Config = new ConfigReader({
+        type: 'gke',
+        projectId: 'some-project',
+      });
+
+      GkeClusterLocator.fromConfig(configs);
+
+      expect(container.v1.ClusterManagerClient).toHaveBeenCalledWith({
+        libName: 'backstage/kubernetes-backend.GkeClusterLocator',
+        libVersion: expect.any(String),
       });
     });
   });

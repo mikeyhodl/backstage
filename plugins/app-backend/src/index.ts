@@ -20,6 +20,5 @@
  * @packageDocumentation
  */
 
+export { appPlugin as default } from './service/appPlugin';
 export * from './service/router';
-export { appPlugin } from './service/appPlugin';
-export type { AppPluginOptions } from './service/appPlugin';

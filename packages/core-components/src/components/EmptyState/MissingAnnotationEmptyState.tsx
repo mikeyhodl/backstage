@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
+import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
-import { BackstageTheme } from '@backstage/theme';
+import React from 'react';
+
+import { CodeSnippet } from '../CodeSnippet';
 import { Link } from '../Link';
 import { EmptyState } from './EmptyState';
-import { CodeSnippet } from '../CodeSnippet';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
+import { coreComponentsTranslationRef } from '../../translation';
 
 const COMPONENT_YAML_TEMPLATE = `apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -46,14 +49,13 @@ type Props = {
   readMoreUrl?: string;
 };
 
-export type MissingAnnotationEmptyStateClassKey = 'code';
-
-const useStyles = makeStyles<BackstageTheme>(
+const useStyles = makeStyles(
   theme => ({
     code: {
       borderRadius: 6,
-      margin: `${theme.spacing(2)}px 0px`,
-      background: theme.palette.type === 'dark' ? '#444' : '#fff',
+      margin: theme.spacing(2, 0),
+      background:
+        theme.palette.type === 'dark' ? '#444' : theme.palette.common.white,
     },
   }),
   { name: 'BackstageMissingAnnotationEmptyState' },
@@ -67,11 +69,10 @@ function generateComponentYaml(annotations: string[]) {
   const annotationYaml = annotations
     .map(ann => ANNOTATION_YAML.replace('ANNOTATION', ann))
     .join('\n');
-
   return COMPONENT_YAML_TEMPLATE.replace(ANNOTATION_YAML, annotationYaml);
 }
 
-function generateDescription(annotations: string[]) {
+function useGenerateDescription(annotations: string[]) {
   const isSingular = annotations.length <= 1;
   return (
     <>
@@ -90,6 +91,10 @@ function generateDescription(annotations: string[]) {
   );
 }
 
+/**
+ * @public
+ * @deprecated This component is deprecated, please use {@link @backstage/plugin-catalog-react#MissingAnnotationEmptyState} instead
+ */
 export function MissingAnnotationEmptyState(props: Props) {
   const { annotation, readMoreUrl } = props;
   const annotations = Array.isArray(annotation) ? annotation : [annotation];
@@ -97,19 +102,19 @@ export function MissingAnnotationEmptyState(props: Props) {
     readMoreUrl ||
     'https://backstage.io/docs/features/software-catalog/well-known-annotations';
   const classes = useStyles();
+  const { t } = useTranslationRef(coreComponentsTranslationRef);
 
   return (
     <EmptyState
       missing="field"
-      title="Missing Annotation"
-      description={generateDescription(annotations)}
+      title={t('emptyState.missingAnnotation.title')}
+      description={useGenerateDescription(annotations)}
       action={
         <>
           <Typography variant="body1">
-            Add the annotation to your component YAML as shown in the
-            highlighted example below:
+            {t('emptyState.missingAnnotation.actionTitle')}
           </Typography>
-          <div className={classes.code}>
+          <Box className={classes.code}>
             <CodeSnippet
               text={generateComponentYaml(annotations)}
               language="yaml"
@@ -117,9 +122,9 @@ export function MissingAnnotationEmptyState(props: Props) {
               highlightedNumbers={generateLineNumbers(annotations.length)}
               customStyle={{ background: 'inherit', fontSize: '115%' }}
             />
-          </div>
+          </Box>
           <Button color="primary" component={Link} to={url}>
-            Read more
+            {t('emptyState.missingAnnotation.readMore')}
           </Button>
         </>
       }

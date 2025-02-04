@@ -6,39 +6,20 @@ authorization token.
 
 ## Setup backend
 
-1. Install the backend plugin:
+Install the backend plugin
 
 ```bash
 # From your Backstage root directory
-yarn --cwd packages/backend add @backstage/plugin-user-settings-backend
+yarn --cwd packages/backend add @backstage/plugin-user-settings-backend @backstage/plugin-signals-backend
 ```
 
-1. Configure the routes by adding a new `userSettings.ts` file in
-   `packages/backend/src/plugins/`:
+Add the plugin to your backend in `packages/backend/src/index.ts`:
 
 ```ts
-// packages/backend/src/plugins/userSettings.ts
-import { createRouter } from '@backstage/plugin-user-settings-backend';
-import { PluginEnvironment } from '../types';
-
-export default async function createPlugin(env: PluginEnvironment) {
-  return await createRouter({
-    database: env.database,
-    identity: env.identity,
-  });
-}
-```
-
-3. Add the new routes to your backend by modifying `packages/backend/src/index.ts`:
-
-```diff
- // packages/backend/src/index.ts
-+import userSettings from './plugins/userSettings';
- async function main() {
-+  const userSettingsEnv = useHotMemoize(module, () => createEnv('user-settings'));
-   const apiRouter = Router();
-+  apiRouter.use('/user-settings', await userSettings(userSettingsEnv));
-}
+backend.add(import('@backstage/plugin-user-settings-backend'));
+// The signals backend is technically optional but enables real-time update of user
+// settings across different sessions
+backend.add(import('@backstage/plugin-signals-backend'));
 ```
 
 ## Setup app
@@ -58,6 +39,7 @@ To make use of the user settings backend, replace the `WebStorage` with the
 +  storageApiRef,
  } from '@backstage/core-plugin-api';
 +import { UserSettingsStorage } from '@backstage/plugin-user-settings';
++import { signalApiRef } from '@backstage/plugin-signals-react';
 
  export const apis: AnyApiFactory[] = [
 +  createApiFactory({
@@ -66,7 +48,8 @@ To make use of the user settings backend, replace the `WebStorage` with the
 +      discoveryApi: discoveryApiRef,
 +      errorApi: errorApiRef,
 +      fetchApi: fetchApiRef,
-+      identityApi: identityApiRef
++      identityApi: identityApiRef,
++      signalApi: signalApiRef, // Optional
 +    },
 +    factory: deps => UserSettingsStorage.create(deps),
 +  }),

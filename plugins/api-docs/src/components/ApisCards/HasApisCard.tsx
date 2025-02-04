@@ -15,7 +15,7 @@
  */
 
 import { ApiEntity, RELATION_HAS_PART } from '@backstage/catalog-model';
-import { Typography } from '@material-ui/core';
+import Typography from '@material-ui/core/Typography';
 import {
   EntityTable,
   useEntity,
@@ -30,10 +30,11 @@ import {
   Link,
   Progress,
   TableColumn,
+  TableOptions,
   WarningPanel,
 } from '@backstage/core-components';
 
-const columns: TableColumn<ApiEntity>[] = [
+const presetColumns: TableColumn<ApiEntity>[] = [
   EntityTable.columns.createEntityRefColumn({ defaultKind: 'API' }),
   EntityTable.columns.createOwnerColumn(),
   createSpecApiTypeColumn(),
@@ -44,8 +45,18 @@ const columns: TableColumn<ApiEntity>[] = [
 /**
  * @public
  */
-export const HasApisCard = (props: { variant?: InfoCardVariants }) => {
-  const { variant = 'gridItem' } = props;
+export const HasApisCard = (props: {
+  variant?: InfoCardVariants;
+  title?: string;
+  columns?: TableColumn<ApiEntity>[];
+  tableOptions?: TableOptions;
+}) => {
+  const {
+    variant = 'gridItem',
+    title = 'APIs',
+    columns = presetColumns,
+    tableOptions = {},
+  } = props;
   const { entity } = useEntity();
   const { entities, loading, error } = useRelatedEntities(entity, {
     type: RELATION_HAS_PART,
@@ -54,7 +65,7 @@ export const HasApisCard = (props: { variant?: InfoCardVariants }) => {
 
   if (loading) {
     return (
-      <InfoCard variant={variant} title="APIs">
+      <InfoCard variant={variant} title={title}>
         <Progress />
       </InfoCard>
     );
@@ -62,7 +73,7 @@ export const HasApisCard = (props: { variant?: InfoCardVariants }) => {
 
   if (error || !entities) {
     return (
-      <InfoCard variant={variant} title="APIs">
+      <InfoCard variant={variant} title={title}>
         <WarningPanel
           severity="error"
           title="Could not load APIs"
@@ -74,7 +85,7 @@ export const HasApisCard = (props: { variant?: InfoCardVariants }) => {
 
   return (
     <EntityTable
-      title="APIs"
+      title={title}
       variant={variant}
       emptyContent={
         <div style={{ textAlign: 'center' }}>
@@ -90,6 +101,7 @@ export const HasApisCard = (props: { variant?: InfoCardVariants }) => {
         </div>
       }
       columns={columns}
+      tableOptions={tableOptions}
       entities={entities as ApiEntity[]}
     />
   );

@@ -16,8 +16,7 @@
 
 import fs from 'fs-extra';
 import { resolve as resolvePath } from 'path';
-import { PackageGraph } from '../../lib/monorepo';
-import { getRoleFromPackage, getRoleInfo, PackageRole } from '../../lib/role';
+import { PackageGraph, PackageRoles, PackageRole } from '@backstage/cli-node';
 
 const configArgPattern = /--config[=\s][^\s$]+/;
 
@@ -28,12 +27,12 @@ export async function command() {
 
   await Promise.all(
     packages.map(async ({ dir, packageJson }) => {
-      const role = getRoleFromPackage(packageJson);
+      const role = PackageRoles.getRoleFromPackage(packageJson);
       if (!role) {
         return;
       }
 
-      const roleInfo = getRoleInfo(role);
+      const roleInfo = PackageRoles.getRoleInfo(role);
       const hasStart = !noStartRoles.includes(role);
       const needsPack = !(roleInfo.output.includes('bundle') || role === 'cli');
       const scripts = packageJson.scripts ?? {};
@@ -49,9 +48,6 @@ export async function command() {
       const buildCmd = ['build'];
       if (scripts.build?.includes('--minify')) {
         buildCmd.push('--minify');
-      }
-      if (scripts.build?.includes('--experimental-type-build')) {
-        buildCmd.push('--experimental-type-build');
       }
       if (scripts.build?.includes('--config')) {
         buildCmd.push(...(scripts.build.match(configArgPattern) ?? []));

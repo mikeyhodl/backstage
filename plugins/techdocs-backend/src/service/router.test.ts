@@ -15,13 +15,12 @@
  */
 
 import {
-  errorHandler,
-  getVoidLogger,
   PluginCacheManager,
-  PluginEndpointDiscovery,
+  loggerToWinstonLogger,
 } from '@backstage/backend-common';
 import { ConfigReader } from '@backstage/config';
 import {
+  DocsBuildStrategy,
   GeneratorBuilder,
   PreparerBuilder,
   PublisherBase,
@@ -32,7 +31,7 @@ import { DocsSynchronizer, DocsSynchronizerSyncOpts } from './DocsSynchronizer';
 import { CachedEntityLoader } from './CachedEntityLoader';
 import { createEventStream, createRouter, RouterOptions } from './router';
 import { TechDocsCache } from '../cache';
-import { DocsBuildStrategy } from './DocsBuildStrategy';
+import { mockErrorHandler, mockServices } from '@backstage/backend-test-utils';
 
 jest.mock('@backstage/catalog-client');
 jest.mock('@backstage/config');
@@ -75,7 +74,7 @@ const getMockHttpResponseFor = (content: string): Buffer => {
 const createApp = async (options: RouterOptions) => {
   const app = express();
   app.use(await createRouter(options));
-  app.use(errorHandler());
+  app.use(mockErrorHandler());
   return app;
 };
 
@@ -111,10 +110,7 @@ describe('createRouter', () => {
     hasDocsBeenGenerated: jest.fn(),
     publish: jest.fn(),
   };
-  const discovery: jest.Mocked<PluginEndpointDiscovery> = {
-    getBaseUrl: jest.fn(),
-    getExternalBaseUrl: jest.fn(),
-  };
+  const discovery = mockServices.discovery.mock();
   const cache: jest.Mocked<PluginCacheManager> = {
     getClient: jest.fn(),
   };
@@ -126,7 +122,7 @@ describe('createRouter', () => {
     generators,
     publisher,
     config: new ConfigReader({}),
-    logger: getVoidLogger(),
+    logger: loggerToWinstonLogger(mockServices.logger.mock()),
     discovery,
     cache,
     docsBuildStrategy,
@@ -134,7 +130,7 @@ describe('createRouter', () => {
   const recommendedOptions = {
     publisher,
     config: new ConfigReader({}),
-    logger: getVoidLogger(),
+    logger: loggerToWinstonLogger(mockServices.logger.mock()),
     discovery,
     cache,
     docsBuildStrategy,

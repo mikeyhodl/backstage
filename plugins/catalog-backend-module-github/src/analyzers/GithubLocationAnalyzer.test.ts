@@ -32,46 +32,38 @@ jest.mock('@octokit/rest', () => {
   return { Octokit };
 });
 
-import {
-  PluginEndpointDiscovery,
-  TokenManager,
-} from '@backstage/backend-common';
 import { GithubLocationAnalyzer } from './GithubLocationAnalyzer';
-import { setupRequestMockHandlers } from '@backstage/backend-test-utils';
+import {
+  registerMswTestHooks,
+  mockServices,
+} from '@backstage/backend-test-utils';
 import { setupServer } from 'msw/node';
-import { rest } from 'msw';
-import { ConfigReader } from '@backstage/config';
+import { http, HttpResponse } from 'msw';
 
 const server = setupServer();
 
 describe('GithubLocationAnalyzer', () => {
-  const mockDiscoveryApi: jest.Mocked<PluginEndpointDiscovery> = {
-    getBaseUrl: jest.fn().mockResolvedValue('http://localhost:7007'),
-    getExternalBaseUrl: jest.fn(),
-  };
-  const mockTokenManager: jest.Mocked<TokenManager> = {
-    authenticate: jest.fn(),
-    getToken: jest.fn().mockResolvedValue('abc123'),
-  };
-  const config = new ConfigReader({
-    integrations: {
-      github: [
-        {
-          host: 'h.com',
-          token: 't',
-        },
-      ],
+  const mockDiscovery = mockServices.discovery.mock({
+    getBaseUrl: async () => 'http://localhost:7007',
+  });
+  const mockAuthService = mockServices.auth.mock({
+    getPluginRequestToken: async () => ({ token: 'abc123' }),
+  });
+  const config = mockServices.rootConfig({
+    data: {
+      integrations: {
+        github: [{ host: 'h.com', token: 't' }],
+      },
     },
   });
 
-  setupRequestMockHandlers(server);
+  registerMswTestHooks(server);
 
   beforeEach(() => {
     server.use(
-      rest.post('http://localhost:7007/locations', async (_, res, ctx) => {
-        return res(
-          ctx.status(201),
-          ctx.json({
+      http.post('http://localhost:7007/locations', () =>
+        HttpResponse.json(
+          {
             location: 'test',
             exists: false,
             entities: [
@@ -101,9 +93,10 @@ describe('GithubLocationAnalyzer', () => {
                 },
               },
             ],
-          }),
-        );
-      }),
+          },
+          { status: 201 },
+        ),
+      ),
     );
 
     octokit.repos.get.mockResolvedValue({
@@ -113,7 +106,7 @@ describe('GithubLocationAnalyzer', () => {
 
   it('should analyze', async () => {
     octokit.search.code.mockImplementation((opts: { q: string }) => {
-      if (opts.q === 'filename:catalog-info.yaml repo:foo/bar') {
+      if (opts.q === 'filename:catalog-info.yaml extension:yaml repo:foo/bar') {
         return Promise.resolve({
           data: { items: [{ path: 'catalog-info.yaml' }], total_count: 1 },
         });
@@ -122,9 +115,9 @@ describe('GithubLocationAnalyzer', () => {
     });
 
     const analyzer = new GithubLocationAnalyzer({
-      discovery: mockDiscoveryApi,
+      discovery: mockDiscovery,
+      auth: mockAuthService,
       config,
-      tokenManager: mockTokenManager,
     });
     const result = await analyzer.analyze({
       url: 'https://github.com/foo/bar',
@@ -137,9 +130,10 @@ describe('GithubLocationAnalyzer', () => {
         'https://github.com/foo/bar/blob/my_default_branch/catalog-info.yaml',
     });
   });
+
   it('should use the provided entity filename for search', async () => {
     octokit.search.code.mockImplementation((opts: { q: string }) => {
-      if (opts.q === 'filename:anvil.yaml repo:foo/bar') {
+      if (opts.q === 'filename:anvil.yaml extension:yaml repo:foo/bar') {
         return Promise.resolve({
           data: { items: [{ path: 'anvil.yaml' }], total_count: 1 },
         });
@@ -148,9 +142,9 @@ describe('GithubLocationAnalyzer', () => {
     });
 
     const analyzer = new GithubLocationAnalyzer({
-      discovery: mockDiscoveryApi,
+      discovery: mockDiscovery,
+      auth: mockAuthService,
       config,
-      tokenManager: mockTokenManager,
     });
     const result = await analyzer.analyze({
       url: 'https://github.com/foo/bar',
@@ -160,6 +154,32 @@ describe('GithubLocationAnalyzer', () => {
     expect(result.existing[0].location).toEqual({
       type: 'url',
       target: 'https://github.com/foo/bar/blob/my_default_branch/anvil.yaml',
+    });
+  });
+
+  it('should use the provided entity file extension in search query only if present', async () => {
+    octokit.search.code.mockImplementation((opts: { q: string }) => {
+      if (opts.q === 'filename:.gitignore  repo:foo/bar') {
+        return Promise.resolve({
+          data: { items: [{ path: '.gitignore' }], total_count: 1 },
+        });
+      }
+      return Promise.reject();
+    });
+
+    const analyzer = new GithubLocationAnalyzer({
+      discovery: mockDiscovery,
+      auth: mockAuthService,
+      config,
+    });
+    const result = await analyzer.analyze({
+      url: 'https://github.com/foo/bar',
+      catalogFilename: '.gitignore',
+    });
+
+    expect(result.existing[0].location).toEqual({
+      type: 'url',
+      target: 'https://github.com/foo/bar/blob/my_default_branch/.gitignore',
     });
   });
 });

@@ -8,8 +8,7 @@ This plugin provides two components, `<UserSettings />` is intended to be used w
 
 It also provides a `UserSettingsStorage` implementation of the `StorageApi`, to
 be used in the frontend as a persistent alternative to the builtin `WebStorage`.
-Please see [the backend
-README](https://github.com/backstage/backstage/tree/master/plugins/user-settings-backend)
+Please see [the backend README](https://github.com/backstage/backstage/tree/master/plugins/user-settings-backend)
 for installation instructions.
 
 ## Components Usage
@@ -64,7 +63,7 @@ const AppRoutes = () => (
 );
 ```
 
-> **Note that the list of providers expects to be rendered within a MUI [`<List>`](https://material-ui.com/components/lists/)**
+> **Note that the list of providers expects to be rendered within a Material UI [`<List>`](https://v4.mui.com/components/lists/)**
 
 **Tabs**
 
@@ -92,7 +91,7 @@ To standardize the UI of all setting tabs,
 make sure you use a similar component structure as the other tabs.
 You can take a look at
 [the example extra tab](https://github.com/backstage/backstage/blob/master/packages/app/src/components/advancedSettings/AdvancedSettings.tsx)
-we have created in Backstage's demo app.
+we have created in Backstage's example app.
 
 To change the layout altogether, create a custom page in `packages/app/src/components/user-settings/SettingsPage.tsx`:
 

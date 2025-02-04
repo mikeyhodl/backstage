@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { lazy, Suspense } from 'react';
-import { AnalyticsContext } from '../analytics';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { AnalyticsContext, useAnalytics } from '../analytics';
 import { useApp } from '../app';
 import { RouteRef, useRouteRef } from '../routing';
 import { attachComponentData } from './componentData';
 import { Extension, BackstagePlugin } from '../plugin';
 import { PluginErrorBoundary } from './PluginErrorBoundary';
-import { PluginProvider } from '../plugin-options';
+import { routableExtensionRenderedEvent } from '../analytics/Tracker';
 
 /**
  * Lazy or synchronous retrieving of extension components.
@@ -82,6 +82,8 @@ export function createRoutableExtension<
         component().then(
           InnerComponent => {
             const RoutableExtensionWrapper: any = (props: any) => {
+              const analytics = useAnalytics();
+
               // Validate that the routing is wired up correctly in the App.tsx
               try {
                 useRouteRef(mountPoint);
@@ -101,6 +103,15 @@ export function createRoutableExtension<
                 }
                 throw error;
               }
+
+              // This event, never exposed to end-users of the analytics API,
+              // helps inform which extension metadata gets associated with a
+              // navigation event when the route navigated to is a gathered
+              // mountpoint.
+              useEffect(() => {
+                analytics.captureEvent(routableExtensionRenderedEvent, '');
+              }, [analytics]);
+
               return <InnerComponent {...props} />;
             };
 
@@ -246,9 +257,7 @@ export function createReactExtension<
                   ...(mountPoint && { routeRef: mountPoint.id }),
                 }}
               >
-                <PluginProvider plugin={plugin}>
-                  <Component {...props} />
-                </PluginProvider>
+                <Component {...props} />
               </AnalyticsContext>
             </PluginErrorBoundary>
           </Suspense>
@@ -256,6 +265,7 @@ export function createReactExtension<
       };
 
       attachComponentData(Result, 'core.plugin', plugin);
+      attachComponentData(Result, 'core.extensionName', name);
       for (const [key, value] of Object.entries(data)) {
         attachComponentData(Result, key, value);
       }

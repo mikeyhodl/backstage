@@ -15,13 +15,13 @@
  */
 
 import { Entity } from '@backstage/catalog-model';
-import { RESOURCE_TYPE_CATALOG_ENTITY } from '@backstage/plugin-catalog-common';
+import { RESOURCE_TYPE_CATALOG_ENTITY } from '@backstage/plugin-catalog-common/alpha';
+import { EntitiesSearchFilter } from '@backstage/plugin-catalog-node';
 import { PermissionRuleParams } from '@backstage/plugin-permission-common';
 import {
   makeCreatePermissionRule,
   PermissionRule,
 } from '@backstage/plugin-permission-node';
-import { EntitiesSearchFilter } from '../../catalog/types';
 
 /**
  * Convenience type for {@link @backstage/plugin-permission-node#PermissionRule}

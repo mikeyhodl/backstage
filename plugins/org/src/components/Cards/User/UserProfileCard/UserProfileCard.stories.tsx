@@ -20,8 +20,8 @@ import {
   entityRouteRef,
 } from '@backstage/plugin-catalog-react';
 import { wrapInTestApp } from '@backstage/test-utils';
-import { Grid } from '@material-ui/core';
-import React, { ComponentType } from 'react';
+import Grid from '@material-ui/core/Grid';
+import React, { ComponentType, PropsWithChildren } from 'react';
 import { UserProfileCard } from './UserProfileCard';
 
 const dummyGroup = {
@@ -45,8 +45,6 @@ const defaultEntity: UserEntity = {
     profile: {
       displayName: 'Guest User',
       email: 'guest@example.com',
-      picture:
-        'https://avatars.dicebear.com/api/avataaars/guest@example.com.svg?background=%23fff',
     },
     memberOf: ['team-a'],
   },
@@ -94,7 +92,7 @@ export default {
   title: 'Plugins/Org/User Profile Card',
   component: UserProfileCard,
   decorators: [
-    (Story: ComponentType<{}>) =>
+    (Story: ComponentType<PropsWithChildren<{}>>) =>
       wrapInTestApp(<Story />, {
         mountedRoutes: {
           '/a': entityRouteRef,
@@ -125,8 +123,6 @@ const extraDetailsEntity: UserEntity = {
     profile: {
       displayName: 'Guest User',
       email: 'guest@example.com',
-      picture:
-        'https://avatars.dicebear.com/api/avataaars/guest@example.com.svg?background=%23fff',
     },
     memberOf: ['team-a'],
   },

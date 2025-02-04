@@ -19,13 +19,28 @@ import { makeFieldSchemaFromZod } from '../utils';
 /**
  * @public
  */
+export const entityQueryFilterExpressionSchema = z.record(
+  z
+    .string()
+    .or(z.object({ exists: z.boolean().optional() }))
+    .or(z.array(z.string())),
+);
+
+/**
+ * @public
+ */
 export const EntityPickerFieldSchema = makeFieldSchemaFromZod(
   z.string(),
   z.object({
+    /**
+     * @deprecated Use `catalogFilter` instead.
+     */
     allowedKinds: z
       .array(z.string())
       .optional()
-      .describe('List of kinds of entities to derive options from'),
+      .describe(
+        'DEPRECATED: Use `catalogFilter` instead. List of kinds of entities to derive options from',
+      ),
     defaultKind: z
       .string()
       .optional()
@@ -42,6 +57,11 @@ export const EntityPickerFieldSchema = makeFieldSchemaFromZod(
       .describe(
         'The default namespace. Options with this namespace will not be prefixed.',
       ),
+    catalogFilter: z
+      .array(entityQueryFilterExpressionSchema)
+      .or(entityQueryFilterExpressionSchema)
+      .optional()
+      .describe('List of key-value filter expression for entities'),
   }),
 );
 
@@ -57,3 +77,10 @@ export type EntityPickerUiOptions =
 export type EntityPickerProps = typeof EntityPickerFieldSchema.type;
 
 export const EntityPickerSchema = EntityPickerFieldSchema.schema;
+
+export type EntityPickerFilterQuery = z.TypeOf<
+  typeof entityQueryFilterExpressionSchema
+>;
+
+export type EntityPickerFilterQueryValue =
+  EntityPickerFilterQuery[keyof EntityPickerFilterQuery];

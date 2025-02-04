@@ -23,6 +23,7 @@ import {
 } from '@backstage/plugin-catalog-node';
 import { DbRelationsRow } from './tables';
 import { RefreshKeyData } from '../processing/types';
+import { Knex } from 'knex';
 
 /**
  * An abstraction for transactions of the underlying database technology.
@@ -59,10 +60,8 @@ export type RefreshStateItem = {
   id: string;
   entityRef: string;
   unprocessedEntity: Entity;
-  processedEntity?: Entity;
   resultHash: string;
   nextUpdateAt: DateTime;
-  lastDiscoveryAt: DateTime; // remove?
   state?: JsonObject;
   errors?: string;
   locationKey?: string;
@@ -81,7 +80,7 @@ export type ReplaceUnprocessedEntitiesOptions =
   | {
       sourceKey: string;
       added: DeferredEntity[];
-      removed: DeferredEntity[];
+      removed: { entityRef: string; locationKey?: string }[];
       type: 'delta';
     };
 
@@ -102,26 +101,21 @@ export type ListAncestorsResult = {
 };
 
 export type ListParentsOptions = {
-  entityRef: string;
+  entityRefs: string[];
 };
 
 export type ListParentsResult = {
   entityRefs: string[];
 };
 
+/**
+ * The database abstraction layer for Entity Processor interactions.
+ */
 export interface ProcessingDatabase {
   transaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T>;
 
-  /**
-   * Add unprocessed entities to the front of the processing queue using a mutation.
-   */
-  replaceUnprocessedEntities(
-    txOpaque: Transaction,
-    options: ReplaceUnprocessedEntitiesOptions,
-  ): Promise<void>;
-
   getProcessableEntities(
-    txOpaque: Transaction,
+    txOpaque: Transaction | Knex,
     request: { processBatchSize: number },
   ): Promise<GetProcessableEntitiesResult>;
 
@@ -152,10 +146,25 @@ export interface ProcessingDatabase {
     options: UpdateProcessedEntityErrorsOptions,
   ): Promise<void>;
 
+  listParents(
+    txOpaque: Transaction,
+    options: ListParentsOptions,
+  ): Promise<ListParentsResult>;
+}
+
+/**
+ * The database abstraction layer for Entity Provider interactions.
+ */
+export interface ProviderDatabase {
+  transaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T>;
+
   /**
-   * Schedules a refresh of a given entityRef.
+   * Add unprocessed entities to the front of the processing queue using a mutation.
    */
-  refresh(txOpaque: Transaction, options: RefreshOptions): Promise<void>;
+  replaceUnprocessedEntities(
+    txOpaque: Transaction,
+    options: ReplaceUnprocessedEntitiesOptions,
+  ): Promise<void>;
 
   /**
    * Schedules a refresh for every entity that has a matching set of refresh key stored for it.
@@ -164,6 +173,14 @@ export interface ProcessingDatabase {
     txOpaque: Transaction,
     options: RefreshByKeyOptions,
   ): Promise<void>;
+}
+
+// TODO(Rugvip): This is only partial for now
+/**
+ * The database abstraction layer for catalog access.
+ */
+export interface CatalogDatabase {
+  transaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T>;
 
   /**
    * Lists all ancestors of a given entityRef.
@@ -175,8 +192,8 @@ export interface ProcessingDatabase {
     options: ListAncestorsOptions,
   ): Promise<ListAncestorsResult>;
 
-  listParents(
-    txOpaque: Transaction,
-    options: ListParentsOptions,
-  ): Promise<ListParentsResult>;
+  /**
+   * Schedules a refresh of a given entityRef.
+   */
+  refresh(txOpaque: Transaction, options: RefreshOptions): Promise<void>;
 }
