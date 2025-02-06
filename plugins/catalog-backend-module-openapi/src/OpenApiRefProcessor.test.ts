@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { getVoidLogger } from '@backstage/backend-common';
-import { ConfigReader } from '@backstage/config';
-import { LocationSpec } from '@backstage/plugin-catalog-backend';
+
+import { LocationSpec } from '@backstage/plugin-catalog-common';
 import { OpenApiRefProcessor } from './OpenApiRefProcessor';
-import { bundleOpenApiSpecification } from './lib';
+import { bundleFileWithRefs } from './lib';
+import { mockServices } from '@backstage/backend-test-utils';
 
 jest.mock('./lib', () => ({
-  bundleOpenApiSpecification: jest.fn(),
+  bundleFileWithRefs: jest.fn(),
 }));
 
-const bundledSpecification = '<bundled-specification>';
+const bundled = '<bundled-specification>';
 
 describe('OpenApiRefProcessor', () => {
   const mockLocation = (): LocationSpec => ({
@@ -32,7 +32,7 @@ describe('OpenApiRefProcessor', () => {
   });
 
   beforeEach(() => {
-    (bundleOpenApiSpecification as any).mockResolvedValue(bundledSpecification);
+    (bundleFileWithRefs as any).mockResolvedValue(bundled);
   });
 
   afterEach(() => {
@@ -45,15 +45,10 @@ describe('OpenApiRefProcessor', () => {
         kind,
         spec: { definition: '<openapi-definition>', ...spec },
       };
-      const config = new ConfigReader({});
-      const reader = {
-        read: jest.fn(),
-        readUrl: jest.fn(),
-        readTree: jest.fn(),
-        search: jest.fn(),
-      };
+      const config = mockServices.rootConfig();
+      const reader = mockServices.urlReader.mock();
       const processor = OpenApiRefProcessor.fromConfig(config, {
-        logger: getVoidLogger(),
+        logger: mockServices.logger.mock(),
         reader,
       });
 
@@ -71,7 +66,7 @@ describe('OpenApiRefProcessor', () => {
         mockLocation(),
       );
 
-      expect(result.spec?.definition).toEqual(bundledSpecification);
+      expect(result.spec?.definition).toEqual(bundled);
     });
 
     it('should ignore other kinds', async () => {

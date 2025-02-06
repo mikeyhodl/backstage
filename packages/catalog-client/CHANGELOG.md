@@ -1,5 +1,614 @@
 # @backstage/catalog-client
 
+## 1.9.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.7.3
+  - @backstage/errors@1.2.7
+
+## 1.9.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.7.3-next.0
+  - @backstage/errors@1.2.7-next.0
+
+## 1.9.0
+
+### Minor Changes
+
+- 384e494: Internal updates to generated code.
+
+### Patch Changes
+
+- d7e7836: Fixed a bug in the `queryEntities` method where errors were not being handled properly.
+- Updated dependencies
+  - @backstage/errors@1.2.6
+  - @backstage/catalog-model@1.7.2
+
+## 1.9.0-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.6-next.0
+  - @backstage/catalog-model@1.7.2-next.0
+
+## 1.9.0-next.1
+
+### Minor Changes
+
+- 384e494: Internal updates to generated code.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.7.1
+  - @backstage/errors@1.2.5
+
+## 1.8.1-next.0
+
+### Patch Changes
+
+- d7e7836: Fixed a bug in the `queryEntities` method where errors were not being handled properly.
+- Updated dependencies
+  - @backstage/catalog-model@1.7.1
+  - @backstage/errors@1.2.5
+
+## 1.8.0
+
+### Minor Changes
+
+- 656d1ef: Internal update to use the updated generated code from `backstage-cli package schema openapi generate --client-package ...`.
+- 31c4fe0: The client now automatically splits up very large `getEntitiesByRefs` calls into several smaller requests behind the scenes when needed. This ensures that each individual request does not exceed common Express.js request body limits or overload the server.
+
+### Patch Changes
+
+- 873f89a: Fix for certain filter fields in the `catalogApiMock` being case sensitive.
+- Updated dependencies
+  - @backstage/catalog-model@1.7.1
+  - @backstage/errors@1.2.5
+
+## 1.8.0-next.1
+
+### Minor Changes
+
+- 656d1ef: Internal update to use the updated generated code from `backstage-cli package schema openapi generate --client-package ...`.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/errors@1.2.4
+
+## 1.8.0-next.0
+
+### Minor Changes
+
+- 31c4fe0: The client now automatically splits up very large `getEntitiesByRefs` calls into several smaller requests behind the scenes when needed. This ensures that each individual request does not exceed common Express.js request body limits or overload the server.
+
+### Patch Changes
+
+- 873f89a: Fix for certain filter fields in the `catalogApiMock` being case sensitive.
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/errors@1.2.4
+
+## 1.7.1
+
+### Patch Changes
+
+- 0040632: Add missing doc string to API
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/errors@1.2.4
+
+## 1.7.1-next.0
+
+### Patch Changes
+
+- 0040632: Add missing doc string to API
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/errors@1.2.4
+
+## 1.7.0
+
+### Minor Changes
+
+- 78475c3: Allow offset mode paging in entity list provider
+- 29e57c7: Add catalog service mocks under the `/testUtils` subpath export.
+
+### Patch Changes
+
+- 1882cfe: Moved `getEntities` ordering to utilize database instead of having it inside catalog client
+
+  Please note that the latest version of `@backstage/catalog-client` will not order the entities in the same way as before. This is because the ordering is now done in the database query instead of in the client. If you rely on the ordering of the entities, you may need to update your backend plugin or code to handle this change.
+
+- Updated dependencies
+  - @backstage/catalog-model@1.7.0
+  - @backstage/errors@1.2.4
+
+## 1.7.0-next.1
+
+### Minor Changes
+
+- 78475c3: Allow offset mode paging in entity list provider
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.6.0
+  - @backstage/errors@1.2.4
+
+## 1.6.7-next.0
+
+### Patch Changes
+
+- 1882cfe: Moved `getEntities` ordering to utilize database instead of having it inside catalog client
+
+  Please note that the latest version of `@backstage/catalog-client` will not order the entities in the same way as before. This is because the ordering is now done in the database query instead of in the client. If you rely on the ordering of the entities, you may need to update your backend plugin or code to handle this change.
+
+- Updated dependencies
+  - @backstage/catalog-model@1.6.0
+  - @backstage/errors@1.2.4
+
+## 1.6.6
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.6.0
+  - @backstage/errors@1.2.4
+
+## 1.6.6-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.6.0-next.0
+  - @backstage/errors@1.2.4
+
+## 1.6.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0
+
+## 1.6.5-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0-next.0
+  - @backstage/errors@1.2.4
+
+## 1.6.4
+
+### Patch Changes
+
+- dad7505: Fix the `CatalogClient::getEntities` method to only sort the resulting entities in case no `order`-parameter is provided.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.5
+  - @backstage/errors@1.2.4
+
+## 1.6.4-next.0
+
+### Patch Changes
+
+- dad7505: Fix the `CatalogClient::getEntities` method to only sort the resulting entities in case no `order`-parameter is provided.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.5
+  - @backstage/errors@1.2.4
+
+## 1.6.3
+
+### Patch Changes
+
+- 7e8a7c8: Added missing commas to the example of `queryEntities`
+- Updated dependencies
+  - @backstage/catalog-model@1.4.5
+  - @backstage/errors@1.2.4
+
+## 1.6.2
+
+### Patch Changes
+
+- 7e8a7c8: Added missing commas to the example of `queryEntities`
+- Updated dependencies
+  - @backstage/catalog-model@1.4.5
+  - @backstage/errors@1.2.4
+
+## 1.6.1
+
+### Patch Changes
+
+- 6f830bb: Allow passing optional filter to `getEntitiesByRefs`
+- Updated dependencies
+  - @backstage/errors@1.2.4
+  - @backstage/catalog-model@1.4.5
+
+## 1.6.1-next.1
+
+### Patch Changes
+
+- 6f830bb: Allow passing optional filter to `getEntitiesByRefs`
+- Updated dependencies
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/errors@1.2.4-next.0
+
+## 1.6.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.4-next.0
+  - @backstage/catalog-model@1.4.5-next.0
+
+## 1.6.0
+
+### Minor Changes
+
+- 43dad25: Add API to get location by entity
+- 04907c3: Updates the OpenAPI specification title to plugin ID instead of package name.
+
+### Patch Changes
+
+- c04c42b: Internal updates to auto-generated files.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.4
+  - @backstage/errors@1.2.3
+
+## 1.6.0-next.1
+
+### Minor Changes
+
+- 43dad25: Add API to get location by entity
+
+### Patch Changes
+
+- c04c42b: Internal updates to auto-generated files.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.4-next.0
+  - @backstage/errors@1.2.3
+
+## 1.6.0-next.0
+
+### Minor Changes
+
+- 04907c3: Updates the OpenAPI specification title to plugin ID instead of package name.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+
+## 1.5.2
+
+### Patch Changes
+
+- 883782e: Fix a bug in `getLocationByRef` that led to invalid backend calls
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+
+## 1.5.2-next.0
+
+### Patch Changes
+
+- 883782e: Fix a bug in `getLocationByRef` that led to invalid backend calls
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+
+## 1.5.0
+
+### Minor Changes
+
+- 3834067: The internals of `CatalogClient` are now auto-generated using the `backstage-repo-tools schema openapi generate-client` command.
+
+### Patch Changes
+
+- 82fa88b: Fixes a bug where some query parameters were double URL encoded.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+
+## 1.5.0-next.1
+
+### Patch Changes
+
+- 82fa88b: Fixes a bug where some query parameters were double URL encoded.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+
+## 1.5.0-next.0
+
+### Minor Changes
+
+- 38340678c3: The internals of `CatalogClient` are now auto-generated using the `backstage-repo-tools schema openapi generate-client` command.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+
+## 1.4.6
+
+### Patch Changes
+
+- 4aa43f62aa: Updated dependency `cross-fetch` to `^4.0.0`.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+
+## 1.4.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/errors@1.2.3
+
+## 1.4.5-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3-next.0
+  - @backstage/errors@1.2.3-next.0
+
+## 1.4.4
+
+### Patch Changes
+
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2
+  - @backstage/errors@1.2.2
+
+## 1.4.4-next.2
+
+### Patch Changes
+
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2-next.2
+  - @backstage/errors@1.2.2-next.0
+
+## 1.4.4-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2-next.1
+  - @backstage/errors@1.2.1
+
+## 1.4.4-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2-next.0
+  - @backstage/errors@1.2.1
+
+## 1.4.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.1
+  - @backstage/catalog-model@1.4.1
+
+## 1.4.3-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/catalog-model@1.4.1-next.0
+
+## 1.4.2
+
+### Patch Changes
+
+- cc936b529676: Updated API docs
+- Updated dependencies
+  - @backstage/catalog-model@1.4.0
+  - @backstage/errors@1.2.0
+
+## 1.4.2-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.0-next.1
+  - @backstage/errors@1.2.0-next.0
+
+## 1.4.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.0-next.0
+  - @backstage/catalog-model@1.4.0-next.0
+
+## 1.4.2-next.0
+
+### Patch Changes
+
+- cc936b529676: Updated API docs
+- Updated dependencies
+  - @backstage/catalog-model@1.3.0
+  - @backstage/errors@1.1.5
+
+## 1.4.1
+
+### Patch Changes
+
+- c1c4e080b79: Fixed bug in `queryEntities` of `CatalogClient` where the `sortField` is supposed to be changed to `orderField`.
+- Updated dependencies
+  - @backstage/catalog-model@1.3.0
+  - @backstage/errors@1.1.5
+
+## 1.4.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.3.0-next.0
+  - @backstage/errors@1.1.5
+
+## 1.4.1-next.0
+
+### Patch Changes
+
+- c1c4e080b79: Fixed bug in `queryEntities` of `CatalogClient` where the `sortField` is supposed to be changed to `orderField`.
+- Updated dependencies
+  - @backstage/catalog-model@1.2.1
+  - @backstage/errors@1.1.5
+
+## 1.4.0
+
+### Minor Changes
+
+- 8c030b1826c: Add `queryEntities` method to `CatalogApi`.
+
+### Patch Changes
+
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- c630360631f: Ensure that `getEntitiesByRefs` returns `undefined` instead of `null` for missing items
+- Updated dependencies
+  - @backstage/errors@1.1.5
+  - @backstage/catalog-model@1.2.1
+
+## 1.4.0-next.1
+
+### Patch Changes
+
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- Updated dependencies
+  - @backstage/errors@1.1.5-next.0
+  - @backstage/catalog-model@1.2.1-next.1
+
+## 1.4.0-next.0
+
+### Minor Changes
+
+- 8c030b1826: Add `queryEntities` method to `CatalogApi`.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.1-next.0
+  - @backstage/errors@1.1.4
+
+## 1.3.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0
+  - @backstage/errors@1.1.4
+
+## 1.3.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0-next.1
+  - @backstage/errors@1.1.4
+
+## 1.3.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.6-next.0
+
+## 1.3.0
+
+### Minor Changes
+
+- f75bf76330: Implemented support for the `order` directive on `getEntities`
+
+### Patch Changes
+
+- e23f13a573: Enable the `by-refs` endpoint to receive `fields` through the POST body as well as through query parameters.
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5
+  - @backstage/errors@1.1.4
+
+## 1.3.0-next.2
+
+### Patch Changes
+
+- e23f13a573: Enable the `by-refs` endpoint to receive `fields` through the POST body as well as through query parameters.
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/errors@1.1.4
+
+## 1.3.0-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/errors@1.1.4
+
+## 1.3.0-next.0
+
+### Minor Changes
+
+- f75bf76330: Implemented support for the `order` directive on `getEntities`
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.0
+  - @backstage/errors@1.1.4
+
+## 1.2.0
+
+### Minor Changes
+
+- 00d90b520a: **BREAKING PRODUCERS**: Added a new `getEntitiesByRefs` endpoint to `CatalogApi`, for efficient batch fetching of entities by ref.
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- Updated dependencies
+  - @backstage/errors@1.1.4
+  - @backstage/catalog-model@1.1.4
+
+## 1.2.0-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/errors@1.1.4-next.1
+
+## 1.2.0-next.0
+
+### Minor Changes
+
+- 00d90b520a: **BREAKING PRODUCERS**: Added a new `getEntitiesByRefs` endpoint to `CatalogApi`, for efficient batch fetching of entities by ref.
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- Updated dependencies
+  - @backstage/catalog-model@1.1.4-next.0
+  - @backstage/errors@1.1.4-next.0
+
 ## 1.1.2
 
 ### Patch Changes

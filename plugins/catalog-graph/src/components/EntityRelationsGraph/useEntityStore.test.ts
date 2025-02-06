@@ -16,27 +16,16 @@
 
 import { Entity } from '@backstage/catalog-model';
 import { useApi as useApiMocked } from '@backstage/core-plugin-api';
-import { act, renderHook } from '@testing-library/react-hooks';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { useEntityStore } from './useEntityStore';
+import { catalogApiMock } from '@backstage/plugin-catalog-react/testUtils';
 
 jest.mock('@backstage/core-plugin-api');
 
 const useApi = useApiMocked as jest.Mocked<any>;
 
 describe('useEntityStore', () => {
-  const catalogApi = {
-    getEntities: jest.fn(),
-    getEntityByRef: jest.fn(),
-    removeEntityByUid: jest.fn(),
-    getLocationById: jest.fn(),
-    getLocationByRef: jest.fn(),
-    addLocation: jest.fn(),
-    removeLocationById: jest.fn(),
-    refreshEntity: jest.fn(),
-    getEntityAncestors: jest.fn(),
-    getEntityFacets: jest.fn(),
-    validateEntity: jest.fn(),
-  };
+  const catalogApi = catalogApiMock.mock();
 
   beforeEach(() => {
     useApi.mockReturnValue(catalogApi);
@@ -63,9 +52,9 @@ describe('useEntityStore', () => {
       },
     };
 
-    catalogApi.getEntityByRef.mockResolvedValue(entity);
+    catalogApi.getEntitiesByRefs.mockResolvedValue({ items: [entity] });
 
-    const { result, waitFor } = renderHook(() => useEntityStore());
+    const { result } = renderHook(() => useEntityStore());
 
     act(() => {
       result.current.requestEntities(['kind:namespace/name']);
@@ -83,9 +72,9 @@ describe('useEntityStore', () => {
 
   test('handles request failures', async () => {
     const err = new Error('Hello World');
-    catalogApi.getEntityByRef.mockRejectedValue(err);
+    catalogApi.getEntitiesByRefs.mockRejectedValue(err);
 
-    const { result, waitFor } = renderHook(() => useEntityStore());
+    const { result } = renderHook(() => useEntityStore());
 
     act(() => {
       result.current.requestEntities(['kind:namespace/name']);
@@ -100,7 +89,7 @@ describe('useEntityStore', () => {
   });
 
   test('handles loading', async () => {
-    catalogApi.getEntityByRef.mockReturnValue(new Promise(() => {}));
+    catalogApi.getEntitiesByRefs.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useEntityStore());
 
@@ -131,10 +120,18 @@ describe('useEntityStore', () => {
         name: 'name2',
       },
     };
+    const entity3: Entity = {
+      apiVersion: 'v1',
+      kind: 'kind',
+      metadata: {
+        namespace: 'namespace',
+        name: 'name3',
+      },
+    };
 
-    catalogApi.getEntityByRef.mockResolvedValue(entity1);
+    catalogApi.getEntitiesByRefs.mockResolvedValue({ items: [entity1] });
 
-    const { result, waitFor } = renderHook(() => useEntityStore());
+    const { result } = renderHook(() => useEntityStore());
 
     act(() => {
       result.current.requestEntities(['kind:namespace/name1']);
@@ -149,12 +146,15 @@ describe('useEntityStore', () => {
       });
     });
 
-    catalogApi.getEntityByRef.mockResolvedValue(entity2);
+    catalogApi.getEntitiesByRefs.mockResolvedValue({
+      items: [entity2, entity3],
+    });
 
     act(() => {
       result.current.requestEntities([
         'kind:namespace/name1',
         'kind:namespace/name2',
+        'kind:namespace/name3',
       ]);
     });
 
@@ -165,6 +165,7 @@ describe('useEntityStore', () => {
       expect(entities).toEqual({
         'kind:namespace/name1': entity1,
         'kind:namespace/name2': entity2,
+        'kind:namespace/name3': entity3,
       });
     });
   });
@@ -186,13 +187,26 @@ describe('useEntityStore', () => {
         name: 'name2',
       },
     };
+    const entity3: Entity = {
+      apiVersion: 'v1',
+      kind: 'kind',
+      metadata: {
+        namespace: 'namespace',
+        name: 'name3',
+      },
+    };
 
-    catalogApi.getEntityByRef.mockResolvedValue(entity1);
+    catalogApi.getEntitiesByRefs.mockResolvedValue({
+      items: [entity1, entity2],
+    });
 
-    const { result, waitFor } = renderHook(() => useEntityStore());
+    const { result } = renderHook(() => useEntityStore());
 
     act(() => {
-      result.current.requestEntities(['kind:namespace/name1']);
+      result.current.requestEntities([
+        'kind:namespace/name1',
+        'kind:namespace/name2',
+      ]);
     });
 
     await waitFor(() => {
@@ -201,13 +215,22 @@ describe('useEntityStore', () => {
       expect(error).toBeUndefined();
       expect(entities).toEqual({
         'kind:namespace/name1': entity1,
+        'kind:namespace/name2': entity2,
       });
     });
 
-    catalogApi.getEntityByRef.mockResolvedValue(entity2);
+    expect(catalogApi.getEntitiesByRefs).toHaveBeenCalledTimes(1);
+    expect(catalogApi.getEntitiesByRefs).toHaveBeenLastCalledWith({
+      entityRefs: ['kind:namespace/name1', 'kind:namespace/name2'],
+    });
+
+    catalogApi.getEntitiesByRefs.mockResolvedValue({ items: [entity3] });
 
     act(() => {
-      result.current.requestEntities(['kind:namespace/name2']);
+      result.current.requestEntities([
+        'kind:namespace/name2',
+        'kind:namespace/name3',
+      ]);
     });
 
     await waitFor(() => {
@@ -216,7 +239,13 @@ describe('useEntityStore', () => {
       expect(error).toBeUndefined();
       expect(entities).toEqual({
         'kind:namespace/name2': entity2,
+        'kind:namespace/name3': entity3,
       });
+    });
+
+    expect(catalogApi.getEntitiesByRefs).toHaveBeenCalledTimes(2);
+    expect(catalogApi.getEntitiesByRefs).toHaveBeenLastCalledWith({
+      entityRefs: ['kind:namespace/name3'],
     });
 
     act(() => {
@@ -232,6 +261,6 @@ describe('useEntityStore', () => {
       });
     });
 
-    expect(catalogApi.getEntityByRef).toHaveBeenCalledTimes(2);
+    expect(catalogApi.getEntitiesByRefs).toHaveBeenCalledTimes(2);
   });
 });

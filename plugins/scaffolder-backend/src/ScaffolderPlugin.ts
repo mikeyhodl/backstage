@@ -13,116 +13,168 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import { loggerToWinstonLogger } from '@backstage/backend-common';
 import {
-  configServiceRef,
+  coreServices,
   createBackendPlugin,
-  databaseServiceRef,
-  loggerServiceRef,
-  loggerToWinstonLogger,
-  permissionsServiceRef,
-  urlReaderServiceRef,
-  httpRouterServiceRef,
-  createExtensionPoint,
 } from '@backstage/backend-plugin-api';
 import { ScmIntegrations } from '@backstage/integration';
-import { catalogServiceRef } from '@backstage/plugin-catalog-node';
-import { TemplateFilter, TemplateGlobal } from './lib';
-import { createBuiltinActions, TaskBroker, TemplateAction } from './scaffolder';
+import { catalogServiceRef } from '@backstage/plugin-catalog-node/alpha';
+import { eventsServiceRef } from '@backstage/plugin-events-node';
+import {
+  TaskBroker,
+  TemplateAction,
+  TemplateFilter,
+  TemplateGlobal,
+} from '@backstage/plugin-scaffolder-node';
+import {
+  AutocompleteHandler,
+  scaffolderActionsExtensionPoint,
+  scaffolderAutocompleteExtensionPoint,
+  scaffolderTaskBrokerExtensionPoint,
+  scaffolderTemplatingExtensionPoint,
+  scaffolderWorkspaceProviderExtensionPoint,
+  WorkspaceProvider,
+} from '@backstage/plugin-scaffolder-node/alpha';
+import {
+  createCatalogRegisterAction,
+  createCatalogWriteAction,
+  createDebugLogAction,
+  createFetchCatalogEntityAction,
+  createFetchPlainAction,
+  createFetchPlainFileAction,
+  createFetchTemplateAction,
+  createFetchTemplateFileAction,
+  createFilesystemDeleteAction,
+  createFilesystemReadDirAction,
+  createFilesystemRenameAction,
+  createWaitAction,
+} from './scaffolder';
 import { createRouter } from './service/router';
 
 /**
- * Catalog plugin options
- * @alpha
- */
-export type ScaffolderPluginOptions = {
-  actions?: TemplateAction<any>[];
-  taskWorkers?: number;
-  taskBroker?: TaskBroker;
-  additionalTemplateFilters?: Record<string, TemplateFilter>;
-  additionalTemplateGlobals?: Record<string, TemplateGlobal>;
-};
-
-/**
- * @alpha
- * TODO: MOVE to scaffolder-node.
- */
-interface ScaffolderActionsExtensionPoint {
-  addActions(...actions: TemplateAction<any>[]): void;
-}
-
-class ScaffolderActionsExtensionPointImpl
-  implements ScaffolderActionsExtensionPoint
-{
-  #actions = new Array<TemplateAction<any>>();
-  addActions(...actions: TemplateAction<any>[]): void {
-    this.#actions.push(...actions);
-  }
-  get actions() {
-    return this.#actions;
-  }
-}
-
-/**
- * @alpha
- * TODO: MOVE to scaffolder-node.
- */
-export const scaffolderActionsExtensionPoint =
-  createExtensionPoint<ScaffolderActionsExtensionPoint>({
-    id: 'scaffolder.actions',
-  });
-
-/**
- * Catalog plugin
- * @alpha
+ * Scaffolder plugin
+ *
+ * @public
  */
 export const scaffolderPlugin = createBackendPlugin({
-  id: 'scaffolder',
-  register(env, options: ScaffolderPluginOptions) {
-    const actionsExtensions = new ScaffolderActionsExtensionPointImpl();
-    env.registerExtensionPoint(
-      scaffolderActionsExtensionPoint,
-      actionsExtensions,
-    );
+  pluginId: 'scaffolder',
+  register(env) {
+    const addedActions = new Array<TemplateAction<any, any>>();
+    env.registerExtensionPoint(scaffolderActionsExtensionPoint, {
+      addActions(...newActions: TemplateAction<any>[]) {
+        addedActions.push(...newActions);
+      },
+    });
+
+    let taskBroker: TaskBroker | undefined;
+    env.registerExtensionPoint(scaffolderTaskBrokerExtensionPoint, {
+      setTaskBroker(newTaskBroker) {
+        if (taskBroker) {
+          throw new Error('Task broker may only be set once');
+        }
+        taskBroker = newTaskBroker;
+      },
+    });
+
+    const additionalTemplateFilters: Record<string, TemplateFilter> = {};
+    const additionalTemplateGlobals: Record<string, TemplateGlobal> = {};
+    env.registerExtensionPoint(scaffolderTemplatingExtensionPoint, {
+      addTemplateFilters(newFilters) {
+        Object.assign(additionalTemplateFilters, newFilters);
+      },
+      addTemplateGlobals(newGlobals) {
+        Object.assign(additionalTemplateGlobals, newGlobals);
+      },
+    });
+
+    const autocompleteHandlers: Record<string, AutocompleteHandler> = {};
+    env.registerExtensionPoint(scaffolderAutocompleteExtensionPoint, {
+      addAutocompleteProvider(provider) {
+        autocompleteHandlers[provider.id] = provider.handler;
+      },
+    });
+
+    const additionalWorkspaceProviders: Record<string, WorkspaceProvider> = {};
+    env.registerExtensionPoint(scaffolderWorkspaceProviderExtensionPoint, {
+      addProviders(provider) {
+        Object.assign(additionalWorkspaceProviders, provider);
+      },
+    });
 
     env.registerInit({
       deps: {
-        logger: loggerServiceRef,
-        config: configServiceRef,
-        reader: urlReaderServiceRef,
-        permissions: permissionsServiceRef,
-        database: databaseServiceRef,
-        httpRouter: httpRouterServiceRef,
+        logger: coreServices.logger,
+        config: coreServices.rootConfig,
+        lifecycle: coreServices.rootLifecycle,
+        reader: coreServices.urlReader,
+        permissions: coreServices.permissions,
+        database: coreServices.database,
+        auth: coreServices.auth,
+        discovery: coreServices.discovery,
+        httpRouter: coreServices.httpRouter,
+        httpAuth: coreServices.httpAuth,
+        auditor: coreServices.auditor,
         catalogClient: catalogServiceRef,
+        events: eventsServiceRef,
       },
       async init({
         logger,
         config,
+        lifecycle,
         reader,
         database,
+        auth,
+        discovery,
         httpRouter,
+        httpAuth,
         catalogClient,
+        permissions,
+        events,
+        auditor,
       }) {
-        const {
-          additionalTemplateFilters,
-          taskBroker,
-          taskWorkers,
-          additionalTemplateGlobals,
-        } = options;
         const log = loggerToWinstonLogger(logger);
+        const integrations = ScmIntegrations.fromConfig(config);
 
-        const actions = options.actions || [
-          ...actionsExtensions.actions,
-          ...createBuiltinActions({
-            integrations: ScmIntegrations.fromConfig(config),
-            catalogClient,
+        const actions = [
+          // actions provided from other modules
+          ...addedActions,
+
+          // built-in actions for the scaffolder
+          createFetchPlainAction({
             reader,
-            config,
+            integrations,
+          }),
+          createFetchPlainFileAction({
+            reader,
+            integrations,
+          }),
+          createFetchTemplateAction({
+            integrations,
+            reader,
             additionalTemplateFilters,
             additionalTemplateGlobals,
           }),
+          createFetchTemplateFileAction({
+            integrations,
+            reader,
+            additionalTemplateFilters,
+            additionalTemplateGlobals,
+          }),
+          createDebugLogAction(),
+          createWaitAction(),
+          // todo(blam): maybe these should be a -catalog module?
+          createCatalogRegisterAction({ catalogClient, integrations, auth }),
+          createFetchCatalogEntityAction({ catalogClient, auth }),
+          createCatalogWriteAction(),
+          createFilesystemDeleteAction(),
+          createFilesystemRenameAction(),
+          createFilesystemReadDirAction(),
         ];
 
         const actionIds = actions.map(action => action.id).join(', ');
+
         log.info(
           `Starting scaffolder with the following actions enabled ${actionIds}`,
         );
@@ -133,11 +185,19 @@ export const scaffolderPlugin = createBackendPlugin({
           database,
           catalogClient,
           reader,
+          lifecycle,
           actions,
           taskBroker,
-          taskWorkers,
           additionalTemplateFilters,
           additionalTemplateGlobals,
+          auth,
+          httpAuth,
+          discovery,
+          permissions,
+          autocompleteHandlers,
+          additionalWorkspaceProviders,
+          events,
+          auditor,
         });
         httpRouter.use(router);
       },

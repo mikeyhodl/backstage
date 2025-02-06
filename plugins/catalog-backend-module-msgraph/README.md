@@ -2,7 +2,7 @@
 
 This is an extension module to the `plugin-catalog-backend` plugin, providing a `MicrosoftGraphOrgEntityProvider`
 that can be used to ingest organization data from the Microsoft Graph API.
-This provider is useful if you want to import users and groups from Azure Active Directory or Office 365.
+This provider is useful if you want to import users and groups from Entra Id (formerly Azure Active Directory) or Office 365.
 
 ## Getting Started
 
@@ -54,6 +54,8 @@ catalog:
           # and for the syntax https://docs.microsoft.com/en-us/graph/query-parameters#filter-parameter
           # This and userGroupMemberFilter are mutually exclusive, only one can be specified
           filter: accountEnabled eq true and userType eq 'member'
+          # Set to false to not load user photos.
+          loadPhotos: true
           # See  https://docs.microsoft.com/en-us/graph/api/resources/schemaextension?view=graph-rest-1.0
           select: ['id', 'displayName', 'description']
         # Optional configuration block
@@ -104,7 +106,7 @@ By default, all users are loaded. If you want to filter users based on their att
 
 ```bash
 # From your Backstage root directory
-yarn add --cwd packages/backend @backstage/plugin-catalog-backend-module-msgraph
+yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-msgraph
 ```
 
 4. The `MicrosoftGraphOrgEntityProvider` is not registered by default, so you

@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-import { UrlReader } from '@backstage/backend-common';
 import { Config } from '@backstage/config';
-import { Permission } from '@backstage/plugin-permission-common';
 import { DocumentCollatorFactory } from '@backstage/plugin-search-common';
-import { parse as parseNdjson } from 'ndjson';
+import { Permission } from '@backstage/plugin-permission-common';
 import { Readable } from 'stream';
-import { Logger } from 'winston';
+import { parse as parseNdjson } from 'ndjson';
+import { LoggerService, UrlReaderService } from '@backstage/backend-plugin-api';
 
 /**
- * Options for instansiate NewlineDelimitedJsonCollatorFactory
+ * Options for instantiate NewlineDelimitedJsonCollatorFactory
  * @public
  */
 export type NewlineDelimitedJsonCollatorFactoryOptions = {
   type: string;
   searchPattern: string;
-  reader: UrlReader;
-  logger: Logger;
+  reader: UrlReaderService;
+  logger: LoggerService;
   visibilityPermission?: Permission;
 };
 
@@ -73,8 +72,8 @@ export class NewlineDelimitedJsonCollatorFactory
   private constructor(
     type: string,
     private readonly searchPattern: string,
-    private readonly reader: UrlReader,
-    private readonly logger: Logger,
+    private readonly reader: UrlReaderService,
+    private readonly logger: LoggerService,
     visibilityPermission: Permission | undefined,
   ) {
     this.type = type;

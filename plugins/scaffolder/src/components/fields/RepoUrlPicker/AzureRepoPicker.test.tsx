@@ -16,11 +16,12 @@
 
 import React from 'react';
 import { AzureRepoPicker } from './AzureRepoPicker';
-import { render, fireEvent } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
+import { renderInTestApp } from '@backstage/test-utils';
 
 describe('AzureRepoPicker', () => {
   it('renders the two input fields', async () => {
-    const { getAllByRole } = render(
+    const { getAllByRole } = await renderInTestApp(
       <AzureRepoPicker onChange={jest.fn()} rawErrors={[]} state={{}} />,
     );
 
@@ -30,9 +31,9 @@ describe('AzureRepoPicker', () => {
   });
 
   describe('org field', () => {
-    it('calls onChange when the organisation changes', () => {
+    it('calls onChange when the organisation changes', async () => {
       const onChange = jest.fn();
-      const { getAllByRole } = render(
+      const { getAllByRole } = await renderInTestApp(
         <AzureRepoPicker onChange={onChange} rawErrors={[]} state={{}} />,
       );
 
@@ -44,18 +45,18 @@ describe('AzureRepoPicker', () => {
     });
   });
 
-  describe('owner field', () => {
-    it('calls onChange when the owner changes', () => {
+  describe('project field', () => {
+    it('calls onChange when the project changes', async () => {
       const onChange = jest.fn();
-      const { getAllByRole } = render(
+      const { getAllByRole } = await renderInTestApp(
         <AzureRepoPicker onChange={onChange} rawErrors={[]} state={{}} />,
       );
 
-      const ownerInput = getAllByRole('textbox')[1];
+      const projectInput = getAllByRole('textbox')[1];
 
-      fireEvent.change(ownerInput, { target: { value: 'owner' } });
+      fireEvent.change(projectInput, { target: { value: 'project' } });
 
-      expect(onChange).toHaveBeenCalledWith({ owner: 'owner' });
+      expect(onChange).toHaveBeenCalledWith({ project: 'project' });
     });
   });
 });

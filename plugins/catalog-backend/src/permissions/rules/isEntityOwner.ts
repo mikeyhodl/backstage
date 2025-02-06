@@ -15,9 +15,9 @@
  */
 
 import { RELATION_OWNED_BY } from '@backstage/catalog-model';
-import { RESOURCE_TYPE_CATALOG_ENTITY } from '@backstage/plugin-catalog-common';
+import { createPermissionRule } from '@backstage/plugin-permission-node';
 import { z } from 'zod';
-import { createCatalogPermissionRule } from './util';
+import { catalogEntityPermissionResourceRef } from '@backstage/plugin-catalog-node/alpha';
 
 /**
  * A catalog {@link @backstage/plugin-permission-node#PermissionRule} which
@@ -25,10 +25,10 @@ import { createCatalogPermissionRule } from './util';
  *
  * @alpha
  */
-export const isEntityOwner = createCatalogPermissionRule({
+export const isEntityOwner = createPermissionRule({
   name: 'IS_ENTITY_OWNER',
-  description: 'Allow entities owned by the current user',
-  resourceType: RESOURCE_TYPE_CATALOG_ENTITY,
+  description: 'Allow entities owned by a specified claim',
+  resourceRef: catalogEntityPermissionResourceRef,
   paramsSchema: z.object({
     claims: z
       .array(z.string())

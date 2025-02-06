@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { HumanDuration } from '@backstage/types';
+
 export interface Config {
   /**
    * Configuration options for the catalog plugin.
@@ -38,6 +40,37 @@ export interface Config {
        * E.g. ["Component", "API", "Template", "Location"]
        */
       allow: Array<string>;
+      /**
+       * Limit this rule to a specific location
+       *
+       * Example with a fixed location
+       *  { "type": "url", "exact": "https://github.com/a/b/blob/file.yaml"}
+       *
+       * Example using a Regex
+       *  { "type": "url", "pattern": "https://github.com/org/*\/blob/master/*.yaml"}
+       *
+       * Using both exact and pattern will result in an error starting the application
+       */
+      locations?: Array<{
+        /**
+         * The type of location, e.g. "url".
+         */
+        type: string;
+        /**
+         * The exact location, e.g.
+         * "https://github.com/org/repo/blob/master/users.yaml".
+         *
+         * The exact location can also be used to match on locations
+         * that contain glob characters themselves, e.g.
+         * "https://github.com/org/*\/blob/master/*.yaml".
+         */
+        exact?: string;
+        /**
+         * The pattern allowed for the location, e.g.
+         * "https://github.com/org/*\/blob/master/*.yaml".
+         */
+        pattern?: string;
+      }>;
     }>;
 
     /**
@@ -50,7 +83,6 @@ export interface Config {
      * be used in combination with static locations to only serve operator
      * provided locations. Effectively this removes the ability to register new
      * components to a running backstage instance.
-     *
      */
     readonly?: boolean;
 
@@ -105,5 +137,84 @@ export interface Config {
         allow: Array<string>;
       }>;
     }>;
+
+    /**
+     * Disables the compatibility layer for relations in returned entities that
+     * ensures that all relations objects have both `target` and `targetRef`.
+     *
+     * Enabling this option significantly reduces the memory usage of the
+     * catalog, and slightly increases performance, but may break consumers that
+     * rely on the existence of `target` in the relations objects.
+     */
+    disableRelationsCompatibility?: boolean;
+
+    /**
+     * The strategy to use for entities that are orphaned, i.e. no longer have
+     * any other entities or providers referencing them. The default value is
+     * "keep".
+     */
+    orphanStrategy?: 'keep' | 'delete';
+
+    /**
+     * The strategy to use when stitching together the final entities.
+     */
+    stitchingStrategy?:
+      | {
+          /** Perform stitching in-band immediately when needed */
+          mode: 'immediate';
+        }
+      | {
+          /** Defer stitching to be performed asynchronously */
+          mode: 'deferred';
+          /** Polling interval for tasks in seconds */
+          pollingInterval?: HumanDuration | string;
+          /** How long to wait for a stitch to complete before giving up in seconds */
+          stitchTimeout?: HumanDuration | string;
+        };
+
+    /**
+     * The interval at which the catalog should process its entities.
+     * @remarks
+     *
+     * Example:
+     *
+     * ```yaml
+     * catalog:
+     *   processingInterval: { minutes: 30 }
+     * ```
+     *
+     * or to disabled processing:
+     *
+     * ```yaml
+     * catalog:
+     *  processingInterval: false
+     * ```
+     *
+     * Note that this is only a suggested minimum, and the actual interval may
+     * be longer. Internally, the catalog will scale up this number by a small
+     * factor and choose random numbers in that range to spread out the load. If
+     * the catalog is overloaded and cannot process all entities during the
+     * interval, the time taken between processing runs of any given entity may
+     * also be longer than specified here.
+     *
+     * Setting this value too low risks exhausting rate limits on external
+     * systems that are queried by processors, such as version control systems
+     * housing catalog-info files.
+     */
+    processingInterval?: HumanDuration | false;
+
+    /**
+     * Defines if the UrlReaderProcessor should always call the search method of the
+     * different UrlReaders.
+     *
+     * If set to false, the UrlReaderProcessor will use the legacy behavior that tries to
+     * parse a Git URL and calls search if there's wildcard patterns and readUrl otherwise.
+     *
+     * If set to true, the UrlReaderProcessor always call the search method and lets each UrlReader
+     * determine if it's a search pattern or not.
+     *
+     * This flag is temporary and will be enabled by default in future releases.
+     */
+    useUrlReadersSearch?: boolean;
   };
 }

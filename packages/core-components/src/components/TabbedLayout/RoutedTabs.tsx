@@ -15,15 +15,16 @@
  */
 import React, { useMemo } from 'react';
 import { Helmet } from 'react-helmet';
-import { matchRoutes, useNavigate, useParams, useRoutes } from 'react-router';
+import { matchRoutes, useParams, useRoutes } from 'react-router-dom';
 import { Content } from '../../layout/Content';
 import { HeaderTabs } from '../../layout/HeaderTabs';
 import { SubRoute } from './types';
+import { Link } from '../Link';
 
 export function useSelectedSubRoute(subRoutes: SubRoute[]): {
   index: number;
-  route: SubRoute;
-  element: JSX.Element;
+  route?: SubRoute;
+  element?: JSX.Element;
 } {
   const params = useParams();
 
@@ -39,7 +40,7 @@ export function useSelectedSubRoute(subRoutes: SubRoute[]): {
     b.path.replace(/\/\*$/, '').localeCompare(a.path.replace(/\/\*$/, '')),
   );
 
-  const element = useRoutes(sortedRoutes) ?? subRoutes[0].children;
+  const element = useRoutes(sortedRoutes) ?? subRoutes[0]?.children;
 
   // TODO(Rugvip): Once we only support v6 stable we can always prefix
   // This avoids having a double / prefix for react-router v6 beta, which in turn breaks
@@ -63,37 +64,35 @@ export function useSelectedSubRoute(subRoutes: SubRoute[]): {
 
 export function RoutedTabs(props: { routes: SubRoute[] }) {
   const { routes } = props;
-  const navigate = useNavigate();
+
   const { index, route, element } = useSelectedSubRoute(routes);
   const headerTabs = useMemo(
     () =>
-      routes.map(t => ({
-        id: t.path,
-        label: t.title,
-        tabProps: t.tabProps,
-      })),
+      routes.map(t => {
+        const { path, title, tabProps } = t;
+        let to = path;
+        // Remove trailing /*
+        to = to.replace(/\/\*$/, '');
+        // And remove leading / for relative navigation
+        to = to.replace(/^\//, '');
+        return {
+          id: path,
+          label: title,
+          tabProps: {
+            component: Link,
+            to,
+            ...tabProps,
+          },
+        };
+      }),
     [routes],
   );
 
-  const onTabChange = (tabIndex: number) => {
-    let { path } = routes[tabIndex];
-    // Remove trailing /*
-    path = path.replace(/\/\*$/, '');
-    // And remove leading / for relative navigation
-    path = path.replace(/^\//, '');
-    // Note! route resolves relative to the position in the React tree,
-    // not relative to current location
-    navigate(path);
-  };
   return (
     <>
-      <HeaderTabs
-        tabs={headerTabs}
-        selectedIndex={index}
-        onChange={onTabChange}
-      />
+      <HeaderTabs tabs={headerTabs} selectedIndex={index} />
       <Content>
-        <Helmet title={route.title} />
+        <Helmet title={route?.title} />
         {element}
       </Content>
     </>

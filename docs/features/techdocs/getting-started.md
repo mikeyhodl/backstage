@@ -21,9 +21,8 @@ The first step is to add the TechDocs plugin to your Backstage application.
 Navigate to your new Backstage application directory. And then to your
 `packages/app` directory, and install the `@backstage/plugin-techdocs` package.
 
-```bash
-# From your Backstage root directory
-yarn add --cwd packages/app @backstage/plugin-techdocs
+```bash title="From your Backstage root directory"
+yarn --cwd packages/app add @backstage/plugin-techdocs
 ```
 
 Once the package has been installed, you need to import the plugin in your app.
@@ -31,18 +30,16 @@ Once the package has been installed, you need to import the plugin in your app.
 In `packages/app/src/App.tsx`, import `TechDocsPage` and add the following to
 `FlatRoutes`:
 
-```tsx
+```tsx title="packages/app/src/App.tsx"
 import {
   DefaultTechDocsHome,
   TechDocsIndexPage,
   TechDocsReaderPage,
 } from '@backstage/plugin-techdocs';
 
-// ...
-
 const AppRoutes = () => {
   <FlatRoutes>
-    // ... other plugin routes
+    {/* ... other plugin routes */}
     <Route path="/docs" element={<TechDocsIndexPage />}>
       <DefaultTechDocsHome />
     </Route>
@@ -58,20 +55,20 @@ It would be nice to decorate your pages with something else... Having a link tha
 
 With the [TechDocs Addon framework](https://backstage.io/docs/features/techdocs/addons#installing-and-using-addons), you can render React components in documentation pages and these Addons can be provided by any Backstage plugin. The framework is exported by the [@backstage/plugin-techdocs-react](https://www.npmjs.com/package/@backstage/plugin-techdocs-react) package and there is a `<ReportIssue />` Addon in the [@backstage/plugin-techdocs-module-addons-contrib](https://www.npmjs.com/package/@backstage/plugin-techdocs-module-addons-contrib) package for you to use once you have these two dependencies installed:
 
-```diff
+```tsx
 import {
   DefaultTechDocsHome,
   TechDocsIndexPage,
   TechDocsReaderPage,
 } from '@backstage/plugin-techdocs';
-+ import { TechDocsAddons } from '@backstage/plugin-techdocs-react';
-+ import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
-
-// ...
+/* highlight-add-start */
+import { TechDocsAddons } from '@backstage/plugin-techdocs-react';
+import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
+/* highlight-add-end */
 
 const AppRoutes = () => {
   <FlatRoutes>
-    // ... other plugin routes
+    {/* ... other plugin routes */}
     <Route path="/docs" element={<TechDocsIndexPage />}>
       <DefaultTechDocsHome />
     </Route>
@@ -79,9 +76,11 @@ const AppRoutes = () => {
       path="/docs/:namespace/:kind/:name/*"
       element={<TechDocsReaderPage />}
     >
-+     <TechDocsAddons>
-+       <ReportIssue />
-+     </TechDocsAddons>
+      {/* highlight-add-start */}
+      <TechDocsAddons>
+        <ReportIssue />
+      </TechDocsAddons>
+      {/* highlight-add-end */}
     </Route>
   </FlatRoutes>;
 };
@@ -89,11 +88,15 @@ const AppRoutes = () => {
 
 I know, you're curious to see how it looks, aren't you? See the image below:
 
-<img data-zoomable src="../../assets/techdocs/report-issue-addon.png" alt="TechDocs Report Issue Add-on" />
+<!-- todo: Needs zoomable plugin -->
+
+![TechDocs Report Issue Add-on](../../assets/techdocs/report-issue-addon.png)
 
 By clicking the open new issue button, you will be redirected to the new issue page according to the source code provider you are using:
 
-<img data-zoomable src="../../assets/techdocs/report-issue-template.png" alt="TechDocs Report Issue Template" />
+<!-- todo: Needs zoomable plugin -->
+
+![TechDocs Report Issue Template](../../assets/techdocs/report-issue-template.png)
 
 That's it! Now, we need the TechDocs Backend plugin for the frontend to work.
 
@@ -102,9 +105,8 @@ That's it! Now, we need the TechDocs Backend plugin for the frontend to work.
 Navigate to `packages/backend` of your Backstage app, and install the
 `@backstage/plugin-techdocs-backend` package.
 
-```bash
-# From your Backstage root directory
-yarn add --cwd packages/backend @backstage/plugin-techdocs-backend
+```bash title="From your Backstage root directory"
+yarn --cwd packages/backend add @backstage/plugin-techdocs-backend
 ```
 
 Create a file called `techdocs.ts` inside `packages/backend/src/plugins/` and
@@ -138,7 +140,6 @@ export default async function createPlugin(
   // Generators are used for generating documentation sites.
   const generators = await Generators.fromConfig(env.config, {
     logger: env.logger,
-    containerRunner,
   });
 
   // Publisher is used for
@@ -189,6 +190,36 @@ async function main() {
 
 That's it! TechDocs frontend and backend have now been added to your Backstage
 app. Now let us tweak some configurations to suit your needs.
+
+### New Backend System
+
+To install TechDocs when using the New Backend system you will need to do the following.
+
+Navigate to `packages/backend` of your Backstage app, and install the `@backstage/plugin-techdocs-backend` package.
+
+```bash title="From your Backstage root directory"
+yarn --cwd packages/backend add @backstage/plugin-techdocs-backend
+```
+
+Then in your backend `index.ts` you will add the following line.
+
+```ts title="packages/backend/src/index.ts"
+const backend = createBackend();
+
+// Other plugins...
+
+/* highlight-add-start */
+backend.add(import('@backstage/plugin-techdocs-backend'));
+/* highlight-add-end */
+
+backend.start();
+```
+
+:::note Note
+
+The above is a very simplified example, you may have more content then this in your version.
+
+:::
 
 ## Setting the configuration
 
@@ -259,34 +290,48 @@ Setting `generator.runIn` to `local` means you will have to make sure your
 environment is compatible with techdocs.
 
 You will have to install the `mkdocs` and `mkdocs-techdocs-core` package from
-pip, as well as `graphviz` and `plantuml` from your OS package manager (e.g.
+pip, optionally also `graphviz` and `plantuml` from your OS package manager (e.g.
 apt).
 
-You can do so by including the following lines in the last step of your
+You can do so by including the following lines right above `USER node` of your
 `Dockerfile`:
 
 ```Dockerfile
-RUN apt-get update && apt-get install -y python3 python3-pip
-RUN pip3 install mkdocs-techdocs-core==1.0.1
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-venv && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN pip3 install mkdocs-techdocs-core
 ```
 
 Please be aware that the version requirement could change, you need to check our
 [`Dockerfile`](https://github.com/backstage/techdocs-container/blob/main/Dockerfile)
 and make sure to match with it.
 
-Note: We recommend Python version 3.7 or higher.
+On a Debian-based Docker container, Python packages must be either installed using
+the OS package manager or within a virtual environment (see the
+[related PEP](https://peps.python.org/pep-0668/)). Alternative is to use e.g.
+[pipx](https://pypa.github.io/pipx/) for installing Python packages in an isolated
+environment.
+
+The above Dockerfile snippet installs the latest `mkdocs-techdoc-core` package.
+Version numbers can be found in the corresponding
+[changelog](https://github.com/backstage/mkdocs-techdocs-core#changelog). In
+case you want to pin the version, use the example below:
+
+```Dockerfile
+RUN pip3 install mkdocs-techdocs-core==1.2.3
+```
+
+Note: We recommend Python version 3.11 or higher.
 
 > Caveat: Please install the `mkdocs-techdocs-core` package after all other
 > Python packages. The order is important to make sure we get correct version of
 > some of the dependencies.
-
-## Running Backstage locally
-
-Start the frontend and the backend app by
-[running Backstage locally](../../getting-started/running-backstage-locally.md).
-
-Open your browser at [http://localhost:3000/docs/](http://localhost:3000/docs/)
-to see all your documentation sites.
 
 ## Additional reading
 

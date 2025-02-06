@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { GroupEntity } from '@backstage/catalog-model';
+import {
+  DEFAULT_NAMESPACE,
+  Entity,
+  isGroupEntity,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { Config } from '@backstage/config';
 import {
   DefaultGithubCredentialsProvider,
@@ -29,13 +34,13 @@ import {
   CatalogProcessorEmit,
   LocationSpec,
   processingResult,
-} from '@backstage/plugin-catalog-backend';
+} from '@backstage/plugin-catalog-node';
 import { graphql } from '@octokit/graphql';
-import { Logger } from 'winston';
 import {
   assignGroupsToUsers,
   buildOrgHierarchy,
   defaultOrganizationTeamTransformer,
+  defaultUserTransformer,
   getOrganizationTeams,
   getOrganizationUsers,
   GithubMultiOrgConfig,
@@ -43,6 +48,8 @@ import {
   TeamTransformer,
   UserTransformer,
 } from '../lib';
+import { areGroupEntities, areUserEntities } from '../lib/guards';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 /**
  * Extracts teams and users out of a multiple GitHub orgs namespaced per org.
@@ -54,13 +61,13 @@ import {
 export class GithubMultiOrgReaderProcessor implements CatalogProcessor {
   private readonly integrations: ScmIntegrationRegistry;
   private readonly orgs: GithubMultiOrgConfig;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
   private readonly githubCredentialsProvider: GithubCredentialsProvider;
 
   static fromConfig(
     config: Config,
     options: {
-      logger: Logger;
+      logger: LoggerService;
       githubCredentialsProvider?: GithubCredentialsProvider;
       userTransformer?: UserTransformer;
       teamTransformer?: TeamTransformer;
@@ -79,7 +86,7 @@ export class GithubMultiOrgReaderProcessor implements CatalogProcessor {
   constructor(
     private options: {
       integrations: ScmIntegrationRegistry;
-      logger: Logger;
+      logger: LoggerService;
       orgs: GithubMultiOrgConfig;
       githubCredentialsProvider?: GithubCredentialsProvider;
       userTransformer?: UserTransformer;
@@ -141,18 +148,36 @@ export class GithubMultiOrgReaderProcessor implements CatalogProcessor {
           client,
           orgConfig.name,
           tokenType,
-          this.options.userTransformer,
+          async (githubUser, ctx): Promise<Entity | undefined> => {
+            const result = this.options.userTransformer
+              ? await this.options.userTransformer(githubUser, ctx)
+              : await defaultUserTransformer(githubUser, ctx);
+
+            if (result) {
+              result.metadata.namespace = orgConfig.userNamespace;
+            }
+
+            return result;
+          },
         );
-        const { groups } = await getOrganizationTeams(
+
+        const { teams } = await getOrganizationTeams(
           client,
           orgConfig.name,
-          async (team, ctx): Promise<GroupEntity | undefined> => {
+          async (team, ctx): Promise<Entity | undefined> => {
             const result = this.options.teamTransformer
               ? await this.options.teamTransformer(team, ctx)
               : await defaultOrganizationTeamTransformer(team, ctx);
 
-            if (result) {
+            if (result && isGroupEntity(result)) {
               result.metadata.namespace = orgConfig.groupNamespace;
+              // Group `spec.members` inherits the namespace of it's group so need to explicitly specify refs here
+              result.spec.members = team.members.map(
+                user =>
+                  `${orgConfig.userNamespace ?? DEFAULT_NAMESPACE}/${
+                    user.login
+                  }`,
+              );
             }
 
             return result;
@@ -161,22 +186,29 @@ export class GithubMultiOrgReaderProcessor implements CatalogProcessor {
 
         const duration = ((Date.now() - startTimestamp) / 1000).toFixed(1);
         this.logger.debug(
-          `Read ${users.length} GitHub users and ${groups.length} GitHub teams from ${orgConfig.name} in ${duration} seconds`,
+          `Read ${users.length} GitHub users and ${teams.length} GitHub teams from ${orgConfig.name} in ${duration} seconds`,
         );
 
-        let prefix: string = orgConfig.userNamespace ?? '';
-        if (prefix.length > 0) prefix += '/';
-
-        users.forEach(u => {
-          if (!allUsersMap.has(prefix + u.metadata.name)) {
-            allUsersMap.set(prefix + u.metadata.name, u);
+        // Grab current users from `allUsersMap` if they already exist in our
+        // pending users so we can append to their group membership relations
+        const pendingUsers = users.map(u => {
+          const userRef = stringifyEntityRef(u);
+          if (!allUsersMap.has(userRef)) {
+            allUsersMap.set(userRef, u);
           }
-        });
-        assignGroupsToUsers(users, groups);
-        buildOrgHierarchy(groups);
 
-        for (const group of groups) {
-          emit(processingResult.entity(location, group));
+          return allUsersMap.get(userRef);
+        });
+
+        if (areGroupEntities(teams)) {
+          buildOrgHierarchy(teams);
+          if (areUserEntities(pendingUsers)) {
+            assignGroupsToUsers(pendingUsers, teams);
+          }
+        }
+
+        for (const team of teams) {
+          emit(processingResult.entity(location, team));
         }
       } catch (e) {
         this.logger.error(
@@ -185,6 +217,8 @@ export class GithubMultiOrgReaderProcessor implements CatalogProcessor {
       }
     }
 
+    // Emit all users at the end after all orgs have been processed
+    // so all memberships across org groups are accounted for
     const allUsers = Array.from(allUsersMap.values());
     for (const user of allUsers) {
       emit(processingResult.entity(location, user));
@@ -204,6 +238,7 @@ export class GithubMultiOrgReaderProcessor implements CatalogProcessor {
       .map(install =>
         install.target_type === 'Organization' &&
         install.account &&
+        'login' in install.account &&
         install.account.login
           ? {
               name: install.account.login,

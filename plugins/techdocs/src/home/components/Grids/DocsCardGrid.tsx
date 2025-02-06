@@ -19,11 +19,14 @@ import { toLowerMaybe } from '../../../helpers';
 import { Entity } from '@backstage/catalog-model';
 import { useApi, useRouteRef, configApiRef } from '@backstage/core-plugin-api';
 import {
-  Button,
+  LinkButton,
   ItemCardGrid,
   ItemCardHeader,
 } from '@backstage/core-components';
-import { Card, CardActions, CardContent, CardMedia } from '@material-ui/core';
+import Card from '@material-ui/core/Card';
+import CardActions from '@material-ui/core/CardActions';
+import CardContent from '@material-ui/core/CardContent';
+import CardMedia from '@material-ui/core/CardMedia';
 import React from 'react';
 
 /**
@@ -58,7 +61,7 @@ export const DocsCardGrid = (props: DocsCardGridProps) => {
               </CardMedia>
               <CardContent>{entity.metadata.description}</CardContent>
               <CardActions>
-                <Button
+                <LinkButton
                   to={getRouteToReaderPageFor({
                     namespace: toLowerMaybe(
                       entity.metadata.namespace ?? 'default',
@@ -71,7 +74,7 @@ export const DocsCardGrid = (props: DocsCardGridProps) => {
                   data-testid="read_docs"
                 >
                   Read Docs
-                </Button>
+                </LinkButton>
               </CardActions>
             </Card>
           ))}

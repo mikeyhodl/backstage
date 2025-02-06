@@ -14,14 +14,26 @@
  * limitations under the License.
  */
 
-export type { BackendModuleConfig, BackendPluginConfig } from './factories';
+import { type CreateBackendModuleOptions } from './createBackendModule';
+import { type CreateBackendPluginOptions } from './createBackendPlugin';
+import { type CreateExtensionPointOptions } from './createExtensionPoint';
+
+export { createBackendModule } from './createBackendModule';
+export { createBackendPlugin } from './createBackendPlugin';
+export { createExtensionPoint } from './createExtensionPoint';
 export {
-  createBackendModule,
-  createBackendPlugin,
-  createExtensionPoint,
-} from './factories';
+  createBackendFeatureLoader,
+  type CreateBackendFeatureLoaderOptions,
+} from './createBackendFeatureLoader';
+
 export type {
-  BackendRegistrationPoints,
-  BackendFeature,
+  BackendModuleRegistrationPoints,
+  BackendPluginRegistrationPoints,
   ExtensionPoint,
 } from './types';
+
+export type {
+  CreateBackendPluginOptions,
+  CreateBackendModuleOptions,
+  CreateExtensionPointOptions,
+};

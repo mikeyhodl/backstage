@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
+export { default } from './module';
 export { GerritEntityProvider } from './providers/GerritEntityProvider';
-export { gerritEntityProviderCatalogModule } from './service/GerritEntityProviderCatalogModule';

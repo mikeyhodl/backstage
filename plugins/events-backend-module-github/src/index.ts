@@ -16,10 +16,10 @@
 
 /**
  * The module `github` for the Backstage backend plugin "events-backend"
- * adding an event router for GitHub.
+ * adding an event router and signature validator for GitHub.
  *
  * @packageDocumentation
  */
 
+export { createGithubSignatureValidator } from './http/createGithubSignatureValidator';
 export { GithubEventRouter } from './router/GithubEventRouter';
-export { githubEventRouterEventsModule } from './service/GithubEventRouterEventsModule';

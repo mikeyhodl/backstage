@@ -14,127 +14,94 @@
  * limitations under the License.
  */
 
-import { JsonValue, JsonObject, Observable } from '@backstage/types';
-import { TaskSpec } from '@backstage/plugin-scaffolder-common';
+import { HumanDuration, JsonObject, JsonValue } from '@backstage/types';
+import { TaskSpec, TaskStep } from '@backstage/plugin-scaffolder-common';
+import {
+  SerializedTask as _SerializedTask,
+  SerializedTaskEvent as _SerializedTaskEvent,
+  TaskBroker as _TaskBroker,
+  TaskBrokerDispatchOptions as _TaskBrokerDispatchOptions,
+  TaskBrokerDispatchResult as _TaskBrokerDispatchResult,
+  TaskCompletionState as _TaskCompletionState,
+  TaskContext as _TaskContext,
+  TaskEventType as _TaskEventType,
+  TaskSecrets,
+  TaskStatus as _TaskStatus,
+  TemplateAction,
+} from '@backstage/plugin-scaffolder-node';
 
 /**
  * The status of each step of the Task
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export type TaskStatus =
-  | 'open'
-  | 'processing'
-  | 'failed'
-  | 'cancelled'
-  | 'completed';
+export type TaskStatus = _TaskStatus;
 
 /**
  * The state of a completed task.
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export type TaskCompletionState = 'failed' | 'completed';
+export type TaskCompletionState = _TaskCompletionState;
 
 /**
  * SerializedTask
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export type SerializedTask = {
-  id: string;
-  spec: TaskSpec;
-  status: TaskStatus;
-  createdAt: string;
-  lastHeartbeatAt?: string;
-  createdBy?: string;
-  secrets?: TaskSecrets;
-};
+export type SerializedTask = _SerializedTask;
 
 /**
  * TaskEventType
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export type TaskEventType = 'completion' | 'log';
+export type TaskEventType = _TaskEventType;
 
 /**
  * SerializedTaskEvent
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export type SerializedTaskEvent = {
-  id: number;
-  taskId: string;
-  body: JsonObject;
-  type: TaskEventType;
-  createdAt: string;
-};
+export type SerializedTaskEvent = _SerializedTaskEvent;
 
 /**
- * TaskSecrets
+ * The result of `TaskBroker.dispatch`.
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export type TaskSecrets = Record<string, string> & {
-  backstageToken?: string;
-};
+export type TaskBrokerDispatchResult = _TaskBrokerDispatchResult;
 
 /**
- * The result of {@link TaskBroker.dispatch}
- *
- * @public
- */
-export type TaskBrokerDispatchResult = {
-  taskId: string;
-};
-
-/**
- * The options passed to {@link TaskBroker.dispatch}
+ * The options passed to `TaskBroker.dispatch`.
  * Currently a spec and optional secrets
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export type TaskBrokerDispatchOptions = {
-  spec: TaskSpec;
-  secrets?: TaskSecrets;
-  createdBy?: string;
-};
+export type TaskBrokerDispatchOptions = _TaskBrokerDispatchOptions;
 
 /**
  * Task
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export interface TaskContext {
-  spec: TaskSpec;
-  secrets?: TaskSecrets;
-  createdBy?: string;
-  done: boolean;
-  isDryRun?: boolean;
-  emitLog(message: string, logMetadata?: JsonObject): Promise<void>;
-  complete(result: TaskCompletionState, metadata?: JsonObject): Promise<void>;
-  getWorkspaceName(): Promise<string>;
-}
+export type TaskContext = _TaskContext;
 
 /**
  * TaskBroker
  *
  * @public
+ * @deprecated Import from `@backstage/plugin-scaffolder-node` instead.
  */
-export interface TaskBroker {
-  claim(): Promise<TaskContext>;
-  dispatch(
-    options: TaskBrokerDispatchOptions,
-  ): Promise<TaskBrokerDispatchResult>;
-  vacuumTasks(options: { timeoutS: number }): Promise<void>;
-  event$(options: {
-    taskId: string;
-    after: number | undefined;
-  }): Observable<{ events: SerializedTaskEvent[] }>;
-  get(taskId: string): Promise<SerializedTask>;
-  list?(options?: { createdBy?: string }): Promise<{ tasks: SerializedTask[] }>;
-}
+export type TaskBroker = _TaskBroker;
 
 /**
  * TaskStoreEmitOptions
@@ -152,6 +119,7 @@ export type TaskStoreEmitOptions<TBody = JsonObject> = {
  * @public
  */
 export type TaskStoreListEventsOptions = {
+  isTaskRecoverable?: boolean;
   taskId: string;
   after?: number | undefined;
 };
@@ -176,6 +144,14 @@ export type TaskStoreCreateTaskOptions = {
 };
 
 /**
+ * The options passed to {@link TaskStore.recoverTasks}
+ * @public
+ */
+export type TaskStoreRecoverTaskOptions = {
+  timeout: HumanDuration;
+};
+
+/**
  * The response from {@link TaskStore.createTask}
  * @public
  */
@@ -189,31 +165,118 @@ export type TaskStoreCreateTaskResult = {
  * @public
  */
 export interface TaskStore {
+  cancelTask?(options: TaskStoreEmitOptions): Promise<void>;
+
   createTask(
     options: TaskStoreCreateTaskOptions,
   ): Promise<TaskStoreCreateTaskResult>;
+
+  retryTask?(options: { taskId: string }): Promise<void>;
+
+  recoverTasks?(
+    options: TaskStoreRecoverTaskOptions,
+  ): Promise<{ ids: string[] }>;
+
   getTask(taskId: string): Promise<SerializedTask>;
+
   claimTask(): Promise<SerializedTask | undefined>;
+
   completeTask(options: {
     taskId: string;
     status: TaskStatus;
     eventBody: JsonObject;
   }): Promise<void>;
+
   heartbeatTask(taskId: string): Promise<void>;
+
   listStaleTasks(options: { timeoutS: number }): Promise<{
     tasks: { taskId: string }[];
   }>;
-  list?(options: { createdBy?: string }): Promise<{ tasks: SerializedTask[] }>;
 
-  emitLogEvent({ taskId, body }: TaskStoreEmitOptions): Promise<void>;
-  listEvents({
+  list?(options: {
+    filters?: {
+      createdBy?: string | string[];
+      status?: TaskStatus | TaskStatus[];
+    };
+    pagination?: {
+      limit?: number;
+      offset?: number;
+    };
+    order?: { order: 'asc' | 'desc'; field: string }[];
+  }): Promise<{ tasks: SerializedTask[]; totalTasks?: number }>;
+
+  /**
+   * @deprecated Make sure to pass `createdBy` and `status` in the `filters` parameter instead
+   */
+  list?(options: {
+    createdBy?: string;
+    status?: TaskStatus;
+    filters?: {
+      createdBy?: string | string[];
+      status?: TaskStatus | TaskStatus[];
+    };
+    pagination?: {
+      limit?: number;
+      offset?: number;
+    };
+    order?: { order: 'asc' | 'desc'; field: string }[];
+  }): Promise<{ tasks: SerializedTask[]; totalTasks?: number }>;
+
+  emitLogEvent(options: TaskStoreEmitOptions): Promise<void>;
+
+  getTaskState?({ taskId }: { taskId: string }): Promise<
+    | {
+        state: JsonObject;
+      }
+    | undefined
+  >;
+
+  saveTaskState?(options: {
+    taskId: string;
+    state?: JsonObject;
+  }): Promise<void>;
+
+  listEvents(
+    options: TaskStoreListEventsOptions,
+  ): Promise<{ events: SerializedTaskEvent[] }>;
+
+  shutdownTask?(options: TaskStoreShutDownTaskOptions): Promise<void>;
+
+  rehydrateWorkspace?(options: {
+    taskId: string;
+    targetPath: string;
+  }): Promise<void>;
+
+  cleanWorkspace?({ taskId }: { taskId: string }): Promise<void>;
+
+  serializeWorkspace?({
+    path,
     taskId,
-    after,
-  }: TaskStoreListEventsOptions): Promise<{ events: SerializedTaskEvent[] }>;
-  shutdownTask?({ taskId }: TaskStoreShutDownTaskOptions): Promise<void>;
+  }: {
+    path: string;
+    taskId: string;
+  }): Promise<void>;
 }
 
 export type WorkflowResponse = { output: { [key: string]: JsonValue } };
+
 export interface WorkflowRunner {
   execute(task: TaskContext): Promise<WorkflowResponse>;
 }
+
+export type TaskTrackType = {
+  markCancelled: (step: TaskStep) => Promise<void>;
+  markFailed: (step: TaskStep, err: Error) => Promise<void>;
+  markSuccessful: () => Promise<void>;
+  skipDryRun: (
+    step: TaskStep,
+    action: TemplateAction<JsonObject>,
+  ) => Promise<void>;
+};
+
+/**
+ * @internal
+ */
+export type InternalTaskSecrets = TaskSecrets & {
+  __initiatorCredentials: string;
+};

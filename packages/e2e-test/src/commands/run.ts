@@ -20,30 +20,33 @@ import fetch from 'cross-fetch';
 import handlebars from 'handlebars';
 import killTree from 'tree-kill';
 import { resolve as resolvePath, join as joinPath } from 'path';
-import puppeteer from 'puppeteer';
 import path from 'path';
 
 import {
   spawnPiped,
   runPlain,
-  waitForPageWithText,
   waitFor,
   waitForExit,
   print,
 } from '../lib/helpers';
+
+import mysql from 'mysql2/promise';
 import pgtools from 'pgtools';
+
 import { findPaths } from '@backstage/cli-common';
+import { OptionValues } from 'commander';
 
 // eslint-disable-next-line no-restricted-syntax
 const paths = findPaths(__dirname);
 
 const templatePackagePaths = [
   'packages/cli/templates/default-plugin/package.json.hbs',
+  'packages/create-app/templates/default-app/package.json.hbs',
   'packages/create-app/templates/default-app/packages/app/package.json.hbs',
   'packages/create-app/templates/default-app/packages/backend/package.json.hbs',
 ];
 
-export async function run() {
+export async function run(opts: OptionValues) {
   const rootDir = await fs.mkdtemp(resolvePath(os.tmpdir(), 'backstage-e2e-'));
   print(`CLI E2E test root: ${rootDir}\n`);
 
@@ -57,17 +60,38 @@ export async function run() {
   const appDir = await createApp('test-app', workspaceDir, rootDir);
 
   print('Creating a Backstage Plugin');
-  const pluginName = await createPlugin('test-plugin', appDir);
+  const pluginId = 'test';
+  await createPlugin({ appDir, pluginId, select: 'plugin' });
 
   print('Creating a Backstage Backend Plugin');
-  await createPlugin('test-plugin', appDir, ['--backend']);
+  await createPlugin({ appDir, pluginId, select: 'backend-plugin' });
 
-  print('Starting the app');
-  await testAppServe(pluginName, appDir);
+  print(`Running 'yarn test:e2e' in newly created app with new plugin`);
+  await runPlain(['yarn', 'test:e2e'], {
+    cwd: appDir,
+    env: { ...process.env, CI: undefined },
+  });
 
-  if (Boolean(process.env.POSTGRES_USER)) {
-    print('Testing the PostgreSQL backend startup');
-    await preCleanPostgres();
+  await switchToReact17(appDir);
+
+  print(`Running 'yarn install' to install React 17`);
+  await runPlain(['yarn', 'install'], { cwd: appDir });
+
+  print(`Running 'yarn tsc' with React 17`);
+  await runPlain(['yarn', 'tsc'], { cwd: appDir });
+
+  print(`Running 'yarn test:e2e' with React 17`);
+  await runPlain(['yarn', 'test:e2e'], {
+    cwd: appDir,
+    env: { ...process.env, CI: undefined },
+  });
+
+  if (
+    Boolean(process.env.POSTGRES_USER) ||
+    Boolean(process.env.MYSQL_CONNECTION)
+  ) {
+    print('Testing the database backend startup');
+    await preCleanDatabase();
     const appConfig = path.resolve(appDir, 'app-config.yaml');
     const productionConfig = path.resolve(appDir, 'app-config.production.yaml');
     await testBackendStart(
@@ -78,7 +102,7 @@ export async function run() {
       productionConfig,
     );
   }
-  print('Testing the SQLite backend startup');
+  print('Testing the Database backend startup');
   await testBackendStart(appDir);
 
   if (process.env.CI) {
@@ -86,8 +110,12 @@ export async function run() {
     // runner will be destroyed anyway
     print('All tests successful');
   } else {
-    print('All tests successful, removing test dir');
-    await fs.remove(rootDir);
+    if (opts.keep) {
+      print(`All tests successful, app dir available at ${appDir}`);
+    } else {
+      print('All tests successful, removing test dir');
+      await fs.remove(rootDir);
+    }
   }
 
   // Just in case some child process was left hanging
@@ -158,7 +186,7 @@ async function buildDistWorkspace(workspaceName: string, rootDir: string) {
     appendDeps(pkg);
   }
 
-  // eslint-disable-next-line import/no-extraneous-dependencies
+  // eslint-disable-next-line @backstage/no-forbidden-package-imports
   appendDeps(require('@backstage/create-app/package.json'));
 
   print(`Preparing workspace`);
@@ -173,6 +201,12 @@ async function buildDistWorkspace(workspaceName: string, rootDir: string) {
 
   print('Pinning yarn version in workspace');
   await pinYarnVersion(workspaceDir);
+
+  const yarnPatchesPath = paths.resolveOwnRoot('.yarn/patches');
+  if (await fs.pathExists(yarnPatchesPath)) {
+    print('Copying yarn patches');
+    await fs.copy(yarnPatchesPath, resolvePath(workspaceDir, '.yarn/patches'));
+  }
 
   print('Installing workspace dependencies');
   await runPlain(['yarn', 'workspaces', 'focus', '--all', '--production'], {
@@ -248,6 +282,9 @@ async function createApp(
 
     const appDir = resolvePath(rootDir, appName);
 
+    print('Overriding yarn.lock with seed file from the create-app package');
+    overrideYarnLockSeed(appDir);
+
     print('Rewriting module resolutions of app to use workspace packages');
     await overrideModuleResolutions(appDir, workspaceDir);
 
@@ -284,19 +321,26 @@ async function createApp(
       await runPlain(['yarn', cmd], { cwd: appDir });
     }
 
-    print(`Running 'yarn test:e2e:ci' in newly created app`);
-    await runPlain(['yarn', 'test:e2e:ci'], {
-      cwd: resolvePath(appDir, 'packages', 'app'),
-      env: {
-        ...process.env,
-        APP_CONFIG_app_baseUrl: '"http://localhost:3001"',
-      },
-    });
-
     return appDir;
   } finally {
     child.kill();
   }
+}
+
+/**
+ * Overrides the downloaded yarn.lock file with the seed file packages/create-app/seed-yarn.lock
+ * This ensures that the E2E tests use the same seed file as users would receive when creating a new app
+ */
+async function overrideYarnLockSeed(appDir: string) {
+  const content = await fs.readFile(
+    paths.resolveOwnRoot('packages/create-app/seed-yarn.lock'),
+    'utf8',
+  );
+  const trimmedContent = content
+    .split('\n')
+    .filter(l => !l.startsWith('//'))
+    .join('\n');
+  await fs.writeFile(resolvePath(appDir, 'yarn.lock'), trimmedContent, 'utf8');
 }
 
 /**
@@ -328,14 +372,18 @@ async function overrideModuleResolutions(appDir: string, workspaceDir: string) {
 /**
  * Uses create-plugin command to create a new plugin in the app
  */
-async function createPlugin(
-  pluginName: string,
-  appDir: string,
-  options: string[] = [],
-) {
-  const child = spawnPiped(['yarn', 'create-plugin', ...options], {
-    cwd: appDir,
-  });
+async function createPlugin(options: {
+  appDir: string;
+  pluginId: string;
+  select: string;
+}) {
+  const { appDir, pluginId, select } = options;
+  const child = spawnPiped(
+    ['yarn', 'new', '--select', select, '--option', `id=${pluginId}`],
+    {
+      cwd: appDir,
+    },
+  );
 
   try {
     let stdout = '';
@@ -343,20 +391,14 @@ async function createPlugin(
       stdout = stdout + data.toString('utf8');
     });
 
-    await waitFor(() => stdout.includes('Enter an ID for the plugin'));
-    child.stdin?.write(`${pluginName}\n`);
-
-    // await waitFor(() => stdout.includes('Enter the owner(s) of the plugin'));
-    // child.stdin.write('@someuser\n');
-
     print('Waiting for plugin create script to be done');
     await waitForExit(child);
 
-    const canonicalName = options.includes('--backend')
-      ? `${pluginName}-backend`
-      : pluginName;
-
-    const pluginDir = resolvePath(appDir, 'plugins', canonicalName);
+    const pluginDir = resolvePath(
+      appDir,
+      'plugins',
+      select === 'backend-plugin' ? `${pluginId}-backend` : pluginId,
+    );
 
     print(`Running 'yarn tsc' in root for newly created plugin`);
     await runPlain(['yarn', 'tsc'], { cwd: appDir });
@@ -365,89 +407,77 @@ async function createPlugin(
       print(`Running 'yarn ${cmd.join(' ')}' in newly created plugin`);
       await runPlain(['yarn', ...cmd], { cwd: pluginDir });
     }
-
-    return canonicalName;
   } finally {
     child.kill();
   }
 }
 
 /**
- * Start serving the newly created app and make sure that the create plugin is rendering correctly
+ * Switch the entire project to use React 17
  */
-async function testAppServe(pluginName: string, appDir: string) {
-  const startApp = spawnPiped(['yarn', 'start'], {
-    cwd: appDir,
-    env: {
-      ...process.env,
-      GITHUB_TOKEN: 'abc',
-    },
+async function switchToReact17(appDir: string) {
+  const rootPkg = await fs.readJson(resolvePath(appDir, 'package.json'));
+  rootPkg.resolutions = {
+    ...(rootPkg.resolutions || {}),
+    react: '^17.0.0',
+    'react-dom': '^17.0.0',
+    '@types/react': '^17.0.0',
+    '@types/react-dom': '^17.0.0',
+    'swagger-ui-react/react': '17.0.2',
+    'swagger-ui-react/react-dom': '17.0.2',
+    'swagger-ui-react/react-redux': '^8',
+  };
+  await fs.writeJson(resolvePath(appDir, 'package.json'), rootPkg, {
+    spaces: 2,
   });
 
-  let successful = false;
+  await fs.writeFile(
+    resolvePath(appDir, 'packages/app/src/index.tsx'),
+    `import '@backstage/cli/asset-types';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
 
-  let browser;
-  try {
-    for (let attempts = 1; ; attempts++) {
-      try {
-        browser = await puppeteer.launch();
-        const page = await browser.newPage();
-
-        await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
-
-        await waitForPageWithText(page, '/', 'My Company Catalog');
-        await waitForPageWithText(
-          page,
-          `/${pluginName}`,
-          `Welcome to ${pluginName}!`,
-        );
-
-        print('Both App and Plugin loaded correctly');
-        successful = true;
-        break;
-      } catch (error) {
-        if (attempts >= 20) {
-          throw new Error(`App serve test failed, ${error}`);
-        }
-        print(`App serve failed, trying again, ${error}`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-  } finally {
-    // Kill entire process group, otherwise we'll end up with hanging serve processes
-    await new Promise<void>((res, rej) => {
-      killTree(startApp.pid!, err => (err ? rej(err) : res()));
-    });
-  }
-
-  try {
-    await waitForExit(startApp);
-  } catch (error) {
-    if (!successful) {
-      throw error;
-    }
-  }
+ReactDOM.render(<App />, document.getElementById('root'));
+`,
+    'utf8',
+  );
 }
 
 /** Drops PG databases */
-async function dropDB(database: string) {
-  const config = {
-    host: process.env.POSTGRES_HOST,
-    port: process.env.POSTGRES_PORT,
-    user: process.env.POSTGRES_USER,
-    password: process.env.POSTGRES_PASSWORD,
-  };
-
+async function dropDB(database: string, client: string) {
   try {
-    await pgtools.dropdb(config, database);
+    if (client === 'postgres') {
+      const config = {
+        host: process.env.POSTGRES_HOST,
+        port: process.env.POSTGRES_PORT,
+        user: process.env.POSTGRES_USER,
+        password: process.env.POSTGRES_PASSWORD,
+      };
+      await pgtools.dropdb(config, database);
+    } else if (client === 'mysql') {
+      const connectionString = process.env.MYSQL_CONNECTION ?? '';
+      const connection = await mysql.createConnection(connectionString);
+      await connection.execute('DROP DATABASE ?', [database]);
+    }
   } catch (_) {
-    /* do nothing*/
+    /* do nothing */
   }
 }
 
 /** Clean remnants from prior e2e runs */
-async function preCleanPostgres() {
+async function preCleanDatabase() {
   print('Dropping old DBs');
+  if (Boolean(process.env.POSTGRES_HOST)) {
+    await dropClientDatabases('postgres');
+  }
+  if (Boolean(process.env.MYSQL_CONNECTION)) {
+    await dropClientDatabases('mysql');
+  }
+  print('Dropped DBs');
+}
+
+async function dropClientDatabases(client: string) {
   await Promise.all(
     [
       'catalog',
@@ -457,9 +487,8 @@ async function preCleanPostgres() {
       'proxy',
       'techdocs',
       'search',
-    ].map(name => dropDB(`backstage_plugin_${name}`)),
+    ].map(name => dropDB(`backstage_plugin_${name}`, client)),
   );
-  print('Created DBs');
 }
 
 /**
@@ -468,9 +497,13 @@ async function preCleanPostgres() {
 async function testBackendStart(appDir: string, ...args: string[]) {
   const child = spawnPiped(['yarn', 'workspace', 'backend', 'start', ...args], {
     cwd: appDir,
+    // Windows does not like piping stdin here, the child process will hang when requiring the 'process' module
+    stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
       GITHUB_TOKEN: 'abc',
+      // TODO: Default auth policy is disabled for e2e tests - replace this with external service auth
+      APP_CONFIG_backend_auth_dangerouslyDisableDefaultAuthPolicy: 'true',
     },
   });
 
@@ -484,36 +517,62 @@ async function testBackendStart(appDir: string, ...args: string[]) {
   });
   let successful = false;
 
-  const stdErrorHasErrors = (input: string) => {
+  const filterStderr = (input: string) => {
     const lines = input.split('\n').filter(Boolean);
-    return (
-      lines.filter(
-        l =>
-          !l.includes('Use of deprecated folder mapping') &&
-          !l.includes('Update this package.json to use a subpath') &&
-          !l.includes(
-            '(Use `node --trace-deprecation ...` to show where the warning was created)',
-          ),
-      ).length !== 0
+    return lines.filter(
+      l =>
+        !l.includes(
+          'ExperimentalWarning: Custom ESM Loaders is an experimental feature', // Node 16
+        ) &&
+        !l.includes(
+          'ExperimentalWarning: `--experimental-loader` may be removed in the future;', // Node 18
+        ) &&
+        !l.includes("--import 'data:text/javascript,import") && // the new --experimental-loader replacement warning, printed after the above, Node 18
+        !l.includes(
+          'ExperimentalWarning: `globalPreload` is planned for removal in favor of `initialize`.', // Node 18
+        ) &&
+        !l.includes(
+          'DeprecationWarning: The `punycode` module is deprecated.', // Node 22
+        ) &&
+        !l.includes('node --trace-warnings ...') &&
+        !l.includes('node --trace-deprecation ...'),
     );
   };
 
   try {
     await waitFor(
-      () => stdout.includes('Listening on ') || stdErrorHasErrors(stderr),
+      () =>
+        stdout.includes('Plugin initialization complete') ||
+        filterStderr(stderr).length > 0,
     );
-    if (stdErrorHasErrors(stderr)) {
-      print(`Expected stderr to be clean, got ${stderr}`);
+    const stderrLines = filterStderr(stderr);
+    if (stderrLines.length > 0) {
+      print(
+        `Expected stderr to be clean, got ${stderr} \n\nThe following lines were unexpected:\n${stderrLines.join(
+          '\n',
+        )}`,
+      );
       // Skipping the whole block
       throw new Error(stderr);
     }
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     print('Try to fetch entities from the backend');
     // Try fetch entities, should be ok
-    await fetch('http://localhost:7007/api/catalog/entities').then(res =>
-      res.json(),
-    );
+    const res = await fetch('http://localhost:7007/api/catalog/entities');
+    if (!res.ok) {
+      throw new Error(
+        `Failed to fetch entities: ${res.status} ${res.statusText}`,
+      );
+    }
+    const content = await res.text();
+    try {
+      JSON.parse(content);
+    } catch (error) {
+      throw new Error(
+        `Failed to parse entities JSON response: ${error}\n${content}`,
+      );
+    }
     print('Entities fetched successfully');
     successful = true;
   } catch (error) {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { TaskScheduleDefinitionConfig } from '@backstage/backend-tasks';
+import { SchedulerServiceTaskScheduleDefinitionConfig } from '@backstage/backend-plugin-api';
 
 export interface Config {
   catalog?: {
@@ -45,24 +45,23 @@ export interface Config {
              */
             filters?: {
               /**
-               * (Optional) Filter for the repository slug.
+               * (Optional) Regular expression filter for the repository slug.
                * @visibility frontend
                */
-              repoSlug?: RegExp;
+              repoSlug?: string;
               /**
-               * (Optional) Filter for the project key.
+               * (Optional) Regular expression filter for the project key.
                * @visibility frontend
                */
-              projectKey?: RegExp;
+              projectKey?: string;
             };
             /**
              * (Optional) TaskScheduleDefinition for the discovery.
              */
-            schedule?: TaskScheduleDefinitionConfig;
+            schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
           }
-        | Record<
-            string,
-            {
+        | {
+            [name: string]: {
               /**
                * (Optional) Path to the catalog file. Default to "/catalog-info.yaml".
                * @visibility frontend
@@ -79,22 +78,22 @@ export interface Config {
                */
               filters?: {
                 /**
-                 * (Optional) Filter for the repository slug.
+                 * (Optional) Regular expression filter for the repository slug.
                  * @visibility frontend
                  */
-                repoSlug?: RegExp;
+                repoSlug?: string;
                 /**
-                 * (Optional) Filter for the project key.
+                 * (Optional) Regular expression filter for the project key.
                  * @visibility frontend
                  */
-                projectKey?: RegExp;
+                projectKey?: string;
               };
               /**
                * (Optional) TaskScheduleDefinition for the discovery.
                */
-              schedule?: TaskScheduleDefinitionConfig;
-            }
-          >;
+              schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
+            };
+          };
     };
   };
 }

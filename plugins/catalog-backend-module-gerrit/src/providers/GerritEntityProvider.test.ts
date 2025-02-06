@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import {
-  PluginTaskScheduler,
-  TaskInvocationDefinition,
-  TaskRunner,
-} from '@backstage/backend-tasks';
-import { setupRequestMockHandlers } from '@backstage/backend-test-utils';
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+  SchedulerServiceTaskInvocationDefinition,
+} from '@backstage/backend-plugin-api';
+import {
+  mockServices,
+  registerMswTestHooks,
+} from '@backstage/backend-test-utils';
 import { ConfigReader } from '@backstage/config';
-import { EntityProviderConnection } from '@backstage/plugin-catalog-backend';
+import { EntityProviderConnection } from '@backstage/plugin-catalog-node';
 import fs from 'fs-extra';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
@@ -39,26 +41,26 @@ const getJsonFixture = (fileName: string) =>
     ),
   );
 
-class PersistingTaskRunner implements TaskRunner {
-  private tasks: TaskInvocationDefinition[] = [];
+class PersistingTaskRunner implements SchedulerServiceTaskRunner {
+  private tasks: SchedulerServiceTaskInvocationDefinition[] = [];
 
   getTasks() {
     return this.tasks;
   }
 
-  run(task: TaskInvocationDefinition): Promise<void> {
+  run(task: SchedulerServiceTaskInvocationDefinition): Promise<void> {
     this.tasks.push(task);
     return Promise.resolve(undefined);
   }
 }
 
-const logger = getVoidLogger();
+const logger = mockServices.logger.mock();
 
 describe('GerritEntityProvider', () => {
-  setupRequestMockHandlers(server);
+  registerMswTestHooks(server);
 
   afterEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
   });
 
   const config = new ConfigReader({
@@ -164,9 +166,11 @@ describe('GerritEntityProvider', () => {
         gerrit: [
           {
             host: 'gerrit1.com',
+            gitilesBaseUrl: 'https://gerrit1.com/gitiles',
           },
           {
             host: 'gerrit2.com',
+            gitilesBaseUrl: 'https://gerrit2.com/gitiles',
           },
         ],
       },
@@ -199,6 +203,7 @@ describe('GerritEntityProvider', () => {
         gerrit: [
           {
             host: 'gerrit1.com',
+            gitilesBaseUrl: 'https://gerrit1.com/gitiles',
           },
         ],
       },
@@ -223,7 +228,7 @@ describe('GerritEntityProvider', () => {
   it('fail with scheduler but no schedule config', () => {
     const scheduler = {
       createScheduledTaskRunner: (_: any) => jest.fn(),
-    } as unknown as PluginTaskScheduler;
+    } as unknown as SchedulerService;
     expect(() =>
       GerritEntityProvider.fromConfig(config, {
         logger,
@@ -265,7 +270,7 @@ describe('GerritEntityProvider', () => {
     });
     const scheduler = {
       createScheduledTaskRunner: (_: any) => schedule,
-    } as unknown as PluginTaskScheduler;
+    } as unknown as SchedulerService;
 
     const repoBuffer = fs.readFileSync(
       path.resolve(__dirname, '__fixtures__/listProjectsBody.txt'),

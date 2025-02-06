@@ -15,11 +15,11 @@
  */
 
 import React from 'react';
-import { BackstageTheme } from '@backstage/theme';
-import { makeStyles, Avatar } from '@material-ui/core';
+import Avatar from '@material-ui/core/Avatar';
+import { makeStyles, Theme } from '@material-ui/core/styles';
 import { sidebarConfig } from '@backstage/core-components';
 
-const useStyles = makeStyles<BackstageTheme, { size: number }>(theme => ({
+const useStyles = makeStyles<Theme, { size: number }>(theme => ({
   avatar: {
     width: ({ size }) => size,
     height: ({ size }) => size,

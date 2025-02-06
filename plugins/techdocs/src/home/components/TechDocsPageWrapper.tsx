@@ -26,27 +26,34 @@ import { useApi, configApiRef } from '@backstage/core-plugin-api';
  */
 export type TechDocsPageWrapperProps = {
   children?: React.ReactNode;
+  CustomPageWrapper?: React.FC<{ children?: React.ReactNode }>;
 };
 
 /**
- * Component wrapping a techdocs page with Page and Header components
+ * Component wrapping a TechDocs page with Page and Header components
  *
  * @public
  */
 export const TechDocsPageWrapper = (props: TechDocsPageWrapperProps) => {
-  const { children } = props;
+  const { children, CustomPageWrapper } = props;
   const configApi = useApi(configApiRef);
   const generatedSubtitle = `Documentation available in ${
     configApi.getOptionalString('organization.name') ?? 'Backstage'
   }`;
 
   return (
-    <PageWithHeader
-      title="Documentation"
-      subtitle={generatedSubtitle}
-      themeId="documentation"
-    >
-      {children}
-    </PageWithHeader>
+    <>
+      {CustomPageWrapper ? (
+        <CustomPageWrapper>{children}</CustomPageWrapper>
+      ) : (
+        <PageWithHeader
+          title="Documentation"
+          subtitle={generatedSubtitle}
+          themeId="documentation"
+        >
+          {children}
+        </PageWithHeader>
+      )}
+    </>
   );
 };

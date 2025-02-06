@@ -14,16 +14,21 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, useState } from 'react';
+import React, { ComponentType, useState, PropsWithChildren } from 'react';
 
-import { Grid, ListItem, ListItemIcon, ListItemText } from '@material-ui/core';
+import Grid from '@material-ui/core/Grid';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
 
-import { createRouteRef } from '@backstage/core-plugin-api';
 import { CatalogIcon, Link } from '@backstage/core-components';
-import { SearchQuery, SearchResultSet } from '@backstage/plugin-search-common';
 import { TestApiProvider, wrapInTestApp } from '@backstage/test-utils';
+import { createPlugin, createRouteRef } from '@backstage/core-plugin-api';
+import { SearchQuery, SearchResultSet } from '@backstage/plugin-search-common';
 
+import { SearchContextProvider } from '../../context';
 import { searchApiRef, MockSearchApi } from '../../api';
+import { createSearchResultListItemExtension } from '../../extensions';
 
 import { SearchResultList } from './SearchResultList';
 import { DefaultResultListItem } from '../DefaultResultListItem';
@@ -57,7 +62,7 @@ export default {
   title: 'Plugins/Search/SearchResultList',
   component: SearchResultList,
   decorators: [
-    (Story: ComponentType<{}>) =>
+    (Story: ComponentType<PropsWithChildren<{}>>) =>
       wrapInTestApp(
         <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
           <Grid container direction="row">
@@ -72,6 +77,14 @@ export default {
 };
 
 export const Default = () => {
+  return (
+    <SearchContextProvider>
+      <SearchResultList />
+    </SearchContextProvider>
+  );
+};
+
+export const WithQuery = () => {
   const [query] = useState<Partial<SearchQuery>>({
     types: ['techdocs'],
   });
@@ -193,5 +206,23 @@ export const WithCustomResultItem = () => {
         }
       }}
     />
+  );
+};
+
+export const WithResultItemExtensions = () => {
+  const [query] = useState<Partial<SearchQuery>>({
+    types: ['techdocs'],
+  });
+  const plugin = createPlugin({ id: 'plugin' });
+  const DefaultSearchResultListItem = plugin.provide(
+    createSearchResultListItemExtension({
+      name: 'DefaultResultListItem',
+      component: async () => DefaultResultListItem,
+    }),
+  );
+  return (
+    <SearchResultList query={query}>
+      <DefaultSearchResultListItem />
+    </SearchResultList>
   );
 };

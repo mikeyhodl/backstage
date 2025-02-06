@@ -15,23 +15,23 @@
  */
 
 import { Entity } from '@backstage/catalog-model';
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  makeStyles,
-  Tab,
-  Tabs,
-} from '@material-ui/core';
-import React, { useEffect } from 'react';
+import Box from '@material-ui/core/Box';
+import Button from '@material-ui/core/Button';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import Tab from '@material-ui/core/Tab';
+import Tabs from '@material-ui/core/Tabs';
+import { makeStyles } from '@material-ui/core/styles';
+import React, { ComponentProps, useEffect } from 'react';
 import { AncestryPage } from './components/AncestryPage';
 import { ColocatedPage } from './components/ColocatedPage';
 import { JsonPage } from './components/JsonPage';
 import { OverviewPage } from './components/OverviewPage';
 import { YamlPage } from './components/YamlPage';
+import { catalogReactTranslationRef } from '../../translation';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 
 const useStyles = makeStyles(theme => ({
   fullHeightDialog: {
@@ -85,6 +85,19 @@ function a11yProps(index: number) {
   };
 }
 
+const tabNames: Record<
+  NonNullable<ComponentProps<typeof InspectEntityDialog>['initialTab']>,
+  string
+> = {
+  overview: 'Overview',
+  ancestry: 'Ancestry',
+  colocated: 'Colocated',
+  json: 'Raw JSON',
+  yaml: 'Raw YAML',
+} as const;
+
+const tabs = Object.keys(tabNames) as Array<keyof typeof tabNames>;
+
 /**
  * A dialog that lets users inspect the low level details of their entities.
  *
@@ -93,14 +106,20 @@ function a11yProps(index: number) {
 export function InspectEntityDialog(props: {
   open: boolean;
   entity: Entity;
+  initialTab?: 'overview' | 'ancestry' | 'colocated' | 'json' | 'yaml';
   onClose: () => void;
+  onSelect?: (tab: string) => void;
 }) {
   const classes = useStyles();
-  const [activeTab, setActiveTab] = React.useState(0);
+
+  const [activeTab, setActiveTab] = React.useState(
+    getTabIndex(tabs, props.initialTab),
+  );
+  const { t } = useTranslationRef(catalogReactTranslationRef);
 
   useEffect(() => {
-    setActiveTab(0);
-  }, [props.open]);
+    getTabIndex(tabs, props.initialTab);
+  }, [props.open, props.initialTab]);
 
   if (!props.entity) {
     return null;
@@ -116,7 +135,7 @@ export function InspectEntityDialog(props: {
       PaperProps={{ className: classes.fullHeightDialog }}
     >
       <DialogTitle id="entity-inspector-dialog-title">
-        Entity Inspector
+        {t('inspectEntityDialog.title')}
       </DialogTitle>
       <DialogContent dividers>
         <div className={classes.root}>
@@ -124,15 +143,16 @@ export function InspectEntityDialog(props: {
             orientation="vertical"
             variant="scrollable"
             value={activeTab}
-            onChange={(_, newValue) => setActiveTab(newValue)}
+            onChange={(_, tabIndex) => {
+              setActiveTab(tabIndex);
+              props.onSelect?.(tabs[tabIndex]);
+            }}
             aria-label="Inspector options"
             className={classes.tabs}
           >
-            <Tab label="Overview" {...a11yProps(0)} />
-            <Tab label="Ancestry" {...a11yProps(1)} />
-            <Tab label="Colocated" {...a11yProps(2)} />
-            <Tab label="Raw JSON" {...a11yProps(3)} />
-            <Tab label="Raw YAML" {...a11yProps(4)} />
+            {tabs.map((tab, index) => (
+              <Tab key={tab} label={tabNames[tab]} {...a11yProps(index)} />
+            ))}
           </Tabs>
 
           <TabPanel value={activeTab} index={0}>
@@ -154,9 +174,16 @@ export function InspectEntityDialog(props: {
       </DialogContent>
       <DialogActions>
         <Button onClick={props.onClose} color="primary">
-          Close
+          {t('inspectEntityDialog.closeButtonTitle')}
         </Button>
       </DialogActions>
     </Dialog>
   );
+}
+
+function getTabIndex(
+  allTabs: string[],
+  initialTab: keyof typeof tabNames | undefined,
+) {
+  return initialTab ? allTabs.indexOf(initialTab) : 0;
 }

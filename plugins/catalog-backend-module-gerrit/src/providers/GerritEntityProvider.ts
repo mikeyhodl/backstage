@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { PluginTaskScheduler, TaskRunner } from '@backstage/backend-tasks';
 import { Config } from '@backstage/config';
 import { InputError } from '@backstage/errors';
 import {
@@ -22,8 +21,7 @@ import {
   EntityProviderConnection,
   LocationSpec,
   locationSpecToLocationEntity,
-} from '@backstage/plugin-catalog-backend';
-import fetch, { Response } from 'node-fetch';
+} from '@backstage/plugin-catalog-node';
 import {
   GerritIntegration,
   getGerritProjectsApiUrl,
@@ -32,25 +30,29 @@ import {
   ScmIntegrations,
 } from '@backstage/integration';
 import * as uuid from 'uuid';
-import { Logger } from 'winston';
 
 import { readGerritConfigs } from './config';
 import { GerritProjectQueryResult, GerritProviderConfig } from './types';
+import {
+  LoggerService,
+  SchedulerService,
+  SchedulerServiceTaskRunner,
+} from '@backstage/backend-plugin-api';
 
 /** @public */
 export class GerritEntityProvider implements EntityProvider {
   private readonly config: GerritProviderConfig;
   private readonly integration: GerritIntegration;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
   private readonly scheduleFn: () => Promise<void>;
   private connection?: EntityProviderConnection;
 
   static fromConfig(
     configRoot: Config,
     options: {
-      logger: Logger;
-      schedule?: TaskRunner;
-      scheduler?: PluginTaskScheduler;
+      logger: LoggerService;
+      schedule?: SchedulerServiceTaskRunner;
+      scheduler?: SchedulerService;
     },
   ): GerritEntityProvider[] {
     if (!options.schedule && !options.scheduler) {
@@ -94,8 +96,8 @@ export class GerritEntityProvider implements EntityProvider {
   private constructor(
     config: GerritProviderConfig,
     integration: GerritIntegration,
-    logger: Logger,
-    taskRunner: TaskRunner,
+    logger: LoggerService,
+    taskRunner: SchedulerServiceTaskRunner,
   ) {
     this.config = config;
     this.integration = integration;
@@ -114,7 +116,9 @@ export class GerritEntityProvider implements EntityProvider {
     await this.scheduleFn();
   }
 
-  private createScheduleFn(taskRunner: TaskRunner): () => Promise<void> {
+  private createScheduleFn(
+    taskRunner: SchedulerServiceTaskRunner,
+  ): () => Promise<void> {
     return async () => {
       const taskId = `${this.getProviderName()}:refresh`;
       return taskRunner.run({
@@ -129,14 +133,17 @@ export class GerritEntityProvider implements EntityProvider {
           try {
             await this.refresh(logger);
           } catch (error) {
-            logger.error(error);
+            logger.error(
+              `${this.getProviderName()} refresh failed, ${error}`,
+              error,
+            );
           }
         },
       });
     };
   }
 
-  async refresh(logger: Logger): Promise<void> {
+  async refresh(logger: LoggerService): Promise<void> {
     if (!this.connection) {
       throw new Error('Gerrit discovery connection not initialized');
     }

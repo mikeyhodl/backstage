@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { Grid, Typography } from '@material-ui/core';
+import Grid from '@material-ui/core/Grid';
+import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { UserSettingsSignInAvatar } from './UserSettingsSignInAvatar';
 import { UserSettingsMenu } from './UserSettingsMenu';
@@ -37,9 +38,11 @@ export const UserSettingsProfileCard = () => {
               <Typography variant="subtitle1" gutterBottom>
                 {displayName}
               </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {profile.email}
-              </Typography>
+              {profile.email && (
+                <Typography variant="body2" color="textSecondary">
+                  {profile.email}
+                </Typography>
+              )}
             </Grid>
           </Grid>
           <Grid item>

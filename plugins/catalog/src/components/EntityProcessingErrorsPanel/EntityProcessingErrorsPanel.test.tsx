@@ -14,24 +14,23 @@
  * limitations under the License.
  */
 
-import { AlphaEntity, stringifyEntityRef } from '@backstage/catalog-model';
+import { AlphaEntity } from '@backstage/catalog-model/alpha';
+import { stringifyEntityRef } from '@backstage/catalog-model';
 import { ApiProvider } from '@backstage/core-app-api';
 import {
-  CatalogApi,
   catalogApiRef,
   EntityProvider,
   entityRouteRef,
 } from '@backstage/plugin-catalog-react';
+import { catalogApiMock } from '@backstage/plugin-catalog-react/testUtils';
 import { renderInTestApp, TestApiRegistry } from '@backstage/test-utils';
 import { screen } from '@testing-library/react';
 import React from 'react';
 import { EntityProcessingErrorsPanel } from './EntityProcessingErrorsPanel';
 
 describe('<EntityProcessErrors />', () => {
-  const getEntityAncestors: jest.MockedFunction<
-    CatalogApi['getEntityAncestors']
-  > = jest.fn();
-  const apis = TestApiRegistry.from([catalogApiRef, { getEntityAncestors }]);
+  const catalogApi = catalogApiMock.mock();
+  const apis = TestApiRegistry.from([catalogApiRef, catalogApi]);
 
   it('renders EntityProcessErrors if the entity has errors', async () => {
     const entity: AlphaEntity = {
@@ -97,7 +96,7 @@ describe('<EntityProcessErrors />', () => {
       },
     };
 
-    getEntityAncestors.mockResolvedValue({
+    catalogApi.getEntityAncestors.mockResolvedValue({
       rootEntityRef: stringifyEntityRef(entity),
       items: [{ entity, parentEntityRefs: [] }],
     });
@@ -198,7 +197,7 @@ describe('<EntityProcessErrors />', () => {
         ],
       },
     };
-    getEntityAncestors.mockResolvedValue({
+    catalogApi.getEntityAncestors.mockResolvedValue({
       rootEntityRef: stringifyEntityRef(entity),
       items: [
         { entity, parentEntityRefs: [stringifyEntityRef(parent)] },
@@ -226,7 +225,7 @@ describe('<EntityProcessErrors />', () => {
     expect(screen.getByText('Error: Foo')).toBeInTheDocument();
     expect(screen.queryByText('Error: This should not be rendered')).toBeNull();
     expect(
-      screen.queryByText('The error below originates from'),
+      screen.getByText('The error below originates from'),
     ).toBeInTheDocument();
   });
 });

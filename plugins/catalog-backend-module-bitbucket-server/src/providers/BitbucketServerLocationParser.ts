@@ -17,10 +17,10 @@
 import {
   LocationSpec,
   locationSpecToLocationEntity,
-} from '@backstage/plugin-catalog-backend';
+} from '@backstage/plugin-catalog-node';
 import { Entity } from '@backstage/catalog-model';
-import { Logger } from 'winston';
 import { BitbucketServerClient } from '../lib';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 /**
  * A custom callback that reacts to finding a location by yielding entities.
@@ -31,7 +31,7 @@ import { BitbucketServerClient } from '../lib';
 export type BitbucketServerLocationParser = (options: {
   client: BitbucketServerClient;
   location: LocationSpec;
-  logger: Logger;
+  logger: LoggerService;
 }) => AsyncIterable<Entity>;
 
 export const defaultBitbucketServerLocationParser =

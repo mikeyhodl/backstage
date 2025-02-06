@@ -16,7 +16,8 @@
 
 import React, { ComponentType, PropsWithChildren } from 'react';
 
-import { Grid, ListItem } from '@material-ui/core';
+import Grid from '@material-ui/core/Grid';
+import ListItem from '@material-ui/core/ListItem';
 import LabelIcon from '@material-ui/icons/Label';
 
 import { TestApiProvider } from '@backstage/test-utils';
@@ -30,7 +31,7 @@ export default {
   title: 'Plugins/Search/SearchAutocompleteDefaultOption',
   component: SearchAutocompleteDefaultOption,
   decorators: [
-    (Story: ComponentType<{}>) => (
+    (Story: ComponentType<PropsWithChildren<{}>>) => (
       <TestApiProvider apis={[[searchApiRef, new MockSearchApi()]]}>
         <SearchContextProvider>
           <Grid container direction="row">

@@ -15,13 +15,8 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react';
 import { TechDocsSearchResultListItem } from './TechDocsSearchResultListItem';
-
-// Using canvas to render text..
-jest.mock('react-text-truncate', () => {
-  return ({ text }: { text: string }) => <span>{text}</span>;
-});
+import { renderInTestApp } from '@backstage/test-utils';
 
 const validResult = {
   location: 'https://backstage.io/docs',
@@ -46,7 +41,7 @@ const validResultWithTitle = {
 
 describe('TechDocsSearchResultListItem test', () => {
   it('should render search doc passed in', async () => {
-    const { findByText } = render(
+    const { findByText } = await renderInTestApp(
       <TechDocsSearchResultListItem result={validResult} />,
     );
 
@@ -61,7 +56,7 @@ describe('TechDocsSearchResultListItem test', () => {
   });
 
   it('should use title if defined', async () => {
-    const { findByText } = render(
+    const { findByText } = await renderInTestApp(
       <TechDocsSearchResultListItem
         result={validResult}
         title="Count Dookumentation"
@@ -77,7 +72,7 @@ describe('TechDocsSearchResultListItem test', () => {
   });
 
   it('should use entity title if defined', async () => {
-    const { findByText } = render(
+    const { findByText } = await renderInTestApp(
       <TechDocsSearchResultListItem result={validResultWithTitle} />,
     );
 

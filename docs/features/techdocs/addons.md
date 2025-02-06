@@ -39,7 +39,9 @@ representative of physical spaces in the TechDocs UI:
 - `Component`: A [proposed-but-not-yet-implemented](https://github.com/backstage/backstage/issues/11109)
   virtual location, aimed at simplifying a common type of Addon.
 
-<img data-zoomable src="../../assets/techdocs/addon-locations.png" alt="TechDocs Addon Location Guide" />
+<!-- todo: Needs zoomable plugin -->
+
+![TechDocs Addon Location Guide](../../assets/techdocs/addon-locations.png)
 
 ### Addon Registry
 
@@ -52,7 +54,7 @@ Addons are rendered in the order in which they are registered.
 
 ## Installing and using Addons
 
-To start using Addons you need to add the `@backstage/plugin-techdocs-module-addons-contrib` package to your app. You can do that by running this command from the root of your project: `yarn add --cwd packages/app @backstage/plugin-techdocs-module-addons-contrib`
+To start using Addons you need to add the `@backstage/plugin-techdocs-module-addons-contrib` package to your app. You can do that by running this command from the root of your project: `yarn --cwd packages/app add @backstage/plugin-techdocs-module-addons-contrib`
 
 Addons can be installed and configured in much the same way as extensions for
 other Backstage plugins: by adding them underneath an extension registry
@@ -63,7 +65,7 @@ page in your `App.tsx`:
 // packages/app/src/App.tsx
 
 import { TechDocsReaderPage } from '@backstage/plugin-techdocs';
-import { TechDocsAddons } from '@backstage/plugin-techdocs-react/alpha';
+import { TechDocsAddons } from '@backstage/plugin-techdocs-react';
 import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
 
 // ...
@@ -97,7 +99,7 @@ is very similar; instead of adding the `<TechDocsAddons>` registry under a
 
 import { EntityLayout } from '@backstage/plugin-catalog';
 import { EntityTechdocsContent } from '@backstage/plugin-techdocs';
-import { TechDocsAddons } from '@backstage/plugin-techdocs-react/alpha';
+import { TechDocsAddons } from '@backstage/plugin-techdocs-react';
 import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
 
 // ...
@@ -120,11 +122,12 @@ page header, TechDocs Addons whose location is `Header` will not be rendered.
 Addons can, in principle, be provided by any plugin! To make it easier to
 discover available Addons, we've compiled a list of them here:
 
-| Addon                                                                                                                        | Package/Plugin                                     | Description                                                                                                                                                                                                                                                                                             |
-| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`<ExpandableNavigation />`](https://backstage.io/docs/reference/plugin-techdocs-module-addons-contrib.expandablenavigation) | `@backstage/plugin-techdocs-module-addons-contrib` | Allows TechDocs users to expand or collapse the entire TechDocs main navigation, and keeps the user's preferred state between documentation sites.                                                                                                                                                      |
-| [`<ReportIssue />`](https://backstage.io/docs/reference/plugin-techdocs-module-addons-contrib.reportissue)                   | `@backstage/plugin-techdocs-module-addons-contrib` | Allows TechDocs users to select a portion of text on a TechDocs page and open an issue against the repository that contains the documentation, populating the issue description with the selected text according to a configurable template.                                                            |
-| [`<TextSize />`](https://backstage.io/docs/reference/plugin-techdocs-module-addons-contrib.textsize)                         | `@backstage/plugin-techdocs-module-addons-contrib` | This TechDocs addon allows users to customize text size on documentation pages, they can select how much they want to increase or decrease the font size via slider or buttons. The default value for font size is 100% and this setting is kept in the browser's local storage whenever it is changed. |
+| Addon                                                                                                                        | Package/Plugin                                     | Description                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`<ExpandableNavigation />`](https://backstage.io/docs/reference/plugin-techdocs-module-addons-contrib.expandablenavigation) | `@backstage/plugin-techdocs-module-addons-contrib` | Allows TechDocs users to expand or collapse the entire TechDocs main navigation, and keeps the user's preferred state between documentation sites.                                                                                                                                                                                                                  |
+| [`<ReportIssue />`](https://backstage.io/docs/reference/plugin-techdocs-module-addons-contrib.reportissue)                   | `@backstage/plugin-techdocs-module-addons-contrib` | Allows TechDocs users to select a portion of text on a TechDocs page and open an issue against the repository that contains the documentation, populating the issue description with the selected text according to a configurable template.                                                                                                                        |
+| [`<TextSize />`](https://backstage.io/docs/reference/plugin-techdocs-module-addons-contrib.textsize)                         | `@backstage/plugin-techdocs-module-addons-contrib` | This TechDocs addon allows users to customize text size on documentation pages, they can select how much they want to increase or decrease the font size via slider or buttons. The default value for font size is 100% and this setting is kept in the browser's local storage whenever it is changed.                                                             |
+| [`<LightBox />`](https://backstage.io/docs/reference/plugin-techdocs-module-addons-contrib.lightbox)                         | `@backstage/plugin-techdocs-module-addons-contrib` | This TechDocs addon allows users to open images in a light-box on documentation pages, they can navigate between images if there are several on one page. The image size of the light-box image is the same as the image size on the document page. When clicking on the zoom icon it zooms the image to fit in the screen (similar to `background-size: contain`). |
 
 Got an Addon to contribute? Feel free to add a row above!
 
@@ -143,7 +146,7 @@ an Addon, follow these steps:
 import {
   createTechDocsAddonExtension,
   TechDocsAddonLocations,
-} from '@backstage/plugin-techdocs-react/alpha';
+} from '@backstage/plugin-techdocs-react';
 import { CatGifComponent, CatGifComponentProps } from './addons';
 
 // ...
@@ -176,14 +179,14 @@ provided by the Addon framework.
 // plugins/your-plugin/src/addons/MakeAllImagesCatGifs.tsx
 
 import React, { useEffect } from 'react';
-import { useShadowRootElements } from '@backstage/plugin-techdocs-react/alpha';
+import { useShadowRootElements } from '@backstage/plugin-techdocs-react';
 
 // This is a normal react component; in order to make it an Addon, you would
 // still create and provide it via your plugin as described above. The only
 // difference is that you'd set `location` to `TechDocsAddonLocations.Content`.
 export const MakeAllImagesCatGifsAddon = () => {
   // This hook can be used to get references to specific elements. If you need
-  // access to the whole shadow DOM, use the the underlying useShadowRoot()
+  // access to the whole shadow DOM, use the underlying useShadowRoot()
   // hook instead.
   const images = useShadowRootElements<HTMLImageElement>(['img']);
 

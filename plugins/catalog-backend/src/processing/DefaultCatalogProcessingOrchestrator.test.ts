@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import {
   ANNOTATION_LOCATION,
   ANNOTATION_ORIGIN_LOCATION,
@@ -34,9 +33,10 @@ import {
 } from '@backstage/plugin-catalog-node';
 import { CatalogRulesEnforcer } from '../ingestion/CatalogRules';
 import { DefaultCatalogProcessingOrchestrator } from './DefaultCatalogProcessingOrchestrator';
-import { defaultEntityDataParser } from '../modules/util/parse';
+import { defaultEntityDataParser } from '../util/parse';
 import { ConfigReader } from '@backstage/config';
 import { InputError } from '@backstage/errors';
+import { mockServices } from '@backstage/backend-test-utils';
 
 class FooBarProcessor implements CatalogProcessor {
   getProcessorName = () => 'foo-bar';
@@ -93,10 +93,11 @@ describe('DefaultCatalogProcessingOrchestrator', () => {
     const orchestrator = new DefaultCatalogProcessingOrchestrator({
       processors: [new FooBarProcessor()],
       integrations: ScmIntegrations.fromConfig(new ConfigReader({})),
-      logger: getVoidLogger(),
+      logger: mockServices.logger.mock(),
       parser: defaultEntityDataParser,
       policy: EntityPolicies.allOf([]),
       rulesEnforcer: { isAllowed: () => true },
+      legacySingleProcessorValidation: false,
     });
 
     it('runs a minimal processing', async () => {
@@ -190,6 +191,56 @@ describe('DefaultCatalogProcessingOrchestrator', () => {
         ok: true,
       });
     });
+
+    it('runs all processor validations when asked to', async () => {
+      const validate = jest.fn(async () => true);
+      const processor1: CatalogProcessor = {
+        getProcessorName: () => 'processor1',
+        validateEntityKind: validate,
+      };
+      const processor2: CatalogProcessor = {
+        getProcessorName: () => 'processor2',
+        validateEntityKind: validate,
+      };
+
+      const legacy = new DefaultCatalogProcessingOrchestrator({
+        processors: [
+          processor1 as CatalogProcessor,
+          processor2 as CatalogProcessor,
+        ],
+        integrations: ScmIntegrations.fromConfig(new ConfigReader({})),
+        logger: mockServices.logger.mock(),
+        parser: defaultEntityDataParser,
+        policy: EntityPolicies.allOf([]),
+        rulesEnforcer: { isAllowed: () => true },
+        legacySingleProcessorValidation: true,
+      });
+
+      const modern = new DefaultCatalogProcessingOrchestrator({
+        processors: [
+          processor1 as CatalogProcessor,
+          processor2 as CatalogProcessor,
+        ],
+        integrations: ScmIntegrations.fromConfig(new ConfigReader({})),
+        logger: mockServices.logger.mock(),
+        parser: defaultEntityDataParser,
+        policy: EntityPolicies.allOf([]),
+        rulesEnforcer: { isAllowed: () => true },
+        legacySingleProcessorValidation: false,
+      });
+
+      await expect(legacy.process({ entity })).resolves.toMatchObject({
+        ok: true,
+      });
+      expect(validate).toHaveBeenCalledTimes(1);
+
+      validate.mockClear();
+
+      await expect(modern.process({ entity })).resolves.toMatchObject({
+        ok: true,
+      });
+      expect(validate).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('rules', () => {
@@ -209,13 +260,22 @@ describe('DefaultCatalogProcessingOrchestrator', () => {
       },
     };
 
+    const child: Entity = {
+      apiVersion: '1',
+      kind: 'Component',
+      metadata: {
+        name: 'Test2',
+        namespace: 'test1',
+      },
+    };
+
     it('enforces catalog rules', async () => {
       const integrations = ScmIntegrations.fromConfig(new ConfigReader({}));
       const processor: jest.Mocked<CatalogProcessor> = {
         getProcessorName: jest.fn(),
         validateEntityKind: jest.fn(async () => true),
         readLocation: jest.fn(async (_l, _o, emit) => {
-          emit(processingResult.entity({ type: 't', target: 't' }, entity));
+          emit(processingResult.entity({ type: 't', target: 't' }, child));
           return true;
         }),
       };
@@ -227,10 +287,11 @@ describe('DefaultCatalogProcessingOrchestrator', () => {
       const orchestrator = new DefaultCatalogProcessingOrchestrator({
         processors: [processor],
         integrations,
-        logger: getVoidLogger(),
+        logger: mockServices.logger.mock(),
         parser,
         policy: EntityPolicies.allOf([]),
         rulesEnforcer,
+        legacySingleProcessorValidation: false,
       });
 
       rulesEnforcer.isAllowed.mockReturnValueOnce(true);
@@ -250,7 +311,7 @@ describe('DefaultCatalogProcessingOrchestrator', () => {
         getProcessorName: jest.fn(),
         validateEntityKind: jest.fn(async () => true),
         readLocation: jest.fn(async (_l, _o, emit) => {
-          emit(processingResult.entity({ type: 't', target: 't' }, entity));
+          emit(processingResult.entity({ type: 't', target: 't' }, child));
           return true;
         }),
       };
@@ -268,10 +329,11 @@ describe('DefaultCatalogProcessingOrchestrator', () => {
       const orchestrator = new DefaultCatalogProcessingOrchestrator({
         processors: [processor],
         integrations,
-        logger: getVoidLogger(),
+        logger: mockServices.logger.mock(),
         parser,
         policy: EntityPolicies.allOf([new FailingEntityPolicy()]),
         rulesEnforcer,
+        legacySingleProcessorValidation: false,
       });
 
       await expect(

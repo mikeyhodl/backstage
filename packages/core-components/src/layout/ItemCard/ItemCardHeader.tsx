@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-import { createStyles, makeStyles, WithStyles } from '@material-ui/core/styles';
+import Box from '@material-ui/core/Box';
+import {
+  createStyles,
+  makeStyles,
+  Theme,
+  WithStyles,
+} from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
-import { BackstageTheme } from '@backstage/theme';
 
 /** @public */
 export type ItemCardHeaderClassKey = 'root';
 
-const styles = (theme: BackstageTheme) =>
+const styles = (theme: Theme) =>
   createStyles({
     root: {
       color: theme.palette.common.white,
@@ -65,7 +70,7 @@ export type ItemCardHeaderProps = Partial<WithStyles<typeof styles>> & {
  * are arranged in a grid for users to select among several options.
  *
  * @remarks
- * This component expects to be placed within a MUI `<CardMedia>`.
+ * This component expects to be placed within a Material UI `<CardMedia>`.
  *
  * Styles for the header can be overridden using the `classes` prop, e.g.:
  *
@@ -77,7 +82,7 @@ export function ItemCardHeader(props: ItemCardHeaderProps) {
   const { title, subtitle, children } = props;
   const classes = useStyles(props);
   return (
-    <div className={classes.root}>
+    <Box className={classes.root}>
       {subtitle && (
         <Typography variant="subtitle2" component="h3">
           {subtitle}
@@ -89,6 +94,6 @@ export function ItemCardHeader(props: ItemCardHeaderProps) {
         </Typography>
       )}
       {children}
-    </div>
+    </Box>
   );
 }

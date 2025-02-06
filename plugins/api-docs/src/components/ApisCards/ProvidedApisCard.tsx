@@ -15,7 +15,7 @@
  */
 
 import { ApiEntity, RELATION_PROVIDES_API } from '@backstage/catalog-model';
-import { Typography } from '@material-ui/core';
+import Typography from '@material-ui/core/Typography';
 import {
   EntityTable,
   useEntity,
@@ -29,14 +29,26 @@ import {
   InfoCardVariants,
   Link,
   Progress,
+  TableColumn,
+  TableOptions,
   WarningPanel,
 } from '@backstage/core-components';
 
 /**
  * @public
  */
-export const ProvidedApisCard = (props: { variant?: InfoCardVariants }) => {
-  const { variant = 'gridItem' } = props;
+export const ProvidedApisCard = (props: {
+  variant?: InfoCardVariants;
+  title?: string;
+  columns?: TableColumn<ApiEntity>[];
+  tableOptions?: TableOptions;
+}) => {
+  const {
+    variant = 'gridItem',
+    title = 'Provided APIs',
+    columns = apiEntityColumns,
+    tableOptions = {},
+  } = props;
   const { entity } = useEntity();
   const { entities, loading, error } = useRelatedEntities(entity, {
     type: RELATION_PROVIDES_API,
@@ -44,7 +56,7 @@ export const ProvidedApisCard = (props: { variant?: InfoCardVariants }) => {
 
   if (loading) {
     return (
-      <InfoCard variant={variant} title="Provided APIs">
+      <InfoCard variant={variant} title={title}>
         <Progress />
       </InfoCard>
     );
@@ -52,7 +64,7 @@ export const ProvidedApisCard = (props: { variant?: InfoCardVariants }) => {
 
   if (error || !entities) {
     return (
-      <InfoCard variant={variant} title="Provided APIs">
+      <InfoCard variant={variant} title={title}>
         <WarningPanel
           severity="error"
           title="Could not load APIs"
@@ -64,7 +76,7 @@ export const ProvidedApisCard = (props: { variant?: InfoCardVariants }) => {
 
   return (
     <EntityTable
-      title="Provided APIs"
+      title={title}
       variant={variant}
       emptyContent={
         <div style={{ textAlign: 'center' }}>
@@ -73,13 +85,17 @@ export const ProvidedApisCard = (props: { variant?: InfoCardVariants }) => {
             APIs.
           </Typography>
           <Typography variant="body2">
-            <Link to="https://backstage.io/docs/features/software-catalog/descriptor-format#specprovidesapis-optional">
-              Learn how to change this.
+            <Link
+              to="https://backstage.io/docs/features/software-catalog/descriptor-format#specprovidesapis-optional"
+              externalLinkIcon
+            >
+              Learn how to change this
             </Link>
           </Typography>
         </div>
       }
-      columns={apiEntityColumns}
+      columns={columns}
+      tableOptions={tableOptions}
       entities={entities as ApiEntity[]}
     />
   );

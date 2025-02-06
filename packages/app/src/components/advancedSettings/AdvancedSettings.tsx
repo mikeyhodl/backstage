@@ -16,15 +16,13 @@
 
 import React from 'react';
 import { InfoCard } from '@backstage/core-components';
-import {
-  List,
-  Grid,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Switch,
-} from '@material-ui/core';
-import useLocalStorage from 'react-use/lib/useLocalStorage';
+import List from '@material-ui/core/List';
+import Grid from '@material-ui/core/Grid';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
+import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import Switch from '@material-ui/core/Switch';
+import useLocalStorage from 'react-use/esm/useLocalStorage';
 
 export function AdvancedSettings() {
   const [value, setValue] = useLocalStorage<'on' | 'off'>(

@@ -17,23 +17,16 @@
 import { z } from 'zod';
 import express, { Request, Response } from 'express';
 import Router from 'express-promise-router';
-import { Logger } from 'winston';
-import {
-  errorHandler,
-  PluginEndpointDiscovery,
-} from '@backstage/backend-common';
+import { createLegacyAuthAdapters } from '@backstage/backend-common';
 import { InputError } from '@backstage/errors';
-import {
-  BackstageIdentityResponse,
-  IdentityApi,
-} from '@backstage/plugin-auth-node';
+import { IdentityApi } from '@backstage/plugin-auth-node';
 import {
   AuthorizeResult,
-  EvaluatePermissionResponse,
   EvaluatePermissionRequest,
-  IdentifiedPermissionMessage,
   EvaluatePermissionRequestBatch,
+  EvaluatePermissionResponse,
   EvaluatePermissionResponseBatch,
+  IdentifiedPermissionMessage,
   isResourcePermission,
   PermissionAttributes,
 } from '@backstage/plugin-permission-common';
@@ -41,11 +34,22 @@ import {
   ApplyConditionsRequestEntry,
   ApplyConditionsResponseEntry,
   PermissionPolicy,
+  PolicyQueryUser,
 } from '@backstage/plugin-permission-node';
 import { PermissionIntegrationClient } from './PermissionIntegrationClient';
 import { memoize } from 'lodash';
 import DataLoader from 'dataloader';
-import { Config } from '@backstage/config';
+import {
+  AuthService,
+  BackstageCredentials,
+  BackstageNonePrincipal,
+  BackstageUserPrincipal,
+  DiscoveryService,
+  HttpAuthService,
+  LoggerService,
+  RootConfigService,
+  UserInfoService,
+} from '@backstage/backend-plugin-api';
 
 const attributesSchema: z.ZodSchema<PermissionAttributes> = z.object({
   action: z
@@ -90,30 +94,56 @@ const evaluatePermissionRequestBatchSchema: z.ZodSchema<EvaluatePermissionReques
  * {@link createRouter}.
  *
  * @public
+ * @deprecated Please migrate to the new backend system as this will be removed in the future.
  */
 export interface RouterOptions {
-  logger: Logger;
-  discovery: PluginEndpointDiscovery;
+  logger: LoggerService;
+  discovery: DiscoveryService;
   policy: PermissionPolicy;
-  identity: IdentityApi;
-  config: Config;
+  identity?: IdentityApi;
+  config: RootConfigService;
+  auth?: AuthService;
+  httpAuth?: HttpAuthService;
+  userInfo?: UserInfoService;
 }
 
 const handleRequest = async (
   requests: IdentifiedPermissionMessage<EvaluatePermissionRequest>[],
-  user: BackstageIdentityResponse | undefined,
   policy: PermissionPolicy,
   permissionIntegrationClient: PermissionIntegrationClient,
-  authHeader?: string,
+  credentials: BackstageCredentials<
+    BackstageNonePrincipal | BackstageUserPrincipal
+  >,
+  auth: AuthService,
+  userInfo: UserInfoService,
 ): Promise<IdentifiedPermissionMessage<EvaluatePermissionResponse>[]> => {
   const applyConditionsLoaderFor = memoize((pluginId: string) => {
     return new DataLoader<
       ApplyConditionsRequestEntry,
       ApplyConditionsResponseEntry
     >(batch =>
-      permissionIntegrationClient.applyConditions(pluginId, batch, authHeader),
+      permissionIntegrationClient.applyConditions(pluginId, credentials, batch),
     );
   });
+
+  let user: PolicyQueryUser | undefined;
+  if (auth.isPrincipal(credentials, 'user')) {
+    const info = await userInfo.getUserInfo(credentials);
+    const { token } = await auth.getPluginRequestToken({
+      onBehalfOf: credentials,
+      targetPluginId: 'catalog', // TODO: unknown at this point
+    });
+    user = {
+      identity: {
+        type: 'user',
+        userEntityRef: credentials.principal.userEntityRef,
+        ownershipEntityRefs: info.ownershipEntityRefs,
+      },
+      token,
+      credentials,
+      info,
+    };
+  }
 
   return Promise.all(
     requests.map(({ id, resourceRef, ...request }) =>
@@ -158,12 +188,14 @@ const handleRequest = async (
  * Creates a new {@link express#Router} which provides the backend API
  * for the permission system.
  *
+ * @deprecated Please migrate to the new backend system as this will be removed in the future.
  * @public
  */
 export async function createRouter(
   options: RouterOptions,
 ): Promise<express.Router> {
-  const { policy, discovery, identity, config, logger } = options;
+  const { policy, discovery, config, logger } = options;
+  const { auth, httpAuth, userInfo } = createLegacyAuthAdapters(options);
 
   if (!config.getOptionalBoolean('permission.enabled')) {
     logger.warn(
@@ -173,6 +205,7 @@ export async function createRouter(
 
   const permissionIntegrationClient = new PermissionIntegrationClient({
     discovery,
+    auth,
   });
 
   const router = Router();
@@ -188,7 +221,9 @@ export async function createRouter(
       req: Request<EvaluatePermissionRequestBatch>,
       res: Response<EvaluatePermissionResponseBatch>,
     ) => {
-      const user = await identity.getIdentity({ request: req });
+      const credentials = await httpAuth.credentials(req, {
+        allow: ['user', 'none'],
+      });
 
       const parseResult = evaluatePermissionRequestBatchSchema.safeParse(
         req.body,
@@ -203,16 +238,15 @@ export async function createRouter(
       res.json({
         items: await handleRequest(
           body.items,
-          user,
           policy,
           permissionIntegrationClient,
-          req.header('authorization'),
+          credentials,
+          auth,
+          userInfo,
         ),
       });
     },
   );
-
-  router.use(errorHandler());
 
   return router;
 }

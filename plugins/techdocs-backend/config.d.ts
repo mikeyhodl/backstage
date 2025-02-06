@@ -24,7 +24,7 @@ export interface Config {
      * Documentation building process depends on the builder attr
      * @visibility frontend
      */
-    builder: 'local' | 'external';
+    builder?: 'local' | 'external';
 
     /**
      * Techdocs generator information
@@ -57,6 +57,11 @@ export interface Config {
          * will be broken in these scenarios.
          */
         legacyCopyReadmeMdToIndexMd?: boolean;
+
+        /**
+         * List of mkdocs plugins which should be added as default to all mkdocs.yml files.
+         */
+        defaultPlugins?: string[];
       };
     };
 
@@ -67,9 +72,12 @@ export interface Config {
       | {
           type: 'local';
 
+          /**
+           *  Optional when 'type' is set to local
+           */
           local?: {
             /**
-             * Directory to store generated static files.
+             * (Optional) Directory to store generated static files.
              */
             publishDirectory?: string;
           };
@@ -82,8 +90,22 @@ export interface Config {
            */
           awsS3?: {
             /**
+             * (Optional) The AWS account ID where the storage bucket is located.
+             * Credentials for the account ID will be sourced from the 'aws' app config section.
+             * See the
+             * [integration-aws-node package](https://github.com/backstage/backstage/blob/master/packages/integration-aws-node/README.md)
+             * for details on how to configure the credentials in the app config.
+             * If account ID is not set and no credentials are set, environment variables or aws config file will be used to authenticate.
+             * @see https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/loading-node-credentials-environment.html
+             * @see https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/loading-node-credentials-shared.html
+             * @visibility secret
+             */
+            accountId?: string;
+            /**
              * (Optional) Credentials used to access a storage bucket.
-             * If not set, environment variables or aws config file will be used to authenticate.
+             * This section is now deprecated. Configuring the account ID is now preferred, with credentials in the 'aws'
+             * app config section.
+             * If not set and no account ID is set, environment variables or aws config file will be used to authenticate.
              * @see https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/loading-node-credentials-environment.html
              * @see https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/loading-node-credentials-shared.html
              * @visibility secret
@@ -108,6 +130,11 @@ export interface Config {
              * (Required) Cloud Storage Bucket Name
              */
             bucketName: string;
+            /**
+             * (Optional) Location in storage bucket to save files
+             * If not set, the default location will be the root of the storage bucket
+             */
+            bucketRootPath?: string;
             /**
              * (Optional) AWS Region.
              * If not set, AWS_REGION environment variable or aws config file will be used.
@@ -184,10 +211,15 @@ export interface Config {
            */
           azureBlobStorage?: {
             /**
-             * (Required) Credentials used to access a storage container.
+             * (Optional) Connection string of the storage container.
              * @visibility secret
              */
-            credentials: {
+            connectionString?: string;
+            /**
+             * (Optional) Credentials used to access a storage container.
+             * @visibility secret
+             */
+            credentials?: {
               /**
                * Account access name
                * @visibility secret
@@ -231,6 +263,11 @@ export interface Config {
              * the credentials belongs to a different project to the bucket.
              */
             projectId?: string;
+            /**
+             * (Optional) Location in storage bucket to save files
+             * If not set, the default location will be the root of the storage bucket
+             */
+            bucketRootPath?: string;
           };
         };
 

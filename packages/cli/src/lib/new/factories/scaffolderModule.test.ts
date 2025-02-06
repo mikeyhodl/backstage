@@ -15,34 +15,49 @@
  */
 
 import fs from 'fs-extra';
-import mockFs from 'mock-fs';
-import { sep, resolve as resolvePath } from 'path';
-import { paths } from '../../paths';
+import { sep } from 'path';
 import { Task } from '../../tasks';
 import { FactoryRegistry } from '../FactoryRegistry';
-import { createMockOutputStream, mockPaths } from './common/testUtils';
+import {
+  createMockOutputStream,
+  expectLogsToMatch,
+  mockPaths,
+} from './common/testUtils';
 import { scaffolderModule } from './scaffolderModule';
+import { createMockDirectory } from '@backstage/backend-test-utils';
+
+const backendIndexTsContent = `
+import { createBackend } from '@backstage/backend-defaults';
+
+const backend = createBackend();
+
+backend.start();
+`;
 
 describe('scaffolderModule factory', () => {
+  const mockDir = createMockDirectory();
+
   beforeEach(() => {
     mockPaths({
-      targetRoot: '/root',
+      targetRoot: mockDir.path,
     });
   });
 
   afterEach(() => {
-    mockFs.restore();
     jest.resetAllMocks();
   });
 
   it('should create a scaffolder backend module package', async () => {
-    mockFs({
-      '/root': {
-        plugins: mockFs.directory(),
+    mockDir.setContent({
+      packages: {
+        backend: {
+          'package.json': JSON.stringify({}),
+          src: {
+            'index.ts': backendIndexTsContent,
+          },
+        },
       },
-      [paths.resolveOwn('templates')]: mockFs.load(
-        paths.resolveOwn('templates'),
-      ),
+      plugins: {},
     });
 
     const options = await FactoryRegistry.populateOptions(scaffolderModule, {
@@ -63,31 +78,53 @@ describe('scaffolderModule factory', () => {
         modified = true;
       },
       createTemporaryDirectory: (name: string) => fs.mkdtemp(name),
+      license: 'Apache-2.0',
     });
 
     expect(modified).toBe(true);
 
-    expect(output).toEqual([
-      '',
+    expectLogsToMatch(output, [
       'Creating module backstage-plugin-scaffolder-backend-module-test',
       'Checking Prerequisites:',
       `availability  plugins${sep}scaffolder-backend-module-test`,
       'creating      temp dir',
       'Executing Template:',
-      'copying       .eslintrc.js',
+      'templating    .eslintrc.js.hbs',
       'templating    README.md.hbs',
       'templating    package.json.hbs',
       'templating    index.ts.hbs',
-      'copying       index.ts',
       'copying       example.test.ts',
       'copying       example.ts',
-      'copying       index.ts',
+      'copying       module.ts',
       'Installing:',
       `moving        plugins${sep}scaffolder-backend-module-test`,
+      'backend       adding dependency',
+      'backend       adding module',
     ]);
 
     await expect(
-      fs.readJson('/root/plugins/scaffolder-backend-module-test/package.json'),
+      fs.readFile(mockDir.resolve('packages/backend/src/index.ts'), 'utf8'),
+    ).resolves.toBe(`
+import { createBackend } from '@backstage/backend-defaults';
+
+const backend = createBackend();
+
+backend.add(import('backstage-plugin-scaffolder-backend-module-test'));
+backend.start();
+`);
+
+    await expect(
+      fs.readJson(mockDir.resolve('packages/backend/package.json')),
+    ).resolves.toEqual({
+      dependencies: {
+        'backstage-plugin-scaffolder-backend-module-test': '^1.0.0',
+      },
+    });
+
+    await expect(
+      fs.readJson(
+        mockDir.resolve('plugins/scaffolder-backend-module-test/package.json'),
+      ),
     ).resolves.toEqual(
       expect.objectContaining({
         name: 'backstage-plugin-scaffolder-backend-module-test',
@@ -99,11 +136,11 @@ describe('scaffolderModule factory', () => {
 
     expect(Task.forCommand).toHaveBeenCalledTimes(2);
     expect(Task.forCommand).toHaveBeenCalledWith('yarn install', {
-      cwd: resolvePath('/root/plugins/scaffolder-backend-module-test'),
+      cwd: mockDir.resolve('plugins/scaffolder-backend-module-test'),
       optional: true,
     });
     expect(Task.forCommand).toHaveBeenCalledWith('yarn lint --fix', {
-      cwd: resolvePath('/root/plugins/scaffolder-backend-module-test'),
+      cwd: mockDir.resolve('plugins/scaffolder-backend-module-test'),
       optional: true,
     });
   });

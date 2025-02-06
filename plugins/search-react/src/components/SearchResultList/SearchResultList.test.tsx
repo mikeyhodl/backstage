@@ -19,15 +19,19 @@ import { screen, waitFor } from '@testing-library/react';
 
 import {
   TestApiProvider,
-  renderWithEffects,
-  wrapInTestApp,
+  renderInTestApp,
+  mockApis,
 } from '@backstage/test-utils';
+import { analyticsApiRef, createPlugin } from '@backstage/core-plugin-api';
 
 import { searchApiRef } from '../../api';
+import { createSearchResultListItemExtension } from '../../extensions';
+
 import { SearchResultList } from './SearchResultList';
 
 const query = jest.fn().mockResolvedValue({ results: [] });
 const searchApiMock = { query };
+const analyticsApiMock = mockApis.analytics();
 
 describe('SearchResultList', () => {
   const results = [
@@ -54,16 +58,19 @@ describe('SearchResultList', () => {
   });
 
   it('Renders without exploding', async () => {
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultList
-            query={{
-              types: ['techdocs'],
-            }}
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultList
+          query={{
+            types: ['techdocs'],
+          }}
+        />
+      </TestApiProvider>,
     );
 
     expect(query).toHaveBeenCalledWith({
@@ -79,16 +86,19 @@ describe('SearchResultList', () => {
       results,
     });
 
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultList
-            query={{
-              types: ['techdocs'],
-            }}
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultList
+          query={{
+            types: ['techdocs'],
+          }}
+        />
+      </TestApiProvider>,
     );
 
     expect(screen.getByText('Search Result 1')).toBeInTheDocument();
@@ -104,16 +114,19 @@ describe('SearchResultList', () => {
 
   it('Shows a progress bar when loading results', async () => {
     query.mockReturnValueOnce(new Promise(() => {}));
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultList
-            query={{
-              types: ['techdocs'],
-            }}
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultList
+          query={{
+            types: ['techdocs'],
+          }}
+        />
+      </TestApiProvider>,
     );
 
     await waitFor(() => {
@@ -123,15 +136,18 @@ describe('SearchResultList', () => {
 
   it('Does not render result group if no results returned and disableRenderingWithNoResults prop is provided', async () => {
     query.mockResolvedValueOnce({ results: [] });
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultList
-            query={{ types: ['techdocs'] }}
-            disableRenderingWithNoResults
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultList
+          query={{ types: ['techdocs'] }}
+          disableRenderingWithNoResults
+        />
+      </TestApiProvider>,
     );
 
     await waitFor(() => {
@@ -141,15 +157,18 @@ describe('SearchResultList', () => {
 
   it('Should render custom component when no results returned', async () => {
     query.mockResolvedValueOnce({ results: [] });
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultList
-            query={{ types: ['techdocs'] }}
-            noResultsComponent="No results were found"
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultList
+          query={{ types: ['techdocs'] }}
+          noResultsComponent="No results were found"
+        />
+      </TestApiProvider>,
     );
 
     await waitFor(() => {
@@ -159,16 +178,19 @@ describe('SearchResultList', () => {
 
   it('Shows an error panel when results rendering fails', async () => {
     query.mockRejectedValueOnce(new Error());
-    await renderWithEffects(
-      wrapInTestApp(
-        <TestApiProvider apis={[[searchApiRef, searchApiMock]]}>
-          <SearchResultList
-            query={{
-              types: ['techdocs'],
-            }}
-          />
-        </TestApiProvider>,
-      ),
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultList
+          query={{
+            types: ['techdocs'],
+          }}
+        />
+      </TestApiProvider>,
     );
 
     await waitFor(() => {
@@ -178,5 +200,43 @@ describe('SearchResultList', () => {
         ),
       ).toBeInTheDocument();
     });
+  });
+
+  it('should render search results using list item extensions', async () => {
+    query.mockResolvedValueOnce({
+      results,
+    });
+
+    const SearchResultListItemExtension = createPlugin({
+      id: 'plugin',
+    }).provide(
+      createSearchResultListItemExtension({
+        name: 'SearchResultListItemExtension',
+        component: async () => props => <>Result: {props.result?.title}</>,
+      }),
+    );
+
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [searchApiRef, searchApiMock],
+          [analyticsApiRef, analyticsApiMock],
+        ]}
+      >
+        <SearchResultList
+          query={{
+            types: ['techdocs'],
+          }}
+        >
+          <SearchResultListItemExtension />
+        </SearchResultList>
+      </TestApiProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Result: Search Result 1')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Result: Search Result 2')).toBeInTheDocument();
   });
 });

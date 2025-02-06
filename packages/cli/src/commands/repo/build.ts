@@ -18,72 +18,30 @@ import chalk from 'chalk';
 import { Command, OptionValues } from 'commander';
 import { relative as relativePath } from 'path';
 import { buildPackages, getOutputsForRole } from '../../lib/builder';
-import { PackageGraph } from '../../lib/monorepo';
-import { ExtendedPackage } from '../../lib/monorepo/PackageGraph';
-import { runParallelWorkers } from '../../lib/parallel';
 import { paths } from '../../lib/paths';
-import { detectRoleFromPackage } from '../../lib/role';
+import {
+  BackstagePackage,
+  PackageGraph,
+  PackageRoles,
+} from '@backstage/cli-node';
+import { runParallelWorkers } from '../../lib/parallel';
 import { buildFrontend } from '../build/buildFrontend';
 import { buildBackend } from '../build/buildBackend';
-
-function createScriptOptionsParser(anyCmd: Command, commandPath: string[]) {
-  // Regardless of what command instance is passed in we want to find
-  // the root command and resolve the path from there
-  let rootCmd = anyCmd;
-  while (rootCmd.parent) {
-    rootCmd = rootCmd.parent;
-  }
-
-  // Now find the command that was requested
-  let targetCmd = rootCmd as Command | undefined;
-  for (const name of commandPath) {
-    targetCmd = targetCmd?.commands.find(c => c.name() === name) as
-      | Command
-      | undefined;
-  }
-
-  if (!targetCmd) {
-    throw new Error(
-      `Could not find package command '${commandPath.join(' ')}'`,
-    );
-  }
-  const cmd = targetCmd;
-
-  const expectedScript = `backstage-cli ${commandPath.join(' ')}`;
-
-  return (scriptStr?: string) => {
-    if (!scriptStr || !scriptStr.startsWith(expectedScript)) {
-      return undefined;
-    }
-
-    const argsStr = scriptStr.slice(expectedScript.length).trim();
-
-    // Can't clone or copy or even use commands as prototype, so we mutate
-    // the necessary members instead, and then reset them once we're done
-    const currentOpts = (cmd as any)._optionValues;
-    const currentStore = (cmd as any)._storeOptionsAsProperties;
-
-    const result: Record<string, any> = {};
-    (cmd as any)._storeOptionsAsProperties = false;
-    (cmd as any)._optionValues = result;
-
-    // Triggers the writing of options to the result object
-    cmd.parseOptions(argsStr.split(' '));
-
-    (cmd as any)._storeOptionsAsProperties = currentOpts;
-    (cmd as any)._optionValues = currentStore;
-
-    return result;
-  };
-}
+import { createScriptOptionsParser } from './optionsParser';
 
 export async function command(opts: OptionValues, cmd: Command): Promise<void> {
   let packages = await PackageGraph.listTargetPackages();
+  const shouldUseRspack = Boolean(process.env.EXPERIMENTAL_RSPACK);
+
+  const rspack = shouldUseRspack
+    ? (require('@rspack/core') as typeof import('@rspack/core').rspack)
+    : undefined;
 
   if (opts.since) {
     const graph = PackageGraph.fromPackages(packages);
     const changedPackages = await graph.listChangedPackages({
       ref: opts.since,
+      analyzeLockfile: true,
     });
     const withDevDependents = graph.collectPackageNames(
       changedPackages.map(pkg => pkg.name),
@@ -92,14 +50,15 @@ export async function command(opts: OptionValues, cmd: Command): Promise<void> {
     packages = Array.from(withDevDependents).map(name => graph.get(name)!);
   }
 
-  const apps = new Array<ExtendedPackage>();
-  const backends = new Array<ExtendedPackage>();
+  const apps = new Array<BackstagePackage>();
+  const backends = new Array<BackstagePackage>();
 
   const parseBuildScript = createScriptOptionsParser(cmd, ['package', 'build']);
 
   const options = packages.flatMap(pkg => {
     const role =
-      pkg.packageJson.backstage?.role ?? detectRoleFromPackage(pkg.packageJson);
+      pkg.packageJson.backstage?.role ??
+      PackageRoles.detectRoleFromPackage(pkg.packageJson);
     if (!role) {
       console.warn(`Ignored ${pkg.packageJson.name} because it has no role`);
       return [];
@@ -129,10 +88,11 @@ export async function command(opts: OptionValues, cmd: Command): Promise<void> {
 
     return {
       targetDir: pkg.dir,
+      packageJson: pkg.packageJson,
       outputs,
       logPrefix: `${chalk.cyan(relativePath(paths.targetRoot, pkg.dir))}: `,
-      minify: buildOptions.minify,
-      useApiExtractor: buildOptions.experimentalTypeBuild,
+      workspacePackages: packages,
+      minify: opts.minify ?? buildOptions.minify,
     };
   });
 
@@ -156,6 +116,7 @@ export async function command(opts: OptionValues, cmd: Command): Promise<void> {
           targetDir: pkg.dir,
           configPaths: (buildOptions.config as string[]) ?? [],
           writeStats: Boolean(buildOptions.stats),
+          rspack,
         });
       },
     });
@@ -175,6 +136,7 @@ export async function command(opts: OptionValues, cmd: Command): Promise<void> {
         await buildBackend({
           targetDir: pkg.dir,
           skipBuildDependencies: true,
+          minify: opts.minify ?? buildOptions.minify,
         });
       },
     });

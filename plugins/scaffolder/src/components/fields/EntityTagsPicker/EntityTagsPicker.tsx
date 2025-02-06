@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 import React, { useState } from 'react';
-import useAsync from 'react-use/lib/useAsync';
-import useEffectOnce from 'react-use/lib/useEffectOnce';
+import useAsync from 'react-use/esm/useAsync';
+import useEffectOnce from 'react-use/esm/useEffectOnce';
 import { GetEntityFacetsRequest } from '@backstage/catalog-client';
 import { makeValidator } from '@backstage/catalog-model';
 import { useApi } from '@backstage/core-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
-import { FormControl, TextField } from '@material-ui/core';
-import { Autocomplete } from '@material-ui/lab';
+import FormControl from '@material-ui/core/FormControl';
+import TextField from '@material-ui/core/TextField';
+import Autocomplete from '@material-ui/lab/Autocomplete';
 import { EntityTagsPickerProps } from './schema';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
+import { scaffolderTranslationRef } from '../../../translation';
 
 export { EntityTagsPickerSchema } from './schema';
 
@@ -42,6 +45,7 @@ export const EntityTagsPicker = (props: EntityTagsPickerProps) => {
   const kinds = uiSchema['ui:options']?.kinds;
   const showCounts = uiSchema['ui:options']?.showCounts;
   const helperText = uiSchema['ui:options']?.helperText;
+  const { t } = useTranslationRef(scaffolderTranslationRef);
 
   const { loading, value: existingTags } = useAsync(async () => {
     const facet = 'metadata.tags';
@@ -108,13 +112,11 @@ export const EntityTagsPicker = (props: EntityTagsPickerProps) => {
         renderInput={params => (
           <TextField
             {...params}
-            label="Tags"
+            label={t('fields.entityTagsPicker.title')}
             onChange={e => setInputValue(e.target.value)}
             error={inputError}
-            helperText={
-              helperText ??
-              "Add any relevant tags, hit 'Enter' to add new tags. Valid format: [a-z0-9+#] separated by [-], at most 63 characters"
-            }
+            helperText={helperText ?? t('fields.entityTagsPicker.description')}
+            FormHelperTextProps={{ margin: 'dense', style: { marginLeft: 0 } }}
           />
         )}
       />

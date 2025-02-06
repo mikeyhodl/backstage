@@ -21,7 +21,12 @@ import {
   relative as relativePath,
 } from 'path';
 import { createFilter } from 'rollup-pluginutils';
-import { Plugin, InputOptions, OutputChunk } from 'rollup';
+import {
+  Plugin,
+  InputOptions,
+  OutputChunk,
+  HasModuleSideEffects,
+} from 'rollup';
 
 type ForwardFileImportsOptions = {
   include: Array<string | RegExp> | string | RegExp | null;
@@ -37,7 +42,7 @@ type ForwardFileImportsOptions = {
  * path `dist/MyComponent/my-image.png`. The import itself will stay, but be resolved,
  * resulting in something like `import ImageUrl from './MyComponent/my-image.png'`
  */
-export function forwardFileImports(options: ForwardFileImportsOptions): Plugin {
+export function forwardFileImports(options: ForwardFileImportsOptions) {
   const filter = createFilter(options.include, options.exclude);
 
   // We collect the absolute paths to all files we want to bundle into the
@@ -91,6 +96,33 @@ export function forwardFileImports(options: ForwardFileImportsOptions): Plugin {
       }
     },
     options(inputOptions) {
+      // We're in control of the config ourselves, so these are just checks to
+      // make sure we don't update the config but forget about the config
+      // overrides here
+      const treeshake = inputOptions.treeshake;
+      if (treeshake !== undefined && typeof treeshake !== 'object') {
+        throw new Error(
+          'Expected treeshake input config to be an object or not set',
+        );
+      }
+      if (treeshake?.moduleSideEffects) {
+        throw new Error('treeshake.moduleSideEffects must not be set');
+      }
+
+      // All external assets are treated as being side-effect free.
+      //
+      // This also works around an apparent bug in rollup where the
+      // `makeAbsoluteExternalsRelative: false` option sometimes caused relative
+      // asset paths to be rewritten with an incorrect path. They are rewritten
+      // in the first place because they are being treated as external by this
+      // plugin, but that seems to be the best way to handle asset files.
+      const moduleSideEffects: HasModuleSideEffects = id => {
+        if (filter(id)) {
+          return false;
+        }
+        return true;
+      };
+
       const origExternal = inputOptions.external;
 
       // We decorate any existing `external` option with our own way of determining
@@ -114,7 +146,7 @@ export function forwardFileImports(options: ForwardFileImportsOptions): Plugin {
           return false;
         }
 
-        // Sanity check, dunno if this can happen
+        // Confidence check, dunno if this can happen
         if (!importer) {
           throw new Error(`Unknown importer of file module ${id}`);
         }
@@ -129,7 +161,11 @@ export function forwardFileImports(options: ForwardFileImportsOptions): Plugin {
         return true;
       };
 
-      return { ...inputOptions, external };
+      return {
+        ...inputOptions,
+        external,
+        treeshake: { ...treeshake, moduleSideEffects },
+      };
     },
-  };
+  } satisfies Plugin;
 }

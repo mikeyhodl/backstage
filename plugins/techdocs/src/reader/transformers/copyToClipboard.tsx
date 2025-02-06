@@ -15,14 +15,14 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import ReactDom from 'react-dom';
-import {
-  withStyles,
-  Theme,
-  ThemeProvider,
-  SvgIcon,
-  Tooltip,
-} from '@material-ui/core';
+import { renderReactElement } from './renderReactElement';
+import { ThemeProvider } from '@material-ui/core/styles';
+import SvgIcon from '@material-ui/core/SvgIcon';
+import Tooltip from '@material-ui/core/Tooltip';
+import { withStyles, Theme } from '@material-ui/core/styles';
+import IconButton from '@material-ui/core/IconButton';
+import type { Transformer } from './transformer';
+import useCopyToClipboard from 'react-use/esm/useCopyToClipboard';
 
 const CopyToClipboardTooltip = withStyles(theme => ({
   tooltip: {
@@ -47,11 +47,12 @@ type CopyToClipboardButtonProps = {
 
 const CopyToClipboardButton = ({ text }: CopyToClipboardButtonProps) => {
   const [open, setOpen] = useState(false);
+  const [, copyToClipboard] = useCopyToClipboard();
 
   const handleClick = useCallback(() => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setOpen(true);
-  }, [text]);
+  }, [text, copyToClipboard]);
 
   const handleClose = useCallback(() => {
     setOpen(false);
@@ -65,14 +66,16 @@ const CopyToClipboardButton = ({ text }: CopyToClipboardButtonProps) => {
       onClose={handleClose}
       leaveDelay={1000}
     >
-      <button className="md-clipboard md-icon" onClick={handleClick}>
+      <IconButton
+        style={{ color: 'inherit', position: 'absolute' }}
+        className="md-clipboard md-icon"
+        onClick={handleClick}
+      >
         <CopyToClipboardIcon />
-      </button>
+      </IconButton>
     </CopyToClipboardTooltip>
   );
 };
-
-import type { Transformer } from './transformer';
 
 /**
  * Recreates copy-to-clipboard functionality attached to <code> snippets that
@@ -85,7 +88,7 @@ export const copyToClipboard = (theme: Theme): Transformer => {
       const text = code.textContent || '';
       const container = document.createElement('div');
       code?.parentElement?.prepend(container);
-      ReactDom.render(
+      renderReactElement(
         <ThemeProvider theme={theme}>
           <CopyToClipboardButton text={text} />
         </ThemeProvider>,

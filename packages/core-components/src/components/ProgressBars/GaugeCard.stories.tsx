@@ -17,7 +17,7 @@
 import React, { PropsWithChildren } from 'react';
 import { GaugeCard } from './GaugeCard';
 import Grid from '@material-ui/core/Grid';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter } from 'react-router-dom';
 import Tooltip from '@material-ui/core/Tooltip';
 import Info from '@material-ui/icons/Info';
 
@@ -170,6 +170,91 @@ export const InfoMessage = () => (
             <Info style={{ float: 'right' }} />
           </Tooltip>
         }
+      />
+    </Grid>
+  </Wrapper>
+);
+
+export const AlignedBottom = () => (
+  <Wrapper>
+    <Grid item>
+      <GaugeCard
+        variant="fullHeight"
+        alignGauge="bottom"
+        title="Progress"
+        subheader="With a subheader"
+        progress={0.3}
+      />
+    </Grid>
+    <Grid item>
+      <GaugeCard
+        variant="fullHeight"
+        alignGauge="bottom"
+        title="Progress"
+        subheader="With a subheader"
+        progress={0.57}
+      />
+    </Grid>
+    <Grid item>
+      <GaugeCard
+        variant="fullHeight"
+        alignGauge="bottom"
+        title="Progress with longer title"
+        subheader="With a subheader"
+        progress={0.89}
+      />
+    </Grid>
+    <Grid item>
+      <GaugeCard
+        variant="fullHeight"
+        alignGauge="bottom"
+        title="Progress"
+        subheader="With a subheader"
+        inverse
+        progress={0.2}
+      />
+    </Grid>
+  </Wrapper>
+);
+
+export const Small = () => (
+  <Wrapper>
+    <Grid item>
+      <GaugeCard
+        variant="fullHeight"
+        alignGauge="bottom"
+        size="small"
+        title="Progress"
+        progress={0.3}
+      />
+    </Grid>
+    <Grid item>
+      <GaugeCard
+        variant="fullHeight"
+        alignGauge="bottom"
+        size="small"
+        title="Progress"
+        subheader="With a subheader"
+        progress={0.57}
+      />
+    </Grid>
+    <Grid item>
+      <GaugeCard
+        variant="fullHeight"
+        alignGauge="bottom"
+        size="small"
+        title="Progress, longer title"
+        progress={0.89}
+      />
+    </Grid>
+    <Grid item>
+      <GaugeCard
+        variant="fullHeight"
+        alignGauge="bottom"
+        size="small"
+        title="Progress"
+        inverse
+        progress={0.2}
       />
     </Grid>
   </Wrapper>

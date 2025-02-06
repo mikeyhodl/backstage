@@ -19,10 +19,10 @@ import fs from 'fs-extra';
 import { join as joinPath } from 'path';
 import { OptionValues } from 'commander';
 import { FactoryRegistry } from '../../lib/new/FactoryRegistry';
+import { isMonoRepo } from '@backstage/cli-node';
 import { paths } from '../../lib/paths';
 import { assertError } from '@backstage/errors';
 import { Task } from '../../lib/tasks';
-import { isMonoRepo } from '../../lib/monorepo/isMonoRepo';
 
 function parseOptions(optionStrings: string[]): Record<string, string> {
   const options: Record<string, string> = {};
@@ -70,11 +70,14 @@ export default async (opts: OptionValues) => {
     return dir;
   }
 
+  const license = opts.license ?? 'Apache-2.0';
+
   let modified = false;
   try {
     await factory.create(options, {
       isMonoRepo: await isMonoRepo(),
       defaultVersion,
+      license,
       scope: opts.scope?.replace(/^@/, ''),
       npmRegistry: opts.npmRegistry,
       private: Boolean(opts.private),

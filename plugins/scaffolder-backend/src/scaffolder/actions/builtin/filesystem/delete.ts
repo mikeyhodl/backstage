@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { createTemplateAction } from '../../createTemplateAction';
+
+import { createTemplateAction } from '@backstage/plugin-scaffolder-node';
 import { InputError } from '@backstage/errors';
-import { resolveSafeChildPath } from '@backstage/backend-common';
+import { resolveSafeChildPath } from '@backstage/backend-plugin-api';
 import fs from 'fs-extra';
+import { examples } from './delete.examples';
 
 /**
  * Creates new action that enables deletion of files and directories in the workspace.
@@ -26,6 +28,7 @@ export const createFilesystemDeleteAction = () => {
   return createTemplateAction<{ files: string[] }>({
     id: 'fs:delete',
     description: 'Deletes files and directories from the workspace',
+    examples,
     schema: {
       input: {
         required: ['files'],

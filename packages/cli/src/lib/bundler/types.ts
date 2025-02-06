@@ -18,20 +18,44 @@ import { AppConfig, Config } from '@backstage/config';
 import { BundlingPathsOptions } from './paths';
 import { ConfigSchema } from '@backstage/config-loader';
 
+export type ModuleFederationOptions = {
+  // Unique name for this module federation bundle
+  name: string;
+  // Whether this is a host or remote bundle
+  mode: 'host' | 'remote';
+  exposes?: {
+    /**
+     * Modules that should be exposed by this container.
+     */
+    [k: string]: string;
+  };
+};
+
 export type BundlingOptions = {
   checksEnabled: boolean;
   isDev: boolean;
   frontendConfig: Config;
-  frontendAppConfigs: AppConfig[];
-  baseUrl: URL;
+  getFrontendAppConfigs(): AppConfig[];
   parallelism?: number;
+  additionalEntryPoints?: string[];
+  // Path to append to the detected public path, e.g. '/public'
+  publicSubPath?: string;
+  // Mode that the app is running in, 'protected' or 'public', default is 'public'
+  appMode?: string;
+  // An external linked workspace to include in the bundling
+  linkedWorkspace?: string;
+  moduleFederation?: ModuleFederationOptions;
+  rspack?: typeof import('@rspack/core').rspack;
 };
 
 export type ServeOptions = BundlingPathsOptions & {
   checksEnabled: boolean;
-  frontendConfig: Config;
-  frontendAppConfigs: AppConfig[];
-  fullConfig: Config;
+  configPaths: string[];
+  verifyVersions?: boolean;
+  skipOpenBrowser?: boolean;
+  moduleFederation?: ModuleFederationOptions;
+  // An external linked workspace to include in the bundling
+  linkedWorkspace?: string;
 };
 
 export type BuildOptions = BundlingPathsOptions & {
@@ -42,6 +66,9 @@ export type BuildOptions = BundlingPathsOptions & {
   schema?: ConfigSchema;
   frontendConfig: Config;
   frontendAppConfigs: AppConfig[];
+  fullConfig: Config;
+  moduleFederation?: ModuleFederationOptions;
+  rspack?: typeof import('@rspack/core').rspack;
 };
 
 export type BackendBundlingOptions = {
@@ -50,10 +77,6 @@ export type BackendBundlingOptions = {
   parallelism?: number;
   inspectEnabled: boolean;
   inspectBrkEnabled: boolean;
-};
-
-export type BackendServeOptions = BundlingPathsOptions & {
-  checksEnabled: boolean;
-  inspectEnabled: boolean;
-  inspectBrkEnabled: boolean;
+  require?: string;
+  rspack?: typeof import('@rspack/core').rspack;
 };

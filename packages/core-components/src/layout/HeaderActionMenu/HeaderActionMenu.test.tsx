@@ -22,7 +22,14 @@ import userEvent from '@testing-library/user-event';
 
 describe('<ComponentContextMenu />', () => {
   it('renders without any items and without exploding', async () => {
-    await renderInTestApp(<HeaderActionMenu actionItems={[]} />);
+    const rendered = await renderInTestApp(
+      <HeaderActionMenu actionItems={[]} />,
+    );
+
+    expect(rendered.queryByTestId('header-action-menu')).toBeInTheDocument();
+    expect(
+      rendered.queryByTestId('header-action-item'),
+    ).not.toBeInTheDocument();
   });
 
   it('can open the menu and click menu items', async () => {
@@ -43,7 +50,7 @@ describe('<ComponentContextMenu />', () => {
     await fireEvent.click(rendered.queryByText('Some label') as Node);
     expect(onClickFunction).toHaveBeenCalled();
     // We do not expect the dropdown to disappear after click
-    expect(rendered.queryByText('Some label')).toBeInTheDocument();
+    expect(rendered.getByText('Some label')).toBeInTheDocument();
   });
 
   it('Disabled', async () => {
@@ -80,7 +87,7 @@ describe('<ComponentContextMenu />', () => {
     await fireEvent.click(rendered.queryByText('Secondary label') as Node);
     expect(onClickFunction).toHaveBeenCalled();
     // We do not expect the dropdown to disappear after click
-    expect(rendered.queryByText('Some label')).toBeInTheDocument();
+    expect(rendered.getByText('Some label')).toBeInTheDocument();
   });
 
   it('should close when hitting escape', async () => {
