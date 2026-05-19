@@ -20,7 +20,6 @@ import {
   discoveryApiRef,
   fetchApiRef,
   identityApiRef,
-  NavItemBlueprint,
   PageBlueprint,
   SubPageBlueprint,
 } from '@backstage/frontend-plugin-api';
@@ -53,6 +52,7 @@ export const scaffolderPage = PageBlueprint.makeWithOverrides({
       routeRef: rootRouteRef,
       path: '/create',
       title: 'Create',
+      icon: <CreateComponentIcon fontSize="inherit" />,
     });
   },
 });
@@ -151,14 +151,6 @@ export const scaffolderTemplatingExtensionsSubPage = SubPageBlueprint.make({
           <m.TemplatingExtensionsPageContent linkLocal />
         </Content>
       )),
-  },
-});
-
-export const scaffolderNavItem = NavItemBlueprint.make({
-  params: {
-    routeRef: rootRouteRef,
-    title: 'Create...',
-    icon: CreateComponentIcon,
   },
 });
 

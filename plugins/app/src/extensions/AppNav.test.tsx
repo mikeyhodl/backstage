@@ -18,14 +18,17 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { renderTestApp } from '@backstage/frontend-test-utils';
 import {
   PageBlueprint,
-  NavItemBlueprint,
+  createExtension,
   createRouteRef,
 } from '@backstage/frontend-plugin-api';
+import { legacyNavItemTargetDataRef } from './legacyNavItem';
 
 const DEFAULT_CONFIG = {
   app: { baseUrl: 'http://localhost:3000' },
   backend: { baseUrl: 'http://localhost:7007' },
 };
+
+const mockRouteRef = createRouteRef();
 
 const mockPage = PageBlueprint.make({
   name: 'my-plugin',
@@ -33,23 +36,28 @@ const mockPage = PageBlueprint.make({
     title: 'My Plugin',
     icon: <span>icon</span>,
     path: '/my-plugin',
-    routeRef: createRouteRef(),
+    routeRef: mockRouteRef,
   },
 });
 
-const mockNavItem = NavItemBlueprint.make({
+const mockLegacyNavItem = createExtension({
+  kind: 'nav-item',
   name: 'my-plugin',
-  params: {
-    title: 'My Plugin',
-    icon: () => <span>icon</span>,
-    routeRef: createRouteRef(),
-  },
+  attachTo: { id: 'app/nav', input: 'items' },
+  output: [legacyNavItemTargetDataRef],
+  factory: () => [
+    legacyNavItemTargetDataRef({
+      title: 'Legacy Nav Title',
+      icon: () => <span>legacy icon</span>,
+      routeRef: mockRouteRef,
+    }),
+  ],
 });
 
 describe('AppNav', () => {
-  it('should show a nav item for a page with an enabled nav-item extension', async () => {
+  it('should show a nav item for a page with title and icon', async () => {
     renderTestApp({
-      extensions: [mockPage, mockNavItem],
+      extensions: [mockPage],
       config: DEFAULT_CONFIG,
     });
 
@@ -60,40 +68,24 @@ describe('AppNav', () => {
     });
   });
 
-  it('should hide a nav item when its nav-item extension is disabled via config', async () => {
-    renderTestApp({
-      extensions: [mockPage, mockNavItem],
-      config: {
-        ...DEFAULT_CONFIG,
-        app: {
-          ...DEFAULT_CONFIG.app,
-          extensions: [{ 'nav-item:test/my-plugin': false }],
-        },
+  it('should merge legacy nav item metadata when page has no explicit title', async () => {
+    const pageWithoutTitle = PageBlueprint.make({
+      name: 'legacy-plugin',
+      params: {
+        path: '/legacy-plugin',
+        routeRef: mockRouteRef,
+        icon: <span>page icon</span>,
       },
+    });
+
+    renderTestApp({
+      extensions: [pageWithoutTitle, mockLegacyNavItem],
+      config: DEFAULT_CONFIG,
     });
 
     await waitFor(() => {
       expect(
-        within(screen.getByRole('navigation')).queryByText('My Plugin'),
-      ).not.toBeInTheDocument();
-    });
-  });
-
-  it('should still show a nav item for a page without a nav-item extension', async () => {
-    renderTestApp({
-      extensions: [mockPage],
-      config: {
-        ...DEFAULT_CONFIG,
-        app: {
-          ...DEFAULT_CONFIG.app,
-          extensions: [{ 'nav-item:test/my-plugin': false }],
-        },
-      },
-    });
-
-    await waitFor(() => {
-      expect(
-        within(screen.getByRole('navigation')).getByText('My Plugin'),
+        within(screen.getByRole('navigation')).getByText('Legacy Nav Title'),
       ).toBeInTheDocument();
     });
   });

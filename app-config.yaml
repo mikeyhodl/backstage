@@ -63,13 +63,6 @@ app:
     # - apis.plugin.graphiql.browse.gitlab: true
     # - graphiql-endpoint:graphiql/gitlab: true
 
-    - nav-item:search: false
-    - nav-item:user-settings: false
-    - nav-item:catalog
-    - nav-item:api-docs
-    - nav-item:scaffolder
-    - nav-item:app-visualizer
-
     # Opt in to the experimental BUI scaffolder form theme
     - sub-page:scaffolder/templates:
         config:
@@ -287,6 +280,7 @@ catalog:
     pullRequestBranchName: backstage-integration
   rules:
     - allow:
+        - AiResource
         - Component
         - API
         - Resource

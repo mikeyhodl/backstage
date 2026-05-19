@@ -18,7 +18,6 @@ import {
   createExtension,
   coreExtensionData,
   createExtensionInput,
-  NavItemBlueprint,
   routeResolutionApiRef,
   appTreeApiRef,
   IconComponent,
@@ -27,6 +26,7 @@ import {
   RouteResolutionApi,
   useApi,
 } from '@backstage/frontend-plugin-api';
+import { legacyNavItemTargetDataRef } from './legacyNavItem';
 import {
   NavContentBlueprint,
   NavContentComponent,
@@ -188,14 +188,6 @@ function NavContentRenderer(props: {
         return [];
       }
 
-      // TODO: Nav items are deprecated, and this code covers for a documented ability to use nav items still in config to disable pages in the sidebar.
-      // Remove this code once nav items are completely gone from the codebase.
-      const navItemNodeId = node.spec.id.replace(/^page:/, 'nav-item:');
-      const navItemNode = tree.nodes.get(navItemNodeId);
-      if (navItemNode?.spec.disabled) {
-        return [];
-      }
-
       const routeRef = node.instance.getData(coreExtensionData.routeRef);
       if (!routeRef) {
         return [];
@@ -256,7 +248,7 @@ export const AppNav = createExtension({
   name: 'nav',
   attachTo: { id: 'app/layout', input: 'nav' },
   inputs: {
-    items: createExtensionInput([NavItemBlueprint.dataRefs.target]),
+    items: createExtensionInput([legacyNavItemTargetDataRef]),
     content: createExtensionInput([NavContentBlueprint.dataRefs.component], {
       singleton: true,
       optional: true,
@@ -272,7 +264,7 @@ export const AppNav = createExtension({
     yield coreExtensionData.reactElement(
       <NavContentRenderer
         legacyNavItems={inputs.items.map(item =>
-          item.get(NavItemBlueprint.dataRefs.target),
+          item.get(legacyNavItemTargetDataRef),
         )}
         Content={Content}
       />,

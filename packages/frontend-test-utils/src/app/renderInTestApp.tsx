@@ -15,7 +15,7 @@
  */
 
 import { Fragment } from 'react';
-import { Link, MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { prepareSpecializedApp } from '@backstage/frontend-app-api';
 import { RenderResult, render } from '@testing-library/react';
 import { ConfigReader } from '@backstage/config';
@@ -25,9 +25,6 @@ import {
   ExtensionDefinition,
   coreExtensionData,
   RouteRef,
-  useRouteRef,
-  IconComponent,
-  NavItemBlueprint,
   createFrontendPlugin,
   FrontendFeature,
   createFrontendModule,
@@ -103,25 +100,6 @@ export type TestAppOptions<TApiPairs extends any[] = any[]> = {
   apis?: readonly [...TestApiPairs<TApiPairs>];
 };
 
-const NavItem = (props: {
-  routeRef: RouteRef<undefined>;
-  title: string;
-  icon: IconComponent;
-}) => {
-  const { routeRef, title, icon: Icon } = props;
-  const link = useRouteRef(routeRef);
-  if (!link) {
-    return null;
-  }
-  return (
-    <li>
-      <Link to={link()}>
-        <Icon /> {title}
-      </Link>
-    </li>
-  );
-};
-
 const appPluginOverride = appPlugin.withOverrides({
   extensions: [
     appPlugin.getExtension('sign-in-page:app').override({
@@ -134,33 +112,7 @@ const appPluginOverride = appPlugin.withOverrides({
       disabled: true,
     }),
     appPlugin.getExtension('app/nav').override({
-      output: [coreExtensionData.reactElement],
-      factory(_originalFactory, { inputs }) {
-        return [
-          coreExtensionData.reactElement(
-            <nav>
-              <ul>
-                {inputs.items.map(
-                  (item: (typeof inputs.items)[number], index: number) => {
-                    const { icon, title, routeRef } = item.get(
-                      NavItemBlueprint.dataRefs.target,
-                    );
-
-                    return (
-                      <NavItem
-                        key={index}
-                        icon={icon}
-                        title={title}
-                        routeRef={routeRef}
-                      />
-                    );
-                  },
-                )}
-              </ul>
-            </nav>,
-          ),
-        ];
-      },
+      disabled: true,
     }),
   ],
 });
